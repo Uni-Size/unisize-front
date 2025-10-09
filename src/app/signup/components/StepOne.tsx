@@ -1,4 +1,6 @@
+import { useStudentFormStore } from "@/stores/useStudentFormStore";
 import { useState } from "react";
+
 const progressSchools = [
   "서울고등학교",
   "경기고등학교",
@@ -6,22 +8,17 @@ const progressSchools = [
   "대구고등학교",
   "인천고등학교",
 ];
+
 export default function StepOne({
   next,
   setShowUnsupportedSchool,
-  handleInputChange,
-  formData,
 }: {
   next: () => void;
   setShowUnsupportedSchool: (isShow: boolean) => void;
-  handleInputChange: (field: string, value: string | number | boolean) => void;
-  formData: {
-    previousSchool: string;
-    admissionYear: number;
-    admissionGrade: number;
-    admissionSchool: string;
-  };
 }) {
+  // Zustand 스토어에서 직접 가져오기
+  const { formData, setFormData } = useStudentFormStore();
+
   const [errors, setErrors] = useState("");
   const currentYear = new Date().getFullYear();
 
@@ -30,6 +27,7 @@ export default function StepOne({
     { value: 2, label: "2학년" },
     { value: 3, label: "3학년" },
   ];
+
   const generateYearOptions = () =>
     Array.from({ length: 4 }, (_, index) => currentYear - 1 + index);
 
@@ -74,9 +72,7 @@ export default function StepOne({
             id="previousSchool"
             type="text"
             value={formData.previousSchool}
-            onChange={(e) =>
-              handleInputChange("previousSchool", e.target.value)
-            }
+            onChange={(e) => setFormData("previousSchool", e.target.value)}
             className="w-full border border-gray-300 rounded-md px-3 py-2
                          focus:outline-none focus:ring-2 focus:ring-blue-500
                          focus:border-transparent"
@@ -96,7 +92,7 @@ export default function StepOne({
             id="admissionYear"
             value={formData.admissionYear}
             onChange={(e) =>
-              handleInputChange("admissionYear", parseInt(e.target.value))
+              setFormData("admissionYear", parseInt(e.target.value))
             }
             className="w-full border border-gray-300 rounded-md px-3 py-2
                          focus:outline-none focus:ring-2 focus:ring-blue-500
@@ -122,7 +118,7 @@ export default function StepOne({
             id="admissionGrade"
             value={formData.admissionGrade}
             onChange={(e) =>
-              handleInputChange("admissionGrade", parseInt(e.target.value))
+              setFormData("admissionGrade", parseInt(e.target.value))
             }
             className="w-full border border-gray-300 rounded-md px-3 py-2
                          focus:outline-none focus:ring-2 focus:ring-blue-500
@@ -148,9 +144,7 @@ export default function StepOne({
             id="admissionSchool"
             type="text"
             value={formData.admissionSchool}
-            onChange={(e) =>
-              handleInputChange("admissionSchool", e.target.value)
-            }
+            onChange={(e) => setFormData("admissionSchool", e.target.value)}
             className="w-full border border-gray-300 rounded-md px-3 py-2
                          focus:outline-none focus:ring-2 focus:ring-blue-500
                          focus:border-transparent"

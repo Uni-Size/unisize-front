@@ -1,3 +1,7 @@
+"use client";
+
+import { useStudentFormStore } from "@/stores/useStudentFormStore";
+import Image from "next/image";
 import { useState, useRef } from "react";
 
 const data = {
@@ -20,24 +24,48 @@ const data = {
   ],
 };
 
-export default function StepWaiting({
-  formData = {
-    admissionSchool: "○○고등학교",
-    name: "홍길동",
-  },
-}) {
-  const [activeTab, setActiveTab] = useState("동복");
+const itemData = {
+  동복: [
+    {
+      item: "교복 탄성 반팔",
+      url: "https://www.smartzzang.com/look/style?cate=2",
+      thumbnail: "/item/2.png",
+    },
+    {
+      item: "냄새제거 스타킹",
+      url: "https://www.smartzzang.com/look/style?cate=1",
+      thumbnail: "/item/1.png",
+    },
+    {
+      item: "속바지",
+      url: "https://www.smartzzang.com/look/style?cate=3",
+      thumbnail: "/item/3.png",
+    },
+  ],
+  하복: [
+    {
+      item: "교복 탄성 반팔",
+      url: "https://www.smartzzang.com/look/style?cate=2",
+      thumbnail: "/item/2.png",
+    },
+  ],
+};
+
+export default function WaitingPage() {
+  const { formData } = useStudentFormStore();
+
+  const [activeTab, setActiveTab] = useState<"동복" | "하복">("동복");
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const tabs = ["동복", "하복"];
+  const tabs: ("동복" | "하복")[] = ["동복", "하복"];
 
-  const handleTouchStart = (e) => {
+  const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientX);
   };
 
-  const handleTouchMove = (e) => {
+  const handleTouchMove = (e: React.TouchEvent) => {
     setTouchEnd(e.targetTouches[0].clientX);
   };
 
@@ -48,15 +76,20 @@ export default function StepWaiting({
     const isLeftSwipe = distance > 50;
     const isRightSwipe = distance < -50;
 
-    if (isLeftSwipe && activeTab === "동복") {
-      setActiveTab("하복");
-    }
-    if (isRightSwipe && activeTab === "하복") {
-      setActiveTab("동복");
-    }
+    if (isLeftSwipe && activeTab === "동복") setActiveTab("하복");
+    if (isRightSwipe && activeTab === "하복") setActiveTab("동복");
+
+    setTouchStart(0);
+    setTouchEnd(0);
   };
 
-  const TableView = ({ season, data }) => (
+  const TableView = ({
+    season,
+    data,
+  }: {
+    season: string;
+    data: (typeof data)["동복"];
+  }) => (
     <div className="w-full">
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg mb-4">
         <h3 className="text-lg font-bold text-gray-800 text-center">
@@ -158,7 +191,7 @@ export default function StepWaiting({
 
       {/* 인디케이터 */}
       <div className="flex justify-center mt-4 space-x-2">
-        {tabs.map((tab, index) => (
+        {tabs.map((tab) => (
           <div
             key={tab}
             className={`w-2 h-2 rounded-full transition-colors duration-200 ${
@@ -167,6 +200,34 @@ export default function StepWaiting({
           />
         ))}
       </div>
+
+      <article className="mt-8">
+        <h3 className="text-xl font-bold text-gray-800 mb-4">
+          {activeTab}과 함께 입을만한 상품
+        </h3>
+        <div className="grid grid-cols-3 gap-4">
+          {itemData[activeTab].map((product, idx) => (
+            <a
+              key={idx}
+              href={product.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block bg-gradient-to-r rounded-lg p-4 hover:shadow-md transition-shadow duration-200"
+            >
+              <Image
+                src={product.thumbnail}
+                alt={product.item}
+                width={100}
+                height={100}
+                className="rounded-md"
+              />
+              <p className="flex items-center text-sm justify-between mt-2">
+                {product.item}
+              </p>
+            </a>
+          ))}
+        </div>
+      </article>
     </section>
   );
 }

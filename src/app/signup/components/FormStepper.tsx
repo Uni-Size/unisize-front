@@ -1,57 +1,21 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import gsap from "gsap";
 
 import NoSchoolList from "./NoSchoolList";
-import gsap from "gsap";
 import StepOne from "./StepOne";
 import StepTwo from "./StepTwo";
 import StepThree from "./StepThree";
-import StepWaiting from "./StepWaiting";
+import { useStudentFormStore } from "@/stores/useStudentFormStore";
 
 export default function FormStepper() {
+  const router = useRouter();
+
+  const { formData, setFormData, setBodyMeasurements } = useStudentFormStore();
+
   const [step, setStep] = useState(1);
   const [showUnsupportedSchool, setShowUnsupportedSchool] = useState(false);
-
-  const [formData, setFormData] = useState({
-    previousSchool: "서울증학교",
-    admissionYear: new Date().getFullYear(),
-    admissionGrade: 1,
-    admissionSchool: "서울고등학교",
-    name: "테스터",
-    studentPhone: "111-1111-1111",
-    guardianPhone: "222-2222-2222",
-    birthDate: "2025-09-09",
-    gender: "boy",
-    privacyConsent: false,
-    body: {
-      height: 170,
-      weight: 70,
-      shoulder: 44,
-      waist: 28,
-    },
-  });
-
-  const handleInputChange = (
-    field: string,
-    value: string | number | boolean
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-  const handleBodyInputChange = (
-    field: string,
-    value: string | number | boolean
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      body: {
-        ...prev.body,
-        [field]: value,
-      },
-    }));
-  };
 
   const closeUnsupportedModal = () => setShowUnsupportedSchool(false);
 
@@ -79,8 +43,9 @@ export default function FormStepper() {
       return;
     }
     alert("폼이 제출되었습니다!");
-    setStep(999);
+    router.push("/waiting");
   };
+
   const modalRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -92,35 +57,18 @@ export default function FormStepper() {
       );
     }
   }, [showUnsupportedSchool]);
+
   return (
     <>
       <div className="bg-white p-6 rounded-xl shadow">
         {step === 1 && (
           <StepOne
             next={next}
-            handleInputChange={handleInputChange}
-            formData={formData}
             setShowUnsupportedSchool={setShowUnsupportedSchool}
           />
         )}
-        {step === 2 && (
-          <StepTwo
-            back={back}
-            next={next}
-            submit={handleSubmit}
-            handleInputChange={handleInputChange}
-            formData={formData}
-          />
-        )}
-        {step === 3 && (
-          <StepThree
-            back={back}
-            submit={handleSubmit}
-            handleInputChange={handleBodyInputChange}
-            formData={formData}
-          />
-        )}
-        {step === 999 && <StepWaiting formData={formData} />}
+        {step === 2 && <StepTwo back={back} next={next} />}
+        {step === 3 && <StepThree back={back} submit={handleSubmit} />}
       </div>
       {showUnsupportedSchool && (
         <NoSchoolList

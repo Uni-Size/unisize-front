@@ -1,29 +1,15 @@
+import { useStudentFormStore } from "@/stores/useStudentFormStore";
 import { useState } from "react";
 
 export default function StepTwo({
   back,
   next,
-  submit,
-  handleInputChange,
-  formData,
 }: {
   back: () => void;
   next: () => void;
-  submit: () => void;
-  handleInputChange: (field: string, value: string | number | boolean) => void;
-  formData: {
-    previousSchool: string;
-    admissionYear: number;
-    admissionGrade: number;
-    admissionSchool: string;
-    name: string;
-    studentPhone: string;
-    guardianPhone: string;
-    birthDate: string;
-    gender: string;
-    privacyConsent: boolean;
-  };
 }) {
+  const { formData, setFormData } = useStudentFormStore();
+
   const [errors, setErrors] = useState("");
 
   const handleNext = () => {
@@ -42,6 +28,27 @@ export default function StepTwo({
     }
 
     next();
+  };
+
+  // 전화번호 포맷팅 함수
+  const formatPhoneNumber = (value: string) => {
+    const numbers = value.replace(/[^0-9]/g, "");
+    let formatted = "";
+
+    if (numbers.length > 0) {
+      if (numbers.length <= 3) {
+        formatted = numbers;
+      } else if (numbers.length <= 7) {
+        formatted = `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+      } else {
+        formatted = `${numbers.slice(0, 3)}-${numbers.slice(
+          3,
+          7
+        )}-${numbers.slice(7, 11)}`;
+      }
+    }
+
+    return formatted;
   };
 
   return (
@@ -65,7 +72,7 @@ export default function StepTwo({
             id="birthDate"
             type="date"
             value={formData.birthDate}
-            onChange={(e) => handleInputChange("birthDate", e.target.value)}
+            onChange={(e) => setFormData("birthDate", e.target.value)}
             className="w-full border border-gray-300 rounded-md px-3 py-2
                          focus:outline-none focus:ring-2 focus:ring-blue-500
                          focus:border-transparent"
@@ -84,7 +91,7 @@ export default function StepTwo({
             id="name"
             type="text"
             value={formData.name}
-            onChange={(e) => handleInputChange("name", e.target.value)}
+            onChange={(e) => setFormData("name", e.target.value)}
             className="w-full border border-gray-300 rounded-md px-3 py-2
                          focus:outline-none focus:ring-2 focus:ring-blue-500
                          focus:border-transparent"
@@ -104,7 +111,7 @@ export default function StepTwo({
                 name="gender"
                 value="boy"
                 checked={formData.gender === "boy"}
-                onChange={(e) => handleInputChange("gender", e.target.value)}
+                onChange={(e) => setFormData("gender", e.target.value)}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
               />
               <span className="ml-2 text-sm text-gray-700">남자</span>
@@ -115,7 +122,7 @@ export default function StepTwo({
                 name="gender"
                 value="girl"
                 checked={formData.gender === "girl"}
-                onChange={(e) => handleInputChange("gender", e.target.value)}
+                onChange={(e) => setFormData("gender", e.target.value)}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
               />
               <span className="ml-2 text-sm text-gray-700">여자</span>
@@ -136,23 +143,8 @@ export default function StepTwo({
             type="tel"
             value={formData.studentPhone}
             onChange={(e) => {
-              const value = e.target.value.replace(/[^0-9]/g, "");
-              let formattedValue = "";
-
-              if (value.length > 0) {
-                if (value.length <= 3) {
-                  formattedValue = value;
-                } else if (value.length <= 7) {
-                  formattedValue = `${value.slice(0, 3)}-${value.slice(3)}`;
-                } else {
-                  formattedValue = `${value.slice(0, 3)}-${value.slice(
-                    3,
-                    7
-                  )}-${value.slice(7, 11)}`;
-                }
-              }
-
-              handleInputChange("studentPhone", formattedValue);
+              const formatted = formatPhoneNumber(e.target.value);
+              setFormData("studentPhone", formatted);
             }}
             className="w-full border border-gray-300 rounded-md px-3 py-2
                          focus:outline-none focus:ring-2 focus:ring-blue-500
@@ -175,23 +167,8 @@ export default function StepTwo({
             type="tel"
             value={formData.guardianPhone}
             onChange={(e) => {
-              const value = e.target.value.replace(/[^0-9]/g, "");
-              let formattedValue = "";
-
-              if (value.length > 0) {
-                if (value.length <= 3) {
-                  formattedValue = value;
-                } else if (value.length <= 7) {
-                  formattedValue = `${value.slice(0, 3)}-${value.slice(3)}`;
-                } else {
-                  formattedValue = `${value.slice(0, 3)}-${value.slice(
-                    3,
-                    7
-                  )}-${value.slice(7, 11)}`;
-                }
-              }
-
-              handleInputChange("guardianPhone", formattedValue);
+              const formatted = formatPhoneNumber(e.target.value);
+              setFormData("guardianPhone", formatted);
             }}
             className="w-full border border-gray-300 rounded-md px-3 py-2
                          focus:outline-none focus:ring-2 focus:ring-blue-500
@@ -208,9 +185,7 @@ export default function StepTwo({
               id="privacyConsent"
               type="checkbox"
               checked={formData.privacyConsent || false}
-              onChange={(e) =>
-                handleInputChange("privacyConsent", e.target.checked)
-              }
+              onChange={(e) => setFormData("privacyConsent", e.target.checked)}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-1"
             />
             <label
