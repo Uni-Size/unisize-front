@@ -1,13 +1,7 @@
 import { useStudentFormStore } from "@/stores/useStudentFormStore";
 import { useState } from "react";
-
-const progressSchools = [
-  "서울고등학교",
-  "경기고등학교",
-  "부산고등학교",
-  "대구고등학교",
-  "인천고등학교",
-];
+import { SUPPORTED_SCHOOLS, GRADE_OPTIONS } from "@/mocks/signupData";
+import { signupApi } from "@/api/signupApi";
 
 export default function StepOne({
   next,
@@ -22,19 +16,12 @@ export default function StepOne({
   const [errors, setErrors] = useState("");
   const currentYear = new Date().getFullYear();
 
-  const gradeOptions = [
-    { value: 1, label: "1학년" },
-    { value: 2, label: "2학년" },
-    { value: 3, label: "3학년" },
-  ];
-
   const generateYearOptions = () =>
     Array.from({ length: 4 }, (_, index) => currentYear - 1 + index);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     console.log(formData);
     setErrors("");
-    const isProgressSchool = progressSchools.includes(formData.admissionSchool);
 
     if (
       !formData.previousSchool ||
@@ -46,7 +33,11 @@ export default function StepOne({
       alert("모든 항목을 입력해주세요.");
       return;
     }
-    if (!isProgressSchool) {
+
+    // API를 통해 학교 지원 여부 확인
+    const supportCheck = await signupApi.checkSchoolSupport(formData.admissionSchool);
+
+    if (!supportCheck.supported) {
       setShowUnsupportedSchool(true);
       return;
     }
@@ -124,7 +115,7 @@ export default function StepOne({
                          focus:outline-none focus:ring-2 focus:ring-blue-500
                          focus:border-transparent"
           >
-            {gradeOptions.map((grade) => (
+            {GRADE_OPTIONS.map((grade) => (
               <option key={grade.value} value={grade.value}>
                 {grade.label}
               </option>

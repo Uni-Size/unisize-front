@@ -1,5 +1,7 @@
 import { useStudentFormStore } from "@/stores/useStudentFormStore";
 import { useState } from "react";
+import { PRIVACY_POLICY } from "@/mocks/signupData";
+import { signupApi } from "@/api/signupApi";
 
 export default function StepTwo({
   back,
@@ -193,13 +195,15 @@ export default function StepTwo({
               className="ml-3 text-sm text-gray-700 cursor-pointer"
             >
               <span className="font-medium text-gray-900">
-                개인정보 수집·이용에 동의합니다. (필수)
+                {PRIVACY_POLICY.title}
               </span>
               <div className="mt-1 text-xs text-gray-600">
-                • 수집항목: 학생 이름, 생년월일, 성별, 연락처, 보호자 연락처
-                <br />
-                • 이용목적: 무상교복 지원 사업 신청 및 교복 수선 서비스 제공
-                <br />• 보유기간: 업무 처리 완료 후 3년
+                {PRIVACY_POLICY.items.map((item, index) => (
+                  <div key={index}>
+                    • {item}
+                    {index < PRIVACY_POLICY.items.length - 1 && <br />}
+                  </div>
+                ))}
               </div>
             </label>
           </div>

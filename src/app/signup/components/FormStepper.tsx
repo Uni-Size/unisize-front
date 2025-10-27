@@ -8,6 +8,7 @@ import StepOne from "./StepOne";
 import StepTwo from "./StepTwo";
 import StepThree from "./StepThree";
 import { useStudentFormStore } from "@/stores/useStudentFormStore";
+import { signupApi } from "@/api/signupApi";
 
 export default function FormStepper() {
   const router = useRouter();
@@ -22,28 +23,19 @@ export default function FormStepper() {
   const next = () => setStep((s) => s + 1);
   const back = () => setStep((s) => s - 1);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     console.log(formData);
-    if (
-      !formData.previousSchool ||
-      !formData.admissionYear ||
-      !formData.admissionGrade ||
-      !formData.admissionSchool ||
-      !formData.name ||
-      !formData.studentPhone ||
-      !formData.guardianPhone ||
-      !formData.birthDate ||
-      !formData.gender ||
-      !formData.body.height ||
-      !formData.body.weight ||
-      !formData.body.shoulder ||
-      !formData.body.waist
-    ) {
-      alert("모든 항목을 입력해주세요.");
-      return;
+
+    try {
+      const result = await signupApi.registerStudent(formData);
+      alert(result.message);
+      console.log("생성된 학생 ID:", result.studentId);
+      router.push("/waiting");
+    } catch (error) {
+      console.error("학생 등록 실패:", error);
+      const errorMessage = error instanceof Error ? error.message : "학생 정보 등록에 실패했습니다.";
+      alert(errorMessage);
     }
-    alert("폼이 제출되었습니다!");
-    router.push("/waiting");
   };
 
   const modalRef = useRef<HTMLDivElement | null>(null);

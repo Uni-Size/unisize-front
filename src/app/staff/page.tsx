@@ -3,6 +3,18 @@
 import { useEffect, useState } from "react";
 import { SecurityMaintenanceInfoCompact } from "./components/SecurityMaintenanceInfo";
 import MeasurementSheet from "./components/MeasurementSheet";
+
+type Student = {
+  no: number;
+  timestamp: string;
+  name: string;
+  gender: string;
+  fromSchool: string;
+  toSchool: string;
+  category: string;
+  status: string;
+};
+
 const data = Array.from({ length: 17 }, (_, i) => ({
   no: i + 1,
   timestamp: "25/01/12 12:34",
@@ -13,11 +25,12 @@ const data = Array.from({ length: 17 }, (_, i) => ({
   category: "신입",
   status: "pending",
 }));
+
 export default function Page() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMeasurementSheetOpen, setIsMeasurementSheetOpen] = useState(true);
   const [toast, setToast] = useState({ show: false, message: "" });
-  const [selectedStudent, setSelectedStudent] = useState<any | null>({
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>({
     no: 1,
     timestamp: "25/01/12 12:34",
     name: "김인철",
@@ -27,7 +40,7 @@ export default function Page() {
     category: "신입",
     status: "pending",
   });
-  const handleDetailClick = (student: any) => {
+  const handleDetailClick = (student: Student) => {
     setSelectedStudent(student);
     setIsModalOpen(true);
   };
@@ -63,7 +76,7 @@ export default function Page() {
   }, [isMeasurementSheetOpen, isModalOpen]);
   return (
     <main className="py-6 px-5 relative">
-      {isModalOpen && (
+      {isModalOpen && selectedStudent && (
         <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
           <div className="bg-white w-full p-6 rounded-xl m-6 text-center text-2xl font-semibold">
             <p>

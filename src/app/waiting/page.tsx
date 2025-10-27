@@ -83,12 +83,18 @@ export default function WaitingPage() {
     setTouchEnd(0);
   };
 
+  type UniformData = {
+    item: string;
+    size: number;
+    count: number;
+  }[];
+
   const TableView = ({
     season,
-    data,
+    data: tableData,
   }: {
     season: string;
-    data: (typeof data)["동복"];
+    data: UniformData;
   }) => (
     <div className="w-full">
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg mb-4">
@@ -98,7 +104,7 @@ export default function WaitingPage() {
       </div>
 
       <div className="space-y-2">
-        {data.map((row, idx) => (
+        {tableData.map((row, idx) => (
           <div
             key={idx}
             className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm"

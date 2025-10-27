@@ -1,4 +1,5 @@
 import { useStudentFormStore } from "@/stores/useStudentFormStore";
+import { VALIDATION_RANGES } from "@/mocks/signupData";
 
 export default function StepThree({
   back,
@@ -27,8 +28,8 @@ export default function StepThree({
             키 (cm)
           </label>
           <input
-            min={130}
-            max={200}
+            min={VALIDATION_RANGES.height.min}
+            max={VALIDATION_RANGES.height.max}
             id="height"
             type="number"
             value={formData.body.height || ""}
@@ -51,8 +52,8 @@ export default function StepThree({
             몸무게 (kg)
           </label>
           <input
-            min={30}
-            max={150}
+            min={VALIDATION_RANGES.weight.min}
+            max={VALIDATION_RANGES.weight.max}
             id="weight"
             type="number"
             value={formData.body.weight || ""}
@@ -75,8 +76,8 @@ export default function StepThree({
             어깨넓이 (cm)
           </label>
           <input
-            min={30}
-            max={60}
+            min={VALIDATION_RANGES.shoulder.min}
+            max={VALIDATION_RANGES.shoulder.max}
             id="shoulder"
             type="number"
             value={formData.body.shoulder || ""}
@@ -99,8 +100,8 @@ export default function StepThree({
             허리둘레 (inch)
           </label>
           <input
-            min={20}
-            max={40}
+            min={VALIDATION_RANGES.waist.min}
+            max={VALIDATION_RANGES.waist.max}
             id="waist"
             type="number"
             value={formData.body.waist || ""}
