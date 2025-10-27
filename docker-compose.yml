@@ -1,8 +1,8 @@
-version: '3.8'
+version: "3.8"
 
 services:
   unisize-front:
-    image: ghcr.io/uni-size/unisize-front:latest
+    image: ghcr.io/Uni-Size/unisize-front:latest
     container_name: unisize-front
     ports:
       - "3000:3000"
