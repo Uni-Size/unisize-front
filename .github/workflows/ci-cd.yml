@@ -12,7 +12,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: uni-size/unisize-front
   NODE_VERSION: '20'
 
 jobs:
