@@ -39,15 +39,22 @@ jobs:
           echo "🚀 Starting deployment..."
 
           SSH_CMD="ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || '2022' }} ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}"
+          SCP_CMD="scp -i ~/.ssh/deploy_key -P ${{ secrets.SSH_PORT || '2022' }}"
+          DEPLOY_PATH="/opt/unisize/frontend"
 
           # Test connection
           $SSH_CMD "echo 'Connected to server'"
 
+          # Copy docker-compose.yml to server
+          echo "📤 Uploading docker-compose.prod.yml..."
+          $SCP_CMD docker-compose.yml ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${DEPLOY_PATH}/docker-compose.prod.yml
+
           # Verify docker-compose file exists
-          $SSH_CMD "ls -la ~/unisize-front/docker-compose.yml"
+          $SSH_CMD "ls -la ${DEPLOY_PATH}/docker-compose.prod.yml"
 
           # Deploy with automatic docker login
-          $SSH_CMD "cd ~/unisize-front && echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin && docker-compose pull && docker-compose down || true && docker-compose up -d && docker logout ghcr.io"
+          echo "🐳 Pulling and deploying containers..."
+          $SSH_CMD "cd ${DEPLOY_PATH} && echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin && docker-compose -f docker-compose.prod.yml pull && docker-compose -f docker-compose.prod.yml down || true && docker-compose -f docker-compose.prod.yml up -d && docker logout ghcr.io"
 
           echo "✅ Deployment completed"
 
