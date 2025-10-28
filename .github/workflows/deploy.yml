@@ -45,9 +45,13 @@ jobs:
           # Test connection
           $SSH_CMD "echo 'Connected to server'"
 
-          # Copy docker-compose.yml to server
+          # Copy docker-compose.yml to server (upload to home directory first)
           echo "📤 Uploading docker-compose.prod.yml..."
-          $SCP_CMD docker-compose.yml ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${DEPLOY_PATH}/docker-compose.prod.yml
+          $SCP_CMD docker-compose.yml ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/docker-compose.prod.yml
+
+          # Move file to deployment directory with sudo
+          echo "📂 Moving file to ${DEPLOY_PATH}..."
+          $SSH_CMD "sudo mv ~/docker-compose.prod.yml ${DEPLOY_PATH}/docker-compose.prod.yml"
 
           # Verify docker-compose file exists
           $SSH_CMD "ls -la ${DEPLOY_PATH}/docker-compose.prod.yml"
