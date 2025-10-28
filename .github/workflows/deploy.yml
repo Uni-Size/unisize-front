@@ -39,14 +39,23 @@ jobs:
           echo "🚀 Starting deployment..."
 
           SSH_CMD="ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || '2022' }} ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}"
+          SCP_CMD="scp -i ~/.ssh/deploy_key -P ${{ secrets.SSH_PORT || '2022' }}"
 
           # Test connection
           $SSH_CMD "echo 'Connected to server'"
+
+          # Create deployment directory if it doesn't exist
+          $SSH_CMD "mkdir -p ~/unisize-front"
+
+          # Copy docker-compose.yml to server
+          echo "📤 Uploading docker-compose.yml..."
+          $SCP_CMD docker-compose.yml ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/unisize-front/
 
           # Verify docker-compose file exists
           $SSH_CMD "ls -la ~/unisize-front/docker-compose.yml"
 
           # Deploy with automatic docker login
+          echo "🐳 Pulling and deploying containers..."
           $SSH_CMD "cd ~/unisize-front && echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin && docker-compose pull && docker-compose down || true && docker-compose up -d && docker logout ghcr.io"
 
           echo "✅ Deployment completed"
