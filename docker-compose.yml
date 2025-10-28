@@ -4,11 +4,30 @@ services:
   unisize-front:
     image: ghcr.io/uni-size/unisize-front:${IMAGE_TAG:-latest}
     container_name: unisize-front
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-    restart: unless-stopped
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
     # 환경 변수 파일이 필요한 경우 주석 해제
     # env_file:
     #   - .env.production
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    labels:
+      - "com.unisize.service=frontend"
+      - "com.unisize.environment=production"
