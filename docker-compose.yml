@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   unisize-front:
-    image: ghcr.io/Uni-Size/unisize-front:${IMAGE_TAG:-latest}
+    image: ghcr.io/uni-size/unisize-front:${IMAGE_TAG:-latest}
     container_name: unisize-front
     ports:
       - "3000:3000"
