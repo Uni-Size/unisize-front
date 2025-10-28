@@ -1,109 +1,85 @@
 name: Deploy to Home Server
 
 on:
-  push:
-    branches:
-      - main # main 브랜치에 push 시 자동 배포
-      # - dev  # dev 브랜치도 배포하려면 주석 해제
-  workflow_dispatch: # 수동 실행 가능
+  # 이전 워크플로우(Build & Test)가 완료된 후에만 실행
+  workflow_run:
+    workflows: ["Build & Test"]
+    types: [completed]
+    branches: [main]
+  # 수동 배포 트리거
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deployment'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
-  # 린트 및 타입 체크
-  lint-and-typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run lint
-        run: npm run lint
-        continue-on-error: true # 린트 에러가 있어도 배포 계속 진행
-
-      # 타입 체크가 필요한 경우 주석 해제
-      # - name: Type check
-      #   run: npx tsc --noEmit
-
-  # Docker 이미지 빌드 및 푸시
-  build-and-push:
-    runs-on: ubuntu-latest
-    needs: lint-and-typecheck
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix={{branch}}-
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # 홈서버 배포
   deploy:
+    name: Deploy to Home Server
+    # workflow_run에서 트리거된 경우, CI/CD 워크플로우가 성공했을 때만 실행
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    needs: build-and-push
     steps:
-      - name: Deploy to Home Server via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT || 2022 }}
-          script: |
-            # 프로젝트 디렉토리로 이동
-            cd ~/unisize-front
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            # GitHub Container Registry 로그인
-            echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.SSH_PORT || '2022' }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
-            # 최신 이미지 pull 및 실행
-            docker-compose pull
-            docker-compose down
-            docker-compose up -d
+      - name: Deploy to server
+        run: |
+          echo "🚀 Starting deployment..."
 
-            # 로그 확인 (최근 20줄)
-            docker-compose logs --tail=20
+          SSH_CMD="ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || '2022' }} ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}"
 
-            # 컨테이너 상태 확인
-            docker ps | grep unisize-front
+          # Test connection
+          $SSH_CMD "echo 'Connected to server'"
 
-            # 사용하지 않는 이미지 정리
-            docker image prune -f
+          # Verify docker-compose file exists
+          $SSH_CMD "ls -la ~/unisize-front/docker-compose.yml"
+
+          # Deploy with automatic docker login
+          $SSH_CMD "cd ~/unisize-front && echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin && docker-compose pull && docker-compose down || true && docker-compose up -d && docker logout ghcr.io"
+
+          echo "✅ Deployment completed"
+
+      - name: Check container status
+        run: |
+          echo "🔍 Checking container status..."
+
+          SSH_CMD="ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || '2022' }} ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}"
+
+          # 컨테이너 상태 확인
+          $SSH_CMD "docker ps | grep unisize-front"
+
+          # 최근 로그 확인
+          $SSH_CMD "cd ~/unisize-front && docker-compose logs --tail=20"
+
+          # 사용하지 않는 이미지 정리
+          $SSH_CMD "docker image prune -f"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+
+      - name: Deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Deployment successful!"
+            echo "Frontend: http://${{ secrets.SSH_HOST }}"
+          else
+            echo "❌ Deployment failed!"
+          fi
 
   # Slack/Discord 알림 (선택사항)
   # notify:
