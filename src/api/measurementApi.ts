@@ -14,13 +14,16 @@ export type SupplyItemsConfigResponse = typeof SUPPLY_ITEMS_CONFIG;
 // 측정 완료 요청 타입
 export type CompleteMeasurementRequest = {
   studentId: string;
-  uniformItems: {
+  uniformItems: Array<{
+    id: string;
+    itemId: string;
+    name: string;
     season: "동복" | "하복";
-    items: Array<{
-      id: string;
-      purchaseCount: number;
-    }>;
-  };
+    selectedSize: number;
+    customization: string;
+    pantsLength?: string;
+    purchaseCount: number;
+  }>;
   supplyItems: Array<{
     id: string;
     name: string;
@@ -28,6 +31,7 @@ export type CompleteMeasurementRequest = {
     size: string;
     count: number;
   }>;
+  signature: string;
 };
 
 // 더미 API 함수들

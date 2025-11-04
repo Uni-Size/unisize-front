@@ -27,9 +27,14 @@ type UniformSizeItem = {
   selectedSize: number;
   customization: string;
   pantsLength?: string;
+  purchaseCount: number; // 구입 개수 추가
 };
 
-export default function MeasurementSheet() {
+export default function MeasurementSheet({
+  setIsMeasurementSheetOpen,
+}: {
+  setIsMeasurementSheetOpen: (open: boolean) => void;
+}) {
   const [season, setSeason] = useState<"동복" | "하복">("동복");
   const [supplyItems, setSupplyItems] = useState<SupplyItem[]>([]);
   const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
@@ -60,6 +65,7 @@ export default function MeasurementSheet() {
             selectedSize: item.size,
             customization: item.customization,
             pantsLength: item.name.includes("바지") ? "" : undefined,
+            purchaseCount: 0, // 초기 구입 개수는 0
           });
         });
       });
@@ -81,6 +87,7 @@ export default function MeasurementSheet() {
         selectedSize: uniformItem.size,
         customization: uniformItem.customization,
         pantsLength: uniformItem.name.includes("바지") ? "" : undefined,
+        purchaseCount: 1, // 추가 구입 시 기본 1개
       };
       setUniformSizeItems((prev) => [...prev, newItem]);
     },
@@ -95,18 +102,21 @@ export default function MeasurementSheet() {
   // 사이즈 변경
   const updateUniformSize = useCallback((id: string, size: number) => {
     setUniformSizeItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, selectedSize: size } : item))
+      prev.map((item) =>
+        item.id === id ? { ...item, selectedSize: size } : item
+      )
     );
   }, []);
 
   // 맞춤 정보 변경
-  const updateCustomization = useCallback((id: string, customization: string) => {
-    setUniformSizeItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, customization } : item
-      )
-    );
-  }, []);
+  const updateCustomization = useCallback(
+    (id: string, customization: string) => {
+      setUniformSizeItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, customization } : item))
+      );
+    },
+    []
+  );
 
   // 바지 기장 변경
   const updatePantsLength = useCallback((id: string, length: string) => {
@@ -116,6 +126,23 @@ export default function MeasurementSheet() {
       )
     );
   }, []);
+
+  // 교복 구입 개수 변경
+  const updateUniformPurchaseCount = useCallback(
+    (id: string, delta: number) => {
+      setUniformSizeItems((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                purchaseCount: Math.max(0, item.purchaseCount + delta),
+              }
+            : item
+        )
+      );
+    },
+    []
+  );
 
   const addSupplyItem = useCallback(
     (itemName: keyof typeof SUPPLY_ITEMS_CONFIG) => {
@@ -179,31 +206,47 @@ export default function MeasurementSheet() {
       return;
     }
 
-    const supplyItemsData = supplyItems.map((item) => ({
+    // 용품 데이터 변환 (구입개수가 0인 항목 제외)
+    const supplyItemsData = supplyItems
+      .filter((item) => (itemCounts[item.id] || 0) > 0)
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        size: item.size,
+        count: itemCounts[item.id] || 0,
+      }));
+
+    // 교복 데이터 변환 - 모든 시즌의 아이템을 배열로 전송
+    const uniformItemsData = uniformSizeItems.map((item) => ({
       id: item.id,
+      itemId: item.itemId,
       name: item.name,
-      category: item.category,
-      size: item.size,
-      count: itemCounts[item.id] || 0,
+      season: item.season,
+      selectedSize: item.selectedSize,
+      customization: item.customization,
+      pantsLength: item.pantsLength,
+      purchaseCount: item.purchaseCount,
     }));
 
     const requestData: CompleteMeasurementRequest = {
       studentId: "student-001", // 실제로는 props나 context에서 받아올 값
-      uniformItems: {
-        season,
-        items: [], // TODO: uniformSizeItems를 적절한 형태로 변환
-      },
+      uniformItems: uniformItemsData,
       supplyItems: supplyItemsData,
+      signature,
     };
 
     try {
       const result = await measurementApi.completeMeasurement(requestData);
       alert(result.message);
+      setIsMeasurementSheetOpen(false);
+
+      // 성공 시 추가 작업 (예: 페이지 이동, 모달 닫기 등)
     } catch (error) {
       console.error("측정 완료 실패:", error);
       alert("측정 완료에 실패했습니다.");
     }
-  }, [season, supplyItems, itemCounts, signature]);
+  }, [uniformSizeItems, supplyItems, itemCounts, signature]);
 
   return (
     <div className="fixed bottom-0 left-0 bg-white w-full rounded-t-md h-5/6 overflow-y-auto">
@@ -225,6 +268,7 @@ export default function MeasurementSheet() {
             onUpdateSize={updateUniformSize}
             onUpdateCustomization={updateCustomization}
             onUpdatePantsLength={updatePantsLength}
+            onUpdatePurchaseCount={updateUniformPurchaseCount}
           />
 
           {/* 용품 섹션 */}
@@ -361,6 +405,7 @@ interface SizeSectionProps {
   onUpdateSize: (id: string, size: number) => void;
   onUpdateCustomization: (id: string, customization: string) => void;
   onUpdatePantsLength: (id: string, length: string) => void;
+  onUpdatePurchaseCount: (id: string, delta: number) => void;
 }
 
 const SizeSection = ({
@@ -372,17 +417,18 @@ const SizeSection = ({
   onUpdateSize,
   onUpdateCustomization,
   onUpdatePantsLength,
+  onUpdatePurchaseCount,
 }: SizeSectionProps) => {
   // 현재 시즌의 아이템들을 품목별로 그룹화
   const groupedItems = uniformSizeItems
     .filter((item) => item.season === season)
     .reduce((acc, item) => {
-    if (!acc[item.itemId]) {
-      acc[item.itemId] = [];
-    }
-    acc[item.itemId].push(item);
-    return acc;
-  }, {} as Record<string, UniformSizeItem[]>);
+      if (!acc[item.itemId]) {
+        acc[item.itemId] = [];
+      }
+      acc[item.itemId].push(item);
+      return acc;
+    }, {} as Record<string, UniformSizeItem[]>);
 
   // 모든 품목 목록 (순서 유지를 위해)
   const allItemIds = UNIFORM_ITEMS[season].map((item) => item.id);
@@ -410,11 +456,17 @@ const SizeSection = ({
 
       {/* 헤더 (7열로 변경: 품목, 가격, 사이즈, 맞춤, 지원개수, 구입개수, 총개수) */}
       <div className="grid grid-cols-7 gap-2 text-xs text-center font-semibold bg-gray-50 py-2 rounded">
-        {["품목", "가격", "사이즈", "맞춤", "지원개수", "구입개수", "총 개수"].map(
-          (h) => (
-            <div key={h}>{h}</div>
-          )
-        )}
+        {[
+          "품목",
+          "가격",
+          "사이즈",
+          "맞춤",
+          "지원개수",
+          "구입개수",
+          "총 개수",
+        ].map((h) => (
+          <div key={h}>{h}</div>
+        ))}
       </div>
 
       {/* 품목 리스트 - 품목별로 그룹화하여 표시 */}
@@ -457,7 +509,13 @@ const SizeSection = ({
             {/* 추가된 아이템들 표시 */}
             {itemsOfType.map((item, index) => {
               const isPants = item.name.includes("바지");
-              const totalCount = baseItem.provided + itemsOfType.length - 1;
+              // 해당 품목의 모든 구입개수 합계
+              const totalPurchaseCount = itemsOfType.reduce(
+                (sum, i) => sum + i.purchaseCount,
+                0
+              );
+              // 총 개수 = 지원개수 + 구입개수 합계
+              const totalCount = baseItem.provided + totalPurchaseCount;
 
               return (
                 <div
@@ -517,7 +575,8 @@ const SizeSection = ({
                         }
                         placeholder="예: 34 3/4"
                         className={`w-full text-xs text-center border rounded px-2 py-1 ${
-                          !item.pantsLength || item.pantsLength.trim().length === 0
+                          !item.pantsLength ||
+                          item.pantsLength.trim().length === 0
                             ? "border-red-300 bg-red-50"
                             : "border-gray-300"
                         }`}
@@ -540,15 +599,25 @@ const SizeSection = ({
                     {index === 0 ? baseItem.provided : 0}
                   </div>
 
-                  {/* 구입개수 */}
-                  <div className="text-center font-medium">
-                    {index === 0 ? 0 : 1}
+                  {/* 구입개수 - 스테퍼 */}
+                  <div className="flex items-center justify-center gap-1">
+                    <CountButton
+                      onClick={() => onUpdatePurchaseCount(item.id, -1)}
+                    >
+                      -
+                    </CountButton>
+                    <span className="w-6 text-center font-medium">
+                      {item.purchaseCount}
+                    </span>
+                    <CountButton
+                      onClick={() => onUpdatePurchaseCount(item.id, 1)}
+                    >
+                      +
+                    </CountButton>
                   </div>
 
                   {/* 총 개수 */}
-                  <div className="text-center font-semibold">
-                    {index === 0 ? baseItem.provided : totalCount}
-                  </div>
+                  <div className="text-center font-semibold">{totalCount}</div>
                 </div>
               );
             })}
@@ -794,6 +863,7 @@ const ConfirmedDataView = ({
                     <th className="py-2 px-3 text-left">품목</th>
                     <th className="py-2 px-3 text-center">선택 사이즈</th>
                     <th className="py-2 px-3 text-center">맞춤 정보</th>
+                    <th className="py-2 px-3 text-center">구입개수</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -810,6 +880,9 @@ const ConfirmedDataView = ({
                           {isPants
                             ? `기장: ${item.pantsLength || "-"}`
                             : item.customization || "-"}
+                        </td>
+                        <td className="py-2 px-3 text-center font-semibold">
+                          {item.purchaseCount}
                         </td>
                       </tr>
                     );
