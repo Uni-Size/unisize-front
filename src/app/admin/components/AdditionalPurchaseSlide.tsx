@@ -39,7 +39,7 @@ export default function AdditionalPurchaseSlide({
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const updateItem = (index: number, field: keyof AdditionalItem, value: any) => {
+  const updateItem = (index: number, field: keyof AdditionalItem, value: string | number) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
     setItems(newItems);
