@@ -1,19 +1,18 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import gsap from "gsap";
-
 import NoSchoolList from "./NoSchoolList";
 import StepOne from "./StepOne";
 import StepTwo from "./StepTwo";
 import StepThree from "./StepThree";
 import { useStudentFormStore } from "@/stores/useStudentFormStore";
-import { signupApi } from "@/api/signupApi";
 
-export default function FormStepper() {
-  const router = useRouter();
-
-  const { formData, setFormData, setBodyMeasurements } = useStudentFormStore();
+export default function FormStepper({
+  handleSubmit,
+}: {
+  handleSubmit: () => void;
+}) {
+  const { formData } = useStudentFormStore();
 
   const [step, setStep] = useState(1);
   const [showUnsupportedSchool, setShowUnsupportedSchool] = useState(false);
@@ -22,21 +21,6 @@ export default function FormStepper() {
 
   const next = () => setStep((s) => s + 1);
   const back = () => setStep((s) => s - 1);
-
-  const handleSubmit = async () => {
-    console.log(formData);
-
-    try {
-      const result = await signupApi.registerStudent(formData);
-      alert(result.message);
-      console.log("생성된 학생 ID:", result.studentId);
-      router.push("/waiting");
-    } catch (error) {
-      console.error("학생 등록 실패:", error);
-      const errorMessage = error instanceof Error ? error.message : "학생 정보 등록에 실패했습니다.";
-      alert(errorMessage);
-    }
-  };
 
   const modalRef = useRef<HTMLDivElement | null>(null);
 
@@ -51,7 +35,7 @@ export default function FormStepper() {
   }, [showUnsupportedSchool]);
 
   return (
-    <>
+    <form>
       <div className="bg-white p-6 rounded-xl shadow">
         {step === 1 && (
           <StepOne
@@ -69,6 +53,6 @@ export default function FormStepper() {
           admissionSchool={formData.admissionSchool}
         />
       )}
-    </>
+    </form>
   );
 }

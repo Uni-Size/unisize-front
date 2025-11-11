@@ -71,7 +71,7 @@ export default function Calendar({ events, year, month }: CalendarProps) {
   );
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 mb-8">
+    <div className="bg-white rounded-lg shadow p-6">
       {/* Calendar Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 
 export interface Tab {
   id: string;
@@ -18,15 +18,27 @@ export default function TabNavigation({
   activeTab: controlledActiveTab,
   onTabChange,
 }: TabNavigationProps) {
-  const [internalActiveTab, setInternalActiveTab] = useState(tabs[0]?.id || '');
+  const router = useRouter();
+  const pathname = usePathname();
 
-  const activeTab = controlledActiveTab ?? internalActiveTab;
+  // Determine active tab from pathname
+  const getActiveTabFromPath = () => {
+    if (pathname === '/admin') return 'smart-uniform';
+    const pathParts = pathname.split('/');
+    return pathParts[pathParts.length - 1] || 'smart-uniform';
+  };
+
+  const activeTab = controlledActiveTab ?? getActiveTabFromPath();
 
   const handleTabClick = (tabId: string) => {
-    if (!controlledActiveTab) {
-      setInternalActiveTab(tabId);
-    }
     onTabChange?.(tabId);
+
+    // Navigate to the corresponding page
+    if (tabId === 'smart-uniform') {
+      router.push('/admin');
+    } else {
+      router.push(`/admin/${tabId}`);
+    }
   };
 
   return (

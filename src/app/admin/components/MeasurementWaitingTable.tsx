@@ -10,13 +10,15 @@ export interface MeasurementData {
 
 interface MeasurementWaitingTableProps {
   data: MeasurementData[];
+  onDetailClick?: (id: number) => void;
 }
 
 export default function MeasurementWaitingTable({
   data,
+  onDetailClick,
 }: MeasurementWaitingTableProps) {
   return (
-    <div className="bg-white rounded-lg shadow p-6 mb-8">
+    <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-xl font-bold mb-4">결제 대기자</h2>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
@@ -73,7 +75,10 @@ export default function MeasurementWaitingTable({
                   {row.expectedAmount}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <button className="text-blue-600 hover:text-blue-800">
+                  <button
+                    onClick={() => onDetailClick?.(row.id)}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
                     🔍
                   </button>
                 </td>

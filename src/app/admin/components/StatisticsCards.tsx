@@ -16,7 +16,7 @@ export default function StatisticsCards({ data }: StatisticsCardsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-6 mb-8">
+    <div className="flex flex-col gap-6">
       {cards.map((card, index) => (
         <div
           key={index}
