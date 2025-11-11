@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SecurityMaintenanceInfoCompact } from "./components/SecurityMaintenanceInfo";
 import MeasurementSheet from "./components/MeasurementSheet";
+import { SecurityMaintenanceInfoCompact } from "./components/SecurityMaintenanceInfo";
 
 type Student = {
   no: number;
@@ -29,7 +29,6 @@ const data = Array.from({ length: 17 }, (_, i) => ({
 export default function Page() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMeasurementSheetOpen, setIsMeasurementSheetOpen] = useState(true);
-  const [toast, setToast] = useState({ show: false, message: "" });
   const [selectedStudent, setSelectedStudent] = useState<Student | null>({
     no: 1,
     timestamp: "25/01/12 12:34",
@@ -49,13 +48,7 @@ export default function Page() {
     const hasError = false;
 
     if (hasError) {
-      setToast({
-        show: true,
-        message:
-          "현재 사이즈 확정 진행중입니다. 다음 학생 사이즈 확정을 도와주세요.",
-      });
       setTimeout(() => {
-        setToast({ show: false, message: "" });
         setSelectedStudent(null);
         setIsModalOpen(false);
       }, 2000);
@@ -76,6 +69,9 @@ export default function Page() {
   }, [isMeasurementSheetOpen, isModalOpen]);
   return (
     <main className="py-6 px-5 relative">
+      <div className="relative">
+        <SecurityMaintenanceInfoCompact />
+      </div>
       {isModalOpen && selectedStudent && (
         <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
           <div className="bg-white w-full p-6 rounded-xl m-6 text-center text-2xl font-semibold">
@@ -113,30 +109,12 @@ export default function Page() {
               setIsMeasurementSheetOpen(false);
             }}
           ></div>
-          <MeasurementSheet />
+          <MeasurementSheet
+            setIsMeasurementSheetOpen={setIsMeasurementSheetOpen}
+          />
         </section>
       )}
       <section>
-        <div className="relative">
-          <SecurityMaintenanceInfoCompact />
-          {toast.show && (
-            <div className=" absolute right-0 flex p-3 bg-white border border-[#840D0D] mt-4 rounded gap-2.5 justify-center items-center">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M4 13V11H11.6L16.6 6H14V4H20V10H18V7.4L12.4 13H4ZM14 20V18H16.6L13.4 14.85L14.85 13.4L18 16.6V14H20V20H14Z"
-                  fill="#850E0E"
-                />
-              </svg>
-              <div>{toast.message}</div>
-            </div>
-          )}
-        </div>
         <div className="overflow-x-auto">
           <div className="text-sm text-gray-600 pt-4 pb-2">
             총 {data.length}명 대기중

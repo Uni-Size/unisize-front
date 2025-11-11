@@ -1,4 +1,5 @@
 import React from "react";
+import { useRouter } from "next/navigation";
 
 // 아이콘 컴포넌트 분리
 const SecurityIcon = ({ size = 44 }) => (
@@ -64,6 +65,8 @@ export function SecurityMaintenanceInfoCompact({
   today = 4,
   simultaneous = 1,
 }) {
+  const router = useRouter();
+
   return (
     <div className="border border-black/10 bg-[#FAFAFA] px-3 py-2 rounded text-left flex justify-between">
       <div>
@@ -136,11 +139,15 @@ export function SecurityMaintenanceInfoCompact({
           )}
         </div>
         {userName && (
-          <div className=" text-gray-600 mt-1.5 pt-1.5 ">
+          <button
+            className=" text-gray-600 mt-1.5 pt-1.5 "
+            type="button"
+            onClick={() => router.push(`/staff/${userName}`)}
+          >
             <span className="text-sm text-gray-600">담당자 : </span> {userName}
-          </div>
+          </button>
         )}
-      </div>{" "}
+      </div>
     </div>
   );
 }
