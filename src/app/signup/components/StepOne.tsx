@@ -5,8 +5,10 @@ import { getSupportedSchools, type School } from "@/api/schoolApi";
 
 export default function StepOne({
   next,
+  setShowUnsupportedSchool,
 }: {
   next: () => void;
+  setShowUnsupportedSchool: (show: boolean) => void;
 }) {
   // Zustand 스토어에서 직접 가져오기
   const { formData, setFormData } = useStudentFormStore();

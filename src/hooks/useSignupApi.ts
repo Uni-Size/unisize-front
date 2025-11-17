@@ -4,41 +4,17 @@ import {
   UseQueryOptions,
   UseMutationOptions,
 } from "@tanstack/react-query";
-import { SUPPORTED_SCHOOLS } from "@/mocks/signupData";
+import {
+  getSupportedSchools,
+  registerStudent,
+  type School,
+  type StudentRegistrationRequest,
+  type StudentRegistrationResponse,
+  type SchoolSupportResponse,
+} from "@/api/signupApi";
 
-// 학생 등록 요청 타입
-export interface StudentRegistrationRequest {
-  previousSchool: string;
-  admissionYear: number;
-  admissionGrade: number;
-  admissionSchool: string;
-  name: string;
-  studentPhone: string;
-  guardianPhone: string;
-  birthDate: string;
-  gender: string;
-  privacyConsent: boolean;
-  body: {
-    height: number;
-    weight: number;
-    shoulder: number;
-    waist: number;
-  };
-}
-
-// 학생 등록 응답 타입
-export interface StudentRegistrationResponse {
-  success: boolean;
-  message: string;
-  studentId?: string;
-}
-
-// 학교 지원 여부 확인 응답 타입
-export interface SchoolSupportResponse {
-  supported: boolean;
-  schoolName: string;
-  message?: string;
-}
+// Re-export types
+export type { StudentRegistrationRequest, StudentRegistrationResponse, SchoolSupportResponse, School };
 
 // Query Keys
 export const signupKeys = {
@@ -48,84 +24,21 @@ export const signupKeys = {
     [...signupKeys.all, "schoolSupport", schoolName] as const,
 };
 
-// API 함수들
-async function fetchSupportedSchools(): Promise<string[]> {
-  // 더미 데이터로 시뮬레이션
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log("지원 학교 목록 조회:", SUPPORTED_SCHOOLS);
-      resolve(SUPPORTED_SCHOOLS);
-    }, 200);
-  });
-}
-
+// 학교 지원 여부 확인 함수
 async function fetchSchoolSupport(
   schoolName: string
 ): Promise<SchoolSupportResponse> {
-  // 더미 데이터로 시뮬레이션
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const supported = SUPPORTED_SCHOOLS.includes(schoolName);
-      const result = {
-        supported,
-        schoolName,
-        message: supported
-          ? `${schoolName}은(는) 지원 가능한 학교입니다.`
-          : `${schoolName}은(는) 현재 지원되지 않는 학교입니다.`,
-      };
-      console.log("학교 지원 여부 확인:", result);
-      resolve(result);
-    }, 300);
-  });
-}
+  // 지원 학교 목록 가져오기
+  const schools = await getSupportedSchools();
+  const supported = schools.some((school) => school.name === schoolName);
 
-async function registerStudent(
-  data: StudentRegistrationRequest
-): Promise<StudentRegistrationResponse> {
-  // 더미 데이터로 시뮬레이션
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      // 필수 항목 검증
-      if (
-        !data.previousSchool ||
-        !data.admissionYear ||
-        !data.admissionGrade ||
-        !data.admissionSchool ||
-        !data.name ||
-        !data.studentPhone ||
-        !data.guardianPhone ||
-        !data.birthDate ||
-        !data.gender ||
-        !data.body.height ||
-        !data.body.weight ||
-        !data.body.shoulder ||
-        !data.body.waist
-      ) {
-        reject({
-          success: false,
-          message: "모든 필수 항목을 입력해주세요.",
-        });
-        return;
-      }
-
-      // 개인정보 동의 확인
-      if (!data.privacyConsent) {
-        reject({
-          success: false,
-          message: "개인정보 수집·이용에 동의해주세요.",
-        });
-        return;
-      }
-
-      // 성공 응답
-      console.log("학생 등록 데이터:", data);
-      resolve({
-        success: true,
-        message: "학생 정보가 성공적으로 등록되었습니다.",
-        studentId: `student-${Date.now()}`,
-      });
-    }, 500);
-  });
+  return {
+    supported,
+    schoolName,
+    message: supported
+      ? `${schoolName}은(는) 지원 가능한 학교입니다.`
+      : `${schoolName}은(는) 현재 지원되지 않는 학교입니다.`,
+  };
 }
 
 // React Query Hooks
@@ -133,13 +46,13 @@ async function registerStudent(
 // 1. 지원 학교 목록 조회
 export function useSupportedSchools(
   options?: Omit<
-    UseQueryOptions<string[], Error, string[], readonly string[]>,
+    UseQueryOptions<School[], Error, School[], readonly string[]>,
     "queryKey" | "queryFn"
   >
 ) {
   return useQuery({
     queryKey: signupKeys.supportedSchools(),
-    queryFn: fetchSupportedSchools,
+    queryFn: getSupportedSchools,
     ...options,
   });
 }
