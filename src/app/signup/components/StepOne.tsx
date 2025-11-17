@@ -1,25 +1,43 @@
 import { useStudentFormStore } from "@/stores/useStudentFormStore";
-import { useState } from "react";
-import { SUPPORTED_SCHOOLS, GRADE_OPTIONS } from "@/mocks/signupData";
-import { signupApi } from "@/api/signupApi";
+import { useState, useEffect } from "react";
+import { GRADE_OPTIONS } from "@/mocks/signupData";
+import { getSupportedSchools, type School } from "@/api/schoolApi";
 
 export default function StepOne({
   next,
-  setShowUnsupportedSchool,
 }: {
   next: () => void;
-  setShowUnsupportedSchool: (isShow: boolean) => void;
 }) {
   // Zustand 스토어에서 직접 가져오기
   const { formData, setFormData } = useStudentFormStore();
 
   const [errors, setErrors] = useState("");
+  const [schools, setSchools] = useState<School[]>([]);
+  const [isLoadingSchools, setIsLoadingSchools] = useState(false);
   const currentYear = new Date().getFullYear();
+
+  // 학교 리스트 가져오기
+  useEffect(() => {
+    const fetchSchools = async () => {
+      setIsLoadingSchools(true);
+      try {
+        const schoolList = await getSupportedSchools();
+        setSchools(schoolList);
+      } catch (error) {
+        console.error("학교 리스트 조회 실패:", error);
+        setErrors("학교 리스트를 불러오는데 실패했습니다.");
+      } finally {
+        setIsLoadingSchools(false);
+      }
+    };
+
+    fetchSchools();
+  }, []);
 
   const generateYearOptions = () =>
     Array.from({ length: 4 }, (_, index) => currentYear - 1 + index);
 
-  const handleNext = async () => {
+  const handleNext = () => {
     console.log(formData);
     setErrors("");
 
@@ -34,13 +52,6 @@ export default function StepOne({
       return;
     }
 
-    // API를 통해 학교 지원 여부 확인
-    const supportCheck = await signupApi.checkSchoolSupport(formData.admissionSchool);
-
-    if (!supportCheck.supported) {
-      setShowUnsupportedSchool(true);
-      return;
-    }
     next();
   };
 
@@ -131,16 +142,24 @@ export default function StepOne({
           >
             입학학교
           </label>
-          <input
+          <select
             id="admissionSchool"
-            type="text"
             value={formData.admissionSchool}
             onChange={(e) => setFormData("admissionSchool", e.target.value)}
+            disabled={isLoadingSchools}
             className="w-full border border-gray-300 rounded-md px-3 py-2
                          focus:outline-none focus:ring-2 focus:ring-blue-500
-                         focus:border-transparent"
-            placeholder="입학학교를 입력해주세요"
-          />
+                         focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+          >
+            <option value="">
+              {isLoadingSchools ? "학교 목록 불러오는 중..." : "학교를 선택해주세요"}
+            </option>
+            {schools.map((school) => (
+              <option key={school.id} value={school.name}>
+                {school.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* 등록 버튼 */}

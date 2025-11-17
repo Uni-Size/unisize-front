@@ -34,8 +34,12 @@ export default function FormStepper({
     }
   }, [showUnsupportedSchool]);
 
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+  };
+
   return (
-    <form>
+    <form onSubmit={handleFormSubmit}>
       <div className="bg-white p-6 rounded-xl shadow">
         {step === 1 && (
           <StepOne

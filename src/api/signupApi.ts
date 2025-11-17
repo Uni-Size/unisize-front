@@ -45,22 +45,6 @@ class SignupApi {
     });
   }
 
-  // 학교 지원 여부 확인
-  async checkSchoolSupport(schoolName: string): Promise<SchoolSupportResponse> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const supported = SUPPORTED_SCHOOLS.includes(schoolName);
-        resolve({
-          supported,
-          schoolName,
-          message: supported
-            ? `${schoolName}은(는) 지원 가능한 학교입니다.`
-            : `${schoolName}은(는) 현재 지원되지 않는 학교입니다.`,
-        });
-      }, 300);
-    });
-  }
-
   // 학생 정보 등록
   async registerStudent(
     data: StudentRegistrationRequest
