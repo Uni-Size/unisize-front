@@ -21,7 +21,6 @@ export default function SignupPage() {
 
     try {
       const result = await addStudent(formData);
-      alert(result.message);
       console.log("생성된 학생 ID:", result.studentId);
       router.push("/waiting");
     } catch (error) {

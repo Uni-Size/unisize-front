@@ -63,10 +63,21 @@ apiClient.interceptors.response.use(
     // 401 에러 처리 (인증 실패)
     if (error.response?.status === 401) {
       console.error("인증 실패: 로그인이 필요합니다.");
-      // 여기서 로그인 페이지로 리다이렉트하거나 토큰 갱신 로직 추가
+      // 클라이언트 사이드에서만 실행
       if (typeof window !== "undefined") {
+        // localStorage에서 토큰 삭제
         localStorage.removeItem("accessToken");
-        // window.location.href = "/login"; // 필요시 주석 해제
+        localStorage.removeItem("refreshToken");
+
+        // 쿠키 삭제
+        document.cookie = "accessToken=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
+        document.cookie = "refreshToken=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
+
+        // authStore 초기화 (localStorage의 auth-storage도 삭제)
+        localStorage.removeItem("auth-storage");
+
+        // 로그인 페이지로 리다이렉트
+        window.location.href = "/staff/signup";
       }
     }
 

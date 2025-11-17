@@ -1,12 +1,3 @@
-// 지원 학교 목록 더미 데이터
-export const SUPPORTED_SCHOOLS = [
-  "서울고등학교",
-  "경기고등학교",
-  "부산고등학교",
-  "대구고등학교",
-  "인천고등학교",
-];
-
 // 학년 옵션 더미 데이터
 export const GRADE_OPTIONS = [
   { value: 1, label: "1학년" },

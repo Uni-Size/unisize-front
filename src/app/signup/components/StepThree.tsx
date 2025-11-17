@@ -129,7 +129,7 @@ export default function StepThree({
           학생 정보 변경하기
         </button>
         <button
-          type="submit"
+          type="button"
           onClick={submit}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium
                      py-2 px-4 rounded-md transition duration-200 ease-in-out

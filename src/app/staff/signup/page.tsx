@@ -3,10 +3,12 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { login } from "@/api/authApi";
+import { useAuthStore } from "@/stores/authStore";
 
 function Page() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  const { setAuth } = useAuthStore();
+  const [employeeId, setEmployeeId] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -17,8 +19,17 @@ function Page() {
     setIsLoading(true);
 
     try {
-      await login({ username, password });
-      // 로그인 성공 시 리다이렉트 (필요한 경로로 수정)
+      // 로그인 요청
+      const loginResponse = await login({ employee_id: employeeId, password });
+
+      // 로그인 상태 저장 (API 응답에 user 정보가 포함되어 있음)
+      setAuth(
+        loginResponse.user,
+        loginResponse.access_token,
+        loginResponse.refresh_token
+      );
+
+      // 로그인 성공 시 리다이렉트
       router.push("/staff");
     } catch (err) {
       console.error("로그인 실패:", err);
@@ -76,8 +87,8 @@ function Page() {
           아이디
           <input
             type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            value={employeeId}
+            onChange={(e) => setEmployeeId(e.target.value)}
             disabled={isLoading}
             required
             className="mt-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
