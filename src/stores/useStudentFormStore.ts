@@ -19,6 +19,8 @@ interface FormData {
   gender: string;
   privacyConsent: boolean;
   body: BodyMeasurements;
+  address: string;
+  delivery: boolean;
 }
 
 interface FormStore {
@@ -48,6 +50,8 @@ const initialFormData: FormData = {
     shoulder: 0,
     waist: 0,
   },
+  address: "",
+  delivery: false,
 };
 
 export const useStudentFormStore = create<FormStore>((set) => ({

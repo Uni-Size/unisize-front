@@ -1,7 +1,6 @@
 import { useStudentFormStore } from "@/stores/useStudentFormStore";
 import { useState } from "react";
 import { PRIVACY_POLICY } from "@/mocks/signupData";
-import { signupApi } from "@/api/signupApi";
 
 export default function StepTwo({
   back,
