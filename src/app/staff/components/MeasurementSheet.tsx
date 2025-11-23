@@ -30,10 +30,14 @@ type UniformSizeItem = {
   purchaseCount: number; // 구입 개수 추가
 };
 
+type MeasurementMode = "new" | "edit" | "readonly";
+
 export default function MeasurementSheet({
   setIsMeasurementSheetOpen,
+  mode = "new",
 }: {
   setIsMeasurementSheetOpen: (open: boolean) => void;
+  mode?: MeasurementMode;
 }) {
   const [season, setSeason] = useState<"동복" | "하복">("동복");
   const [supplyItems, setSupplyItems] = useState<SupplyItem[]>([]);
@@ -44,8 +48,10 @@ export default function MeasurementSheet({
     []
   );
 
-  // 측정 완료 여부
-  const [isMeasurementComplete, setIsMeasurementComplete] = useState(false);
+  // 측정 완료 여부 - edit이나 readonly 모드면 true로 시작
+  const [isMeasurementComplete, setIsMeasurementComplete] = useState(
+    mode === "edit" || mode === "readonly"
+  );
 
   // 서명 입력
   const [signature, setSignature] = useState("");
@@ -312,28 +318,43 @@ export default function MeasurementSheet({
 
           {/* 서명 및 최종 확정 */}
           <div className="border-b-8 border-black/5 p-6">
-            <p className="text-xs text-gray-600 pb-3.5">서명</p>
-            <input
-              type="text"
-              value={signature}
-              onChange={(e) => setSignature(e.target.value)}
-              placeholder="서명을 입력해주세요"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={() => setIsMeasurementComplete(false)}
-                className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-              >
-                수정하기
-              </button>
-              <button
-                onClick={handleFinalConfirmation}
-                className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                최종 확정
-              </button>
-            </div>
+            {mode === "readonly" ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm font-semibold text-yellow-800 mb-2">
+                  수정 불가 안내
+                </p>
+                <p className="text-sm text-yellow-700">
+                  결제 완료 후 일정 기간이 지나 더 이상 수정할 수 없습니다.
+                  <br />
+                  변경이 필요한 경우 관리자에게 문의해주세요.
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-gray-600 pb-3.5">서명</p>
+                <input
+                  type="text"
+                  value={signature}
+                  onChange={(e) => setSignature(e.target.value)}
+                  placeholder="서명을 입력해주세요"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setIsMeasurementComplete(false)}
+                    className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                  >
+                    수정하기
+                  </button>
+                  <button
+                    onClick={handleFinalConfirmation}
+                    className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    최종 확정
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </>
       )}
