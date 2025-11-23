@@ -62,6 +62,11 @@ export async function login(credentials: LoginRequest): Promise<LoginResponseDat
       localStorage.setItem("refreshToken", loginData.refresh_token);
       setCookie("refreshToken", loginData.refresh_token, 30);
     }
+
+    // role 정보를 쿠키에 저장 (middleware에서 권한 검증용)
+    if (loginData.user?.role) {
+      setCookie("userRole", loginData.user.role, 7);
+    }
   }
 
   return loginData;
@@ -83,5 +88,6 @@ export async function logout(): Promise<void> {
     localStorage.removeItem("refreshToken");
     deleteCookie("accessToken");
     deleteCookie("refreshToken");
+    deleteCookie("userRole");
   }
 }

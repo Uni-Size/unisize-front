@@ -1,28 +1,8 @@
 "use client";
 
-import { useStudentFormStore } from "@/stores/useStudentFormStore";
+import { useStudentResponseStore } from "@/stores/useStudentResponseStore";
 import Image from "next/image";
 import { useState, useRef } from "react";
-
-const data = {
-  동복: [
-    { item: "자켓", size: 95, count: 1 },
-    { item: "니트조끼", size: 95, count: 1 },
-    { item: "블라우스", size: 100, count: 2 },
-    { item: "치마", size: 72, count: 1 },
-    { item: "바지", size: 80, count: 0 },
-    { item: "체육복 상의", size: 100, count: 0 },
-    { item: "체육복 하의", size: 100, count: 0 },
-  ],
-  하복: [
-    { item: "반팔셔츠", size: 95, count: 2 },
-    { item: "반바지", size: 78, count: 1 },
-    { item: "치마", size: 72, count: 1 },
-    { item: "니트조끼", size: 95, count: 0 },
-    { item: "체육복 반팔", size: 100, count: 0 },
-    { item: "체육복 반바지", size: 100, count: 0 },
-  ],
-};
 
 const itemData = {
   동복: [
@@ -52,7 +32,7 @@ const itemData = {
 };
 
 export default function WaitingPage() {
-  const { formData } = useStudentFormStore();
+  const { studentData } = useStudentResponseStore();
 
   const [activeTab, setActiveTab] = useState<"동복" | "하복">("동복");
   const [touchStart, setTouchStart] = useState(0);
@@ -60,6 +40,42 @@ export default function WaitingPage() {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const tabs: ("동복" | "하복")[] = ["동복", "하복"];
+
+  // 디버깅 로그
+  console.log("=== Waiting 페이지 렌더링 ===");
+  console.log("studentData:", studentData);
+  console.log(
+    "전체 store 상태:",
+    useStudentResponseStore.getState()
+  );
+
+  // API 응답 데이터가 없으면 로딩 표시
+  if (!studentData) {
+    console.log("=== studentData가 없음 - 로딩 표시 ===");
+    return (
+      <section className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
+        <div className="text-center">
+          <p className="text-gray-600">데이터를 불러오는 중...</p>
+        </div>
+      </section>
+    );
+  }
+
+  // API 응답 데이터를 테이블 형식으로 변환
+  const data = {
+    동복:
+      studentData.recommended_sizes?.winter?.map((item) => ({
+        item: item.product,
+        size: item.size,
+        count: item.free,
+      })) || [],
+    하복:
+      studentData.recommended_sizes?.summer?.map((item) => ({
+        item: item.product,
+        size: item.size,
+        count: item.free,
+      })) || [],
+  };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientX);
@@ -149,7 +165,7 @@ export default function WaitingPage() {
       {/* 헤더 */}
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-2">
-          {formData.admissionSchool} {formData.name}
+          {studentData.school_name} {studentData.name}
         </h2>
         <p className="text-gray-600">
           교복을 입어보실 수 있도록 준비해드리겠습니다.

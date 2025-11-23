@@ -1,4 +1,48 @@
-function page() {
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { login } from "@/api/authApi";
+import { useAuthStore } from "@/stores/authStore";
+
+function AdminSignInPage() {
+  const router = useRouter();
+  const { setAuth } = useAuthStore();
+  const [employeeId, setEmployeeId] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const response = await login({
+        employee_id: employeeId,
+        password: password,
+      });
+
+      // role이 admin인지 확인
+      if (response.user.role !== "admin") {
+        setError("관리자 권한이 없습니다.");
+        setIsLoading(false);
+        return;
+      }
+
+      // authStore에 저장
+      setAuth(response.user, response.access_token, response.refresh_token);
+
+      // 어드민 메인 페이지로 이동
+      router.push("/admin");
+    } catch (err) {
+      console.error("로그인 실패:", err);
+      setError("로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.");
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className=" flex gap-2.5 justify-center">
@@ -34,32 +78,47 @@ function page() {
         외부 유출되지 않도록 특별히 주의해주세요
       </h5>
 
-      <form className="mt-10 flex flex-col gap-4 w-3/4  mx-auto">
+      <form className="mt-10 flex flex-col gap-4 w-3/4 mx-auto" onSubmit={handleSubmit}>
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">
+            {error}
+          </div>
+        )}
+
         <label className="flex flex-col text-sm font-medium">
           관리자 아이디
           <input
             type="text"
+            value={employeeId}
+            onChange={(e) => setEmployeeId(e.target.value)}
             className="mt-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="관리자 아이디를 입력하세요"
+            required
+            disabled={isLoading}
           />
         </label>
         <label className="flex flex-col text-sm font-medium">
           비밀번호
           <input
             type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             className="mt-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="비밀번호를 입력하세요"
+            required
+            disabled={isLoading}
           />
         </label>
         <button
           type="submit"
-          className="mt-4 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors"
+          disabled={isLoading}
+          className="mt-4 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          로그인
+          {isLoading ? "로그인 중..." : "로그인"}
         </button>
       </form>
     </div>
   );
 }
 
-export default page;
+export default AdminSignInPage;

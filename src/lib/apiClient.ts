@@ -72,6 +72,7 @@ apiClient.interceptors.response.use(
         // 쿠키 삭제
         document.cookie = "accessToken=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
         document.cookie = "refreshToken=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
+        document.cookie = "userRole=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
 
         // authStore 초기화 (localStorage의 auth-storage도 삭제)
         localStorage.removeItem("auth-storage");

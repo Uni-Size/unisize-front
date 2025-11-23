@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import MeasurementSheet from "../../components/MeasurementSheet";
+
 const data = Array.from({ length: 17 }, (_, i) => ({
   no: i + 1,
   timestamp: "25/01/12 12:34",
@@ -22,23 +24,42 @@ type Student = {
   status: string;
 };
 export default function ProgressList() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>({
-    no: 1,
-    timestamp: "25/01/12 12:34",
-    name: "김인철",
-    gender: "남",
-    fromSchool: "솔밭중학교",
-    toSchool: "청주고등학교",
-    category: "신입",
-    status: "pending",
-  });
+  const [isMeasurementSheetOpen, setIsMeasurementSheetOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+
   const handleDetailClick = (student: Student) => {
     setSelectedStudent(student);
-    setIsModalOpen(true);
+    setIsMeasurementSheetOpen(true);
   };
+
+  useEffect(() => {
+    if (isMeasurementSheetOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isMeasurementSheetOpen]);
+
   return (
-    <div>
+    <div className="relative">
+      {isMeasurementSheetOpen && (
+        <section className="fixed inset-0 z-50">
+          <div
+            className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm"
+            onClick={() => {
+              setIsMeasurementSheetOpen(false);
+            }}
+          ></div>
+          <MeasurementSheet
+            setIsMeasurementSheetOpen={setIsMeasurementSheetOpen}
+            mode="edit"
+          />
+        </section>
+      )}
+
       <table className="w-full">
         <thead className="bg-gray-50 border-b-2 border-gray-200">
           <tr>

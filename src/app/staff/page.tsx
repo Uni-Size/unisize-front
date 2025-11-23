@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import MeasurementSheet from "./components/MeasurementSheet";
-import { SecurityMaintenanceInfoCompact } from "./components/SecurityMaintenanceInfo";
 import { getRegisterStudents, RegisterStudent } from "@/api/studentApi";
 
 type Student = {
@@ -108,10 +107,7 @@ export default function Page() {
     };
   }, [isMeasurementSheetOpen, isModalOpen]);
   return (
-    <main className="py-6 px-5 relative">
-      <div className="relative">
-        <SecurityMaintenanceInfoCompact />
-      </div>
+    <main className="px-5 relative">
       {isModalOpen && selectedStudent && (
         <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
           <div className="bg-white w-full p-6 rounded-xl m-6 text-center text-2xl font-semibold">

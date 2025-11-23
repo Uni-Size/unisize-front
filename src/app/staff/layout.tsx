@@ -1,23 +1,44 @@
-import { cookies, headers } from "next/headers";
-import { redirect } from "next/navigation";
+"use client";
 
-export default async function StaffLayout({
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useAuthStore } from "@/stores/authStore";
+import { SecurityMaintenanceInfoCompact } from "./components/SecurityMaintenanceInfo";
+
+export default function StaffLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // 쿠키에서 accessToken 확인
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get("accessToken");
+  const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
+  const [isClient, setIsClient] = useState(false);
 
-  // 현재 경로 확인
-  const headersList = await headers();
-  const pathname = headersList.get("x-invoke-path") || "";
+  // 클라이언트에서만 렌더링되도록
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
-  // /staff/signup이 아닌 경우에만 인증 체크
-  if (!pathname.includes("/staff/signup") && !accessToken) {
-    redirect("/staff/signup");
-  }
+  // 인증 체크 (로그인 페이지가 아닌 경우)
+  useEffect(() => {
+    if (isClient && !pathname.includes("/staff/signup") && !isAuthenticated) {
+      router.push("/staff/signup");
+    }
+  }, [isClient, pathname, isAuthenticated, router]);
 
-  return <section>{children}</section>;
+  // 로그인 페이지인지 확인
+  const isSignupPage = pathname === "/staff/signup";
+
+  return (
+    <section>
+      {/* 로그인 페이지가 아닐 때만 SecurityMaintenanceInfoCompact 표시 */}
+      {!isSignupPage && isClient && (
+        <div className="py-6 px-5">
+          <SecurityMaintenanceInfoCompact />
+        </div>
+      )}
+      {children}
+    </section>
+  );
 }

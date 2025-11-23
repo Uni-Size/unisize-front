@@ -39,6 +39,37 @@ interface StudentApiRequest {
   delivery: boolean;
 }
 
+// addStudent 응답 데이터
+export interface RecommendedSizeItem {
+  product: string;
+  size: number;
+  free: number;
+}
+
+export interface AddStudentResponse {
+  id: number;
+  name: string;
+  birth_date: string;
+  gender: string;
+  student_phone: string;
+  guardian_phone: string;
+  address: string;
+  delivery: boolean;
+  privacy_consent: boolean;
+  previous_school: string;
+  admission_year: number;
+  admission_grade: number;
+  school_name: string;
+  grade: number;
+  checked_in_at: string;
+  recommended_sizes?: {
+    winter?: RecommendedSizeItem[];
+    summer?: RecommendedSizeItem[];
+  };
+  created_at: string;
+  updated_at: string;
+}
+
 // 대기 리스트 학생 정보
 export interface RegisterStudent {
   id: number;
@@ -93,8 +124,16 @@ export async function getRegisterStudents(params?: {
   return response.data;
 }
 
+// API 응답 래퍼 타입
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+}
+
 // 학생 생성
-export async function addStudent(formData: StudentFormData) {
+export async function addStudent(
+  formData: StudentFormData
+): Promise<AddStudentResponse> {
   const startTime = performance.now();
 
   // camelCase를 snake_case로 변환
@@ -114,12 +153,16 @@ export async function addStudent(formData: StudentFormData) {
     delivery: formData.delivery,
   };
 
-  const response = await apiClient.post("api/v1/students/register", requestData);
+  const response = await apiClient.post<ApiResponse<AddStudentResponse>>(
+    "api/v1/students/register",
+    requestData
+  );
 
   const endTime = performance.now();
   const responseTime = Math.round(endTime - startTime);
 
   console.log("응답 시간:", `${responseTime}ms`);
 
-  return { ...response.data, responseTime };
+  // API 응답이 { success: true, data: {...} } 형식이므로 data만 반환
+  return response.data.data;
 }
