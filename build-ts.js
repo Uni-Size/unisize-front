@@ -6,7 +6,7 @@ import StyleDictionary from "style-dictionary";
 register(StyleDictionary);
 
 const sd = new StyleDictionary({
-  source: ["./token/color-token.json"], // Tokens Studio 에서 추출한 토큰
+  source: ["./token/origin-figma-token.json"], // Tokens Studio 에서 추출한 토큰
   preprocessors: ["tokens-studio"],
   platforms: {
     css: {

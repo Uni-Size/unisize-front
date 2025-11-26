@@ -4,12 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "tokens:build": "node build-ts.js && node build-tw.js",
+    "predev": "npm run tokens:build",
     "dev": "next dev",
+    "prebuild": "npm run tokens:build",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "split:tokens": "node split-tokens.js",
-    "build:tokens:tailwind": "node sd-tokens-config.js && node tw-tokens-config.js"
+    "lint": "eslint"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.7",
