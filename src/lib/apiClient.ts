@@ -65,20 +65,26 @@ apiClient.interceptors.response.use(
       console.error("인증 실패: 로그인이 필요합니다.");
       // 클라이언트 사이드에서만 실행
       if (typeof window !== "undefined") {
-        // localStorage에서 토큰 삭제
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
+        // 현재 경로가 로그인 페이지가 아닌 경우에만 리다이렉트
+        const currentPath = window.location.pathname;
+        const isLoginPage = currentPath === "/admin/signin" || currentPath === "/staff/signup";
 
-        // 쿠키 삭제
-        document.cookie = "accessToken=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
-        document.cookie = "refreshToken=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
-        document.cookie = "userRole=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
+        if (!isLoginPage) {
+          // localStorage에서 토큰 삭제
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
 
-        // authStore 초기화 (localStorage의 auth-storage도 삭제)
-        localStorage.removeItem("auth-storage");
+          // 쿠키 삭제
+          document.cookie = "accessToken=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
+          document.cookie = "refreshToken=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
+          document.cookie = "userRole=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
 
-        // 로그인 페이지로 리다이렉트
-        window.location.href = "/staff/signup";
+          // authStore 초기화 (localStorage의 auth-storage도 삭제)
+          localStorage.removeItem("auth-storage");
+
+          // 로그인 페이지로 리다이렉트
+          window.location.href = "/staff/signup";
+        }
       }
     }
 
