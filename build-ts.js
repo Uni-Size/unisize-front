@@ -2,20 +2,46 @@
 
 import { register } from "@tokens-studio/sd-transforms";
 import StyleDictionary from "style-dictionary";
+import fs from "fs";
+
+// 토큰 파일을 읽어서 평탄화
+const rawTokens = JSON.parse(
+  fs.readFileSync("./token/origin-figma-token.json", "utf8")
+);
+
+// 토큰 평탄화: font-token의 내용을 최상위로 이동
+const flattenedTokens = {
+  ...rawTokens,
+};
+
+// font-token 내부의 토큰들을 최상위로 복사
+if (rawTokens["font-token"]) {
+  Object.keys(rawTokens["font-token"]).forEach((key) => {
+    if (!flattenedTokens[key]) {
+      flattenedTokens[key] = rawTokens["font-token"][key];
+    }
+  });
+}
+
+// 임시 평탄화된 토큰 파일 생성
+fs.writeFileSync(
+  "./token/flattened-token.json",
+  JSON.stringify(flattenedTokens, null, 2)
+);
 
 register(StyleDictionary);
 
 const sd = new StyleDictionary({
-  source: ["./token/origin-figma-token.json"], // Tokens Studio 에서 추출한 토큰
+  source: ["./token/flattened-token.json"], // 평탄화된 토큰 사용
   preprocessors: ["tokens-studio"],
   platforms: {
     css: {
-      transformGroup: "tokens-studio", // <-- apply the tokens-studio transformGroup to apply all transforms
-      transforms: ["name/kebab"], // 만들어질 token 이름 형태, 기본값 camel
-      buildPath: "", // 생성될 파일 경로
+      transformGroup: "tokens-studio",
+      transforms: ["name/kebab"],
+      buildPath: "token/",
       files: [
         {
-          destination: "tokens.json", // 반환될 토큰 파일 이름
+          destination: "tokens.json",
           format: "json",
         },
       ],

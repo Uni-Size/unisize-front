@@ -134,6 +134,24 @@
     --color-background-900: #262626;
     --color-background-canvas: #ffffff;
 
+  /* Font tokens */
+    --font-family-pretendard-variable: 'Pretendard Variable';
+    --font-size-0: 11px;
+    --font-size-1: 12px;
+    --font-size-2: 13px;
+    --font-size-3: 15px;
+    --font-size-4: 16px;
+    --font-size-5: 17px;
+    --font-size-6: 20px;
+    --font-size-7: 22px;
+    --font-size-8: 28px;
+    --font-size-9: 34px;
+    --font-weight-pretendard-variable-0: 700;
+    --font-weight-pretendard-variable-1: 600;
+    --font-weight-pretendard-variable-2: 500;
+    --font-weight-pretendard-variable-3: 400;
+    --letter-spacing-0: 0em;
+
 }
 
 /* Dark mode colors */
@@ -271,3 +289,105 @@
     --color-background-canvas: #232323;
 
 }
+
+/* Typography utility classes */
+
+/* 화면의 최상단에서 페이지나 뷰의 제목을 표시할 때 */
+.large-title {
+  font-family: 'Pretendard Variable';
+  font-weight: 700;
+  font-size: 34px;
+  line-height: normal;
+  letter-spacing: 0em;
+}
+
+/* 주요 화면 제목 또는 큰 섹션의 헤더 */
+.title1 {
+  font-family: 'Pretendard Variable';
+  font-weight: 600;
+  font-size: 28px;
+  line-height: normal;
+  letter-spacing: 0em;
+}
+
+/* 중간 수준의 섹션 제목 */
+.title2 {
+  font-family: 'Pretendard Variable';
+  font-weight: 500;
+  font-size: 22px;
+  line-height: normal;
+  letter-spacing: 0em;
+}
+
+/* 작은 섹션 제목이나 카드형 UI의 타이틀 */
+.title3 {
+  font-family: 'Pretendard Variable';
+  font-weight: 400;
+  font-size: 20px;
+  line-height: normal;
+  letter-spacing: 0em;
+}
+
+/* 기본 본문 텍스트 */
+.body {
+  font-family: 'Pretendard Variable';
+  font-weight: 400;
+  font-size: 17px;
+  line-height: normal;
+  letter-spacing: 0em;
+}
+
+/* 강조된 본문 텍스트, 리스트 제목 */
+.headline {
+  font-family: 'Pretendard Variable';
+  font-weight: 500;
+  font-size: 17px;
+  line-height: normal;
+  letter-spacing: 0em;
+}
+
+/* 부제목, 날짜, 위치 정보 등 부가 설명 */
+.subhead-line {
+  font-family: 'Pretendard Variable';
+  font-weight: 400;
+  font-size: 15px;
+  line-height: normal;
+  letter-spacing: 0em;
+}
+
+/* 본문보다 약간 작지만 눈에 띄는 보조 설명 */
+.callout {
+  font-family: 'Pretendard Variable';
+  font-weight: 400;
+  font-size: 16px;
+  line-height: normal;
+  letter-spacing: 0em;
+}
+
+/* 이미지 캡션, 버튼 라벨, UI의 작은 설명 */
+.caption1 {
+  font-family: 'Pretendard Variable';
+  font-weight: 400;
+  font-size: 12px;
+  line-height: normal;
+  letter-spacing: 0em;
+}
+
+/* 보조 캡션, 세부 정보, 아주 작은 라벨 */
+.caption2 {
+  font-family: 'Pretendard Variable';
+  font-weight: 400;
+  font-size: 11px;
+  line-height: normal;
+  letter-spacing: 0em;
+}
+
+/* 짧은 주석, 법적 고지, 보조 정보 */
+.footnote {
+  font-family: 'Pretendard Variable';
+  font-weight: 400;
+  font-size: 13px;
+  line-height: normal;
+  letter-spacing: 0em;
+}
+
