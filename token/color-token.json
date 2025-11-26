@@ -1105,10 +1105,320 @@
       }
     }
   },
+  "font-token": {
+    "fontFamilies": {
+      "pretendard-variable": {
+        "value": "Pretendard Variable",
+        "type": "fontFamilies"
+      }
+    },
+    "lineHeights": {
+      "0": {
+        "value": "AUTO",
+        "type": "lineHeights"
+      },
+      "1": {
+        "value": "AUTO",
+        "type": "lineHeights"
+      },
+      "2": {
+        "value": "AUTO",
+        "type": "lineHeights"
+      },
+      "3": {
+        "value": "AUTO",
+        "type": "lineHeights"
+      },
+      "4": {
+        "value": "AUTO",
+        "type": "lineHeights"
+      },
+      "5": {
+        "value": "AUTO",
+        "type": "lineHeights"
+      },
+      "6": {
+        "value": "AUTO",
+        "type": "lineHeights"
+      },
+      "7": {
+        "value": "AUTO",
+        "type": "lineHeights"
+      },
+      "8": {
+        "value": "AUTO",
+        "type": "lineHeights"
+      },
+      "9": {
+        "value": "AUTO",
+        "type": "lineHeights"
+      },
+      "10": {
+        "value": "AUTO",
+        "type": "lineHeights"
+      }
+    },
+    "fontWeights": {
+      "pretendard-variable-0": {
+        "value": "Bold",
+        "type": "fontWeights"
+      },
+      "pretendard-variable-1": {
+        "value": "SemiBold",
+        "type": "fontWeights"
+      },
+      "pretendard-variable-2": {
+        "value": "Medium",
+        "type": "fontWeights"
+      },
+      "pretendard-variable-3": {
+        "value": "Regular",
+        "type": "fontWeights"
+      }
+    },
+    "fontSize": {
+      "0": {
+        "value": 11,
+        "type": "fontSizes"
+      },
+      "1": {
+        "value": 12,
+        "type": "fontSizes"
+      },
+      "2": {
+        "value": 13,
+        "type": "fontSizes"
+      },
+      "3": {
+        "value": 15,
+        "type": "fontSizes"
+      },
+      "4": {
+        "value": 16,
+        "type": "fontSizes"
+      },
+      "5": {
+        "value": 17,
+        "type": "fontSizes"
+      },
+      "6": {
+        "value": 20,
+        "type": "fontSizes"
+      },
+      "7": {
+        "value": 22,
+        "type": "fontSizes"
+      },
+      "8": {
+        "value": 28,
+        "type": "fontSizes"
+      },
+      "9": {
+        "value": 34,
+        "type": "fontSizes"
+      }
+    },
+    "letterSpacing": {
+      "0": {
+        "value": "0%",
+        "type": "letterSpacing"
+      }
+    },
+    "paragraphSpacing": {
+      "0": {
+        "value": 0,
+        "type": "paragraphSpacing"
+      }
+    },
+    "largeTitle": {
+      "value": {
+        "fontFamily": "{fontFamilies.pretendard-variable}",
+        "fontWeight": "{fontWeights.pretendard-variable-0}",
+        "lineHeight": "{lineHeights.0}",
+        "fontSize": "{fontSize.9}",
+        "letterSpacing": "{letterSpacing.0}",
+        "paragraphSpacing": "{paragraphSpacing.0}",
+        "paragraphIndent": "{paragraphIndent.0}",
+        "textCase": "{textCase.none}",
+        "textDecoration": "{textDecoration.none}"
+      },
+      "type": "typography",
+      "description": "화면의 최상단에서 페이지나 뷰의 제목을 표시할 때"
+    },
+    "Title1": {
+      "value": {
+        "fontFamily": "{fontFamilies.pretendard-variable}",
+        "fontWeight": "{fontWeights.pretendard-variable-1}",
+        "lineHeight": "{lineHeights.0}",
+        "fontSize": "{fontSize.8}",
+        "letterSpacing": "{letterSpacing.0}",
+        "paragraphSpacing": "{paragraphSpacing.0}",
+        "paragraphIndent": "{paragraphIndent.0}",
+        "textCase": "{textCase.none}",
+        "textDecoration": "{textDecoration.none}"
+      },
+      "type": "typography",
+      "description": "주요 화면 제목 또는 큰 섹션의 헤더"
+    },
+    "Title2": {
+      "value": {
+        "fontFamily": "{fontFamilies.pretendard-variable}",
+        "fontWeight": "{fontWeights.pretendard-variable-2}",
+        "lineHeight": "{lineHeights.0}",
+        "fontSize": "{fontSize.7}",
+        "letterSpacing": "{letterSpacing.0}",
+        "paragraphSpacing": "{paragraphSpacing.0}",
+        "paragraphIndent": "{paragraphIndent.0}",
+        "textCase": "{textCase.none}",
+        "textDecoration": "{textDecoration.none}"
+      },
+      "type": "typography",
+      "description": "중간 수준의 섹션 제목"
+    },
+    "Title3": {
+      "value": {
+        "fontFamily": "{fontFamilies.pretendard-variable}",
+        "fontWeight": "{fontWeights.pretendard-variable-3}",
+        "lineHeight": "{lineHeights.0}",
+        "fontSize": "{fontSize.6}",
+        "letterSpacing": "{letterSpacing.0}",
+        "paragraphSpacing": "{paragraphSpacing.0}",
+        "paragraphIndent": "{paragraphIndent.0}",
+        "textCase": "{textCase.none}",
+        "textDecoration": "{textDecoration.none}"
+      },
+      "type": "typography",
+      "description": "작은 섹션 제목이나 카드형 UI의 타이틀"
+    },
+    "Headline": {
+      "value": {
+        "fontFamily": "{fontFamilies.pretendard-variable}",
+        "fontWeight": "{fontWeights.pretendard-variable-2}",
+        "lineHeight": "{lineHeights.0}",
+        "fontSize": "{fontSize.5}",
+        "letterSpacing": "{letterSpacing.0}",
+        "paragraphSpacing": "{paragraphSpacing.0}",
+        "paragraphIndent": "{paragraphIndent.0}",
+        "textCase": "{textCase.none}",
+        "textDecoration": "{textDecoration.none}"
+      },
+      "type": "typography",
+      "description": "강조된 본문 텍스트, 리스트 제목"
+    },
+    "Body": {
+      "value": {
+        "fontFamily": "{fontFamilies.pretendard-variable}",
+        "fontWeight": "{fontWeights.pretendard-variable-3}",
+        "lineHeight": "{lineHeights.0}",
+        "fontSize": "{fontSize.5}",
+        "letterSpacing": "{letterSpacing.0}",
+        "paragraphSpacing": "{paragraphSpacing.0}",
+        "paragraphIndent": "{paragraphIndent.0}",
+        "textCase": "{textCase.none}",
+        "textDecoration": "{textDecoration.none}"
+      },
+      "type": "typography",
+      "description": "기본 본문 텍스트"
+    },
+    "Callout": {
+      "value": {
+        "fontFamily": "{fontFamilies.pretendard-variable}",
+        "fontWeight": "{fontWeights.pretendard-variable-3}",
+        "lineHeight": "{lineHeights.0}",
+        "fontSize": "{fontSize.4}",
+        "letterSpacing": "{letterSpacing.0}",
+        "paragraphSpacing": "{paragraphSpacing.0}",
+        "paragraphIndent": "{paragraphIndent.0}",
+        "textCase": "{textCase.none}",
+        "textDecoration": "{textDecoration.none}"
+      },
+      "type": "typography",
+      "description": "본문보다 약간 작지만 눈에 띄는 보조 설명"
+    },
+    "SubheadLine": {
+      "value": {
+        "fontFamily": "{fontFamilies.pretendard-variable}",
+        "fontWeight": "{fontWeights.pretendard-variable-3}",
+        "lineHeight": "{lineHeights.0}",
+        "fontSize": "{fontSize.3}",
+        "letterSpacing": "{letterSpacing.0}",
+        "paragraphSpacing": "{paragraphSpacing.0}",
+        "paragraphIndent": "{paragraphIndent.0}",
+        "textCase": "{textCase.none}",
+        "textDecoration": "{textDecoration.none}"
+      },
+      "type": "typography",
+      "description": "부제목, 날짜, 위치 정보 등 부가 설명"
+    },
+    "Footnote": {
+      "value": {
+        "fontFamily": "{fontFamilies.pretendard-variable}",
+        "fontWeight": "{fontWeights.pretendard-variable-3}",
+        "lineHeight": "{lineHeights.0}",
+        "fontSize": "{fontSize.2}",
+        "letterSpacing": "{letterSpacing.0}",
+        "paragraphSpacing": "{paragraphSpacing.0}",
+        "paragraphIndent": "{paragraphIndent.0}",
+        "textCase": "{textCase.none}",
+        "textDecoration": "{textDecoration.none}"
+      },
+      "type": "typography",
+      "description": "짧은 주석, 법적 고지, 보조 정보"
+    },
+    "Caption1": {
+      "value": {
+        "fontFamily": "{fontFamilies.pretendard-variable}",
+        "fontWeight": "{fontWeights.pretendard-variable-3}",
+        "lineHeight": "{lineHeights.0}",
+        "fontSize": "{fontSize.1}",
+        "letterSpacing": "{letterSpacing.0}",
+        "paragraphSpacing": "{paragraphSpacing.0}",
+        "paragraphIndent": "{paragraphIndent.0}",
+        "textCase": "{textCase.none}",
+        "textDecoration": "{textDecoration.none}"
+      },
+      "type": "typography",
+      "description": "이미지 캡션, 버튼 라벨, UI의 작은 설명"
+    },
+    "Caption2": {
+      "value": {
+        "fontFamily": "{fontFamilies.pretendard-variable}",
+        "fontWeight": "{fontWeights.pretendard-variable-3}",
+        "lineHeight": "{lineHeights.0}",
+        "fontSize": "{fontSize.0}",
+        "letterSpacing": "{letterSpacing.0}",
+        "paragraphSpacing": "{paragraphSpacing.0}",
+        "paragraphIndent": "{paragraphIndent.0}",
+        "textCase": "{textCase.none}",
+        "textDecoration": "{textDecoration.none}"
+      },
+      "type": "typography",
+      "description": "보조 캡션, 세부 정보, 아주 작은 라벨"
+    },
+    "textCase": {
+      "none": {
+        "value": "none",
+        "type": "textCase"
+      }
+    },
+    "textDecoration": {
+      "none": {
+        "value": "none",
+        "type": "textDecoration"
+      }
+    },
+    "paragraphIndent": {
+      "0": {
+        "value": "0px",
+        "type": "dimension"
+      }
+    }
+  },
   "$themes": [],
   "$metadata": {
     "tokenSetOrder": [
-      "global/color-token"
+      "global/color-token",
+      "font-token"
     ]
   }
 }
