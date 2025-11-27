@@ -16,7 +16,7 @@ interface FormData {
   studentPhone: string;
   guardianPhone: string;
   birthDate: string;
-  gender: string;
+  gender: "F" | "M";
   privacyConsent: boolean;
   body: BodyMeasurements;
   address: string;
@@ -42,7 +42,7 @@ const initialFormData: FormData = {
   studentPhone: "",
   guardianPhone: "",
   birthDate: "",
-  gender: "",
+  gender: "F",
   privacyConsent: false,
   body: {
     height: 0,

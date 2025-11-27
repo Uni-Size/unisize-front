@@ -42,8 +42,11 @@ interface StudentApiRequest {
 // addStudent 응답 데이터
 export interface RecommendedSizeItem {
   product: string;
-  size: number;
-  free: number;
+  recommended_size: string;
+  quantity: number;
+  is_selectable?: boolean; // deprecated, 호환성을 위해 유지
+  selectable_with?: string[];
+  gender: "male" | "female" | "unisex";
 }
 
 export interface AddStudentResponse {
@@ -62,7 +65,7 @@ export interface AddStudentResponse {
   school_name: string;
   grade: number;
   checked_in_at: string;
-  recommended_sizes?: {
+  recommended_uniforms?: {
     winter?: RecommendedSizeItem[];
     summer?: RecommendedSizeItem[];
   };

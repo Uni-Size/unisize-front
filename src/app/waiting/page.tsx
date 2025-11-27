@@ -62,20 +62,33 @@ export default function WaitingPage() {
   }
 
   // API 응답 데이터를 테이블 형식으로 변환
+  console.log("=== 데이터 매핑 전 ===");
+  console.log("recommended_uniforms:", studentData.recommended_uniforms);
+  console.log("winter:", studentData.recommended_uniforms?.winter);
+  console.log("summer:", studentData.recommended_uniforms?.summer);
+
   const data = {
     동복:
-      studentData.recommended_sizes?.winter?.map((item) => ({
+      studentData.recommended_uniforms?.winter?.map((item) => ({
         item: item.product,
-        size: item.size,
-        count: item.free,
+        size: item.recommended_size,
+        count: item.quantity,
+        selectableWith: item.selectable_with,
+        gender: item.gender,
       })) || [],
     하복:
-      studentData.recommended_sizes?.summer?.map((item) => ({
+      studentData.recommended_uniforms?.summer?.map((item) => ({
         item: item.product,
-        size: item.size,
-        count: item.free,
+        size: item.recommended_size,
+        count: item.quantity,
+        selectableWith: item.selectable_with,
+        gender: item.gender,
       })) || [],
   };
+
+  console.log("=== 데이터 매핑 후 ===");
+  console.log("동복 data:", data.동복);
+  console.log("하복 data:", data.하복);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientX);
@@ -101,8 +114,10 @@ export default function WaitingPage() {
 
   type UniformData = {
     item: string;
-    size: number;
+    size: string;
     count: number;
+    selectableWith?: string[];
+    gender: "male" | "female" | "unisex";
   }[];
 
   const TableView = ({
@@ -130,6 +145,11 @@ export default function WaitingPage() {
                 <h4 className="font-medium text-gray-800 text-sm">
                   {row.item}
                 </h4>
+                {row.selectableWith && row.selectableWith.length > 0 && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    {row.selectableWith.join(", ")}와 교환 가능
+                  </p>
+                )}
               </div>
               <div className="flex items-center space-x-3">
                 <div className="text-center">
