@@ -2,14 +2,10 @@ import { useStudentFormStore } from "@/stores/useStudentFormStore";
 import { useState, useEffect } from "react";
 import { GRADE_OPTIONS } from "@/mocks/signupData";
 import { getSupportedSchools, type School } from "@/api/schoolApi";
+import Button from "@/components/ui/Button";
+import Image from "next/image";
 
-export default function StepOne({
-  next,
-  setShowUnsupportedSchool,
-}: {
-  next: () => void;
-  setShowUnsupportedSchool: (show: boolean) => void;
-}) {
+export default function StepOne({ next }: { next: () => void }) {
   // Zustand 스토어에서 직접 가져오기
   const { formData, setFormData } = useStudentFormStore();
 
@@ -39,6 +35,13 @@ export default function StepOne({
   const generateYearOptions = () =>
     Array.from({ length: 4 }, (_, index) => currentYear - 1 + index);
 
+  // 모든 필드가 입력되었는지 확인
+  const isFormValid =
+    formData.previousSchool.trim() !== "" &&
+    formData.admissionYear !== 0 &&
+    formData.admissionGrade !== 0 &&
+    formData.admissionSchool !== "";
+
   const handleNext = () => {
     console.log(formData);
     setErrors("");
@@ -58,8 +61,8 @@ export default function StepOne({
   };
 
   return (
-    <section className="rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+    <section>
+      <h2 className="title2 text-center mb-14">
         출신학교와 입학학교를 알려주세요
       </h2>
 
@@ -77,9 +80,7 @@ export default function StepOne({
             type="text"
             value={formData.previousSchool}
             onChange={(e) => setFormData("previousSchool", e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2
-                         focus:outline-none focus:ring-2 focus:ring-blue-500
-                         focus:border-transparent"
+            className="w-full"
             placeholder="출신학교를 입력해주세요"
           />
         </div>
@@ -98,9 +99,7 @@ export default function StepOne({
             onChange={(e) =>
               setFormData("admissionYear", parseInt(e.target.value))
             }
-            className="w-full border border-gray-300 rounded-md px-3 py-2
-                         focus:outline-none focus:ring-2 focus:ring-blue-500
-                         focus:border-transparent"
+            className="w-full"
           >
             {generateYearOptions().map((year) => (
               <option key={year} value={year}>
@@ -124,9 +123,7 @@ export default function StepOne({
             onChange={(e) =>
               setFormData("admissionGrade", parseInt(e.target.value))
             }
-            className="w-full border border-gray-300 rounded-md px-3 py-2
-                         focus:outline-none focus:ring-2 focus:ring-blue-500
-                         focus:border-transparent"
+            className="w-full"
           >
             {GRADE_OPTIONS.map((grade) => (
               <option key={grade.value} value={grade.value}>
@@ -149,12 +146,12 @@ export default function StepOne({
             value={formData.admissionSchool}
             onChange={(e) => setFormData("admissionSchool", e.target.value)}
             disabled={isLoadingSchools}
-            className="w-full border border-gray-300 rounded-md px-3 py-2
-                         focus:outline-none focus:ring-2 focus:ring-blue-500
-                         focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="w-full"
           >
             <option value="">
-              {isLoadingSchools ? "학교 목록 불러오는 중..." : "학교를 선택해주세요"}
+              {isLoadingSchools
+                ? "학교 목록 불러오는 중..."
+                : "학교를 선택해주세요"}
             </option>
             {schools.map((school) => (
               <option key={school.id} value={school.name}>
@@ -163,18 +160,23 @@ export default function StepOne({
             ))}
           </select>
         </div>
+        <Image
+          src="/student/congrats.svg"
+          alt="logo"
+          width={200}
+          height={100}
+          className="mx-auto"
+        />
 
         {/* 등록 버튼 */}
-        <button
+        <Button
           type="button"
           onClick={handleNext}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium
-                       py-2 px-4 rounded-md transition duration-200 ease-in-out
-                       focus:outline-none focus:ring-2 focus:ring-blue-500
-                       focus:ring-offset-2 mt-6"
+          disabled={!isFormValid}
+          className="mt-6"
         >
-          등록하기
-        </button>
+          다음
+        </Button>
       </div>
     </section>
   );
