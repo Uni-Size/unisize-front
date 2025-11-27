@@ -47,7 +47,7 @@ export default function PaymentList() {
 
   return (
     <div className="relative">
-      {isMeasurementSheetOpen && (
+      {isMeasurementSheetOpen && selectedStudent && (
         <section className="fixed inset-0 z-50">
           <div
             className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm"
@@ -57,6 +57,7 @@ export default function PaymentList() {
           ></div>
           <MeasurementSheet
             setIsMeasurementSheetOpen={setIsMeasurementSheetOpen}
+            studentId={selectedStudent.no}
             mode="readonly"
           />
         </section>

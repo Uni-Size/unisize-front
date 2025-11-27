@@ -1,296 +1,113 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState } from "react";
 import {
-  STUDENT_INFO,
-  MEASUREMENT_INFO,
-  UNIFORM_ITEMS,
   SUPPLY_ITEMS_CONFIG,
+  UNIFORM_ITEMS,
 } from "@/mocks/measurementData";
+import type { StudentMeasurementData } from "@/api/studentApi";
 import {
-  measurementApi,
-  type CompleteMeasurementRequest,
-} from "@/api/measurementApi";
-
-type SupplyItem = {
-  id: string;
-  name: string;
-  category: string;
-  size: string;
-};
-
-type UniformSizeItem = {
-  id: string;
-  itemId: string;
-  name: string;
-  season: "동복" | "하복";
-  selectedSize: number;
-  customization: string;
-  pantsLength?: string;
-  purchaseCount: number; // 구입 개수 추가
-};
-
-type MeasurementMode = "new" | "edit" | "readonly";
+  MeasurementMode,
+  UniformSizeItem,
+  SupplyItem,
+} from "./types";
+import { useUniformItems } from "../hooks/useUniformItems";
+import { useSupplyItems } from "../hooks/useSupplyItems";
+import { useMeasurementData } from "../hooks/useMeasurementData";
 
 export default function MeasurementSheet({
   setIsMeasurementSheetOpen,
+  studentId,
   mode = "new",
 }: {
   setIsMeasurementSheetOpen: (open: boolean) => void;
+  studentId: number;
   mode?: MeasurementMode;
 }) {
   const [season, setSeason] = useState<"동복" | "하복">("동복");
-  const [supplyItems, setSupplyItems] = useState<SupplyItem[]>([]);
-  const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
 
-  // 교복 사이즈 선택 항목들 (용품처럼 여러 개 추가 가능)
-  const [uniformSizeItems, setUniformSizeItems] = useState<UniformSizeItem[]>(
-    []
-  );
+  // 커스텀 훅으로 상태 관리 분리
+  const uniformItems = useUniformItems();
+  const supplyItems = useSupplyItems();
+  const measurementData = useMeasurementData(studentId, mode);
 
-  // 측정 완료 여부 - edit이나 readonly 모드면 true로 시작
-  const [isMeasurementComplete, setIsMeasurementComplete] = useState(
-    mode === "edit" || mode === "readonly"
-  );
+  const {
+    studentData,
+    isLoading,
+    isMeasurementComplete,
+    setIsMeasurementComplete,
+    signature,
+    setSignature,
+    handleCompleteMeasurement,
+    handleFinalConfirmation,
+  } = measurementData;
 
-  // 서명 입력
-  const [signature, setSignature] = useState("");
+  const canCompleteMeasurement = uniformItems.canComplete;
 
-  // 초기화: 각 교복 아이템에 대해 첫 번째 사이즈 항목을 추가
-  useMemo(() => {
-    if (uniformSizeItems.length === 0) {
-      const initialItems: UniformSizeItem[] = [];
-      ["동복", "하복"].forEach((s) => {
-        const seasonItems = UNIFORM_ITEMS[s as "동복" | "하복"];
-        seasonItems.forEach((item) => {
-          initialItems.push({
-            id: `${item.id}-${Date.now()}-${Math.random()}`,
-            itemId: item.id,
-            name: item.name,
-            season: s as "동복" | "하복",
-            selectedSize: item.size,
-            customization: item.customization,
-            pantsLength: item.name.includes("바지") ? "" : undefined,
-            purchaseCount: 0, // 초기 구입 개수는 0
-          });
-        });
-      });
-      setUniformSizeItems(initialItems);
-    }
-  }, [uniformSizeItems.length]);
-
-  // 교복 아이템 추가
-  const addUniformItem = useCallback(
-    (itemId: string, season: "동복" | "하복") => {
-      const uniformItem = UNIFORM_ITEMS[season].find((i) => i.id === itemId);
-      if (!uniformItem) return;
-
-      const newItem: UniformSizeItem = {
-        id: `${itemId}-${Date.now()}-${Math.random()}`,
-        itemId,
-        name: uniformItem.name,
-        season,
-        selectedSize: uniformItem.size,
-        customization: uniformItem.customization,
-        pantsLength: uniformItem.name.includes("바지") ? "" : undefined,
-        purchaseCount: 1, // 추가 구입 시 기본 1개
-      };
-      setUniformSizeItems((prev) => [...prev, newItem]);
-    },
-    []
-  );
-
-  // 교복 아이템 제거
-  const removeUniformItem = useCallback((id: string) => {
-    setUniformSizeItems((prev) => prev.filter((item) => item.id !== id));
-  }, []);
-
-  // 사이즈 변경
-  const updateUniformSize = useCallback((id: string, size: number) => {
-    setUniformSizeItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, selectedSize: size } : item
-      )
-    );
-  }, []);
-
-  // 맞춤 정보 변경
-  const updateCustomization = useCallback(
-    (id: string, customization: string) => {
-      setUniformSizeItems((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, customization } : item))
-      );
-    },
-    []
-  );
-
-  // 바지 기장 변경
-  const updatePantsLength = useCallback((id: string, length: string) => {
-    setUniformSizeItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, pantsLength: length } : item
-      )
-    );
-  }, []);
-
-  // 교복 구입 개수 변경
-  const updateUniformPurchaseCount = useCallback(
-    (id: string, delta: number) => {
-      setUniformSizeItems((prev) =>
-        prev.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                purchaseCount: Math.max(0, item.purchaseCount + delta),
-              }
-            : item
-        )
-      );
-    },
-    []
-  );
-
-  const addSupplyItem = useCallback(
-    (itemName: keyof typeof SUPPLY_ITEMS_CONFIG) => {
-      const config = SUPPLY_ITEMS_CONFIG[itemName];
-      const firstOption = config.options[0];
-      const newItem: SupplyItem = {
-        id: `${itemName}-${Date.now()}`,
-        name: config.name,
-        category: firstOption.category,
-        size: firstOption.size,
-      };
-      setSupplyItems((prev) => [...prev, newItem]);
-    },
-    []
-  );
-
-  const removeSupplyItem = useCallback((itemId: string) => {
-    setSupplyItems((prev) => prev.filter((item) => item.id !== itemId));
-  }, []);
-
-  const updateSupplyItem = useCallback(
-    (itemId: string, field: "category" | "size", value: string) => {
-      setSupplyItems((prev) =>
-        prev.map((item) =>
-          item.id === itemId ? { ...item, [field]: value } : item
-        )
-      );
-    },
-    []
-  );
-
-  // 현재 시즌의 교복 아이템들
-  const currentSeasonItems = useMemo(
-    () => uniformSizeItems.filter((item) => item.season === season),
-    [uniformSizeItems, season]
-  );
-
-  // 측정 완료 가능 여부 검증
-  const canCompleteMeasurement = useMemo(() => {
-    // 모든 바지의 기장이 입력되었는지 확인
-    const allPantsLengthsFilled = uniformSizeItems
-      .filter((item) => item.name.includes("바지"))
-      .every((item) => item.pantsLength && item.pantsLength.trim().length > 0);
-
-    return allPantsLengthsFilled;
-  }, [uniformSizeItems]);
-
-  const handleCompleteMeasurement = useCallback(() => {
+  const onCompleteMeasurement = () => {
     if (!canCompleteMeasurement) {
       alert("모든 바지 기장을 입력해주세요.");
       return;
     }
+    handleCompleteMeasurement();
+  };
 
-    // 측정 완료 상태로 전환
-    setIsMeasurementComplete(true);
-  }, [canCompleteMeasurement]);
+  const onFinalConfirmation = () => {
+    handleFinalConfirmation(
+      uniformItems.uniformSizeItems,
+      supplyItems.supplyItems,
+      supplyItems.itemCounts,
+      setIsMeasurementSheetOpen
+    );
+  };
 
-  const handleFinalConfirmation = useCallback(async () => {
-    if (!signature || signature.trim().length === 0) {
-      alert("서명을 입력해주세요.");
-      return;
-    }
+  if (isLoading) {
+    return (
+      <div className="fixed bottom-0 left-0 bg-white w-full rounded-t-md h-5/6 overflow-y-auto flex items-center justify-center">
+        <p className="text-gray-600">데이터를 불러오는 중...</p>
+      </div>
+    );
+  }
 
-    // 용품 데이터 변환 (구입개수가 0인 항목 제외)
-    const supplyItemsData = supplyItems
-      .filter((item) => (itemCounts[item.id] || 0) > 0)
-      .map((item) => ({
-        id: item.id,
-        name: item.name,
-        category: item.category,
-        size: item.size,
-        count: itemCounts[item.id] || 0,
-      }));
-
-    // 교복 데이터 변환 - 모든 시즌의 아이템을 배열로 전송
-    const uniformItemsData = uniformSizeItems.map((item) => ({
-      id: item.id,
-      itemId: item.itemId,
-      name: item.name,
-      season: item.season,
-      selectedSize: item.selectedSize,
-      customization: item.customization,
-      pantsLength: item.pantsLength,
-      purchaseCount: item.purchaseCount,
-    }));
-
-    const requestData: CompleteMeasurementRequest = {
-      studentId: "student-001", // 실제로는 props나 context에서 받아올 값
-      uniformItems: uniformItemsData,
-      supplyItems: supplyItemsData,
-      signature,
-    };
-
-    try {
-      const result = await measurementApi.completeMeasurement(requestData);
-      alert(result.message);
-      setIsMeasurementSheetOpen(false);
-
-      // 성공 시 추가 작업 (예: 페이지 이동, 모달 닫기 등)
-    } catch (error) {
-      console.error("측정 완료 실패:", error);
-      alert("측정 완료에 실패했습니다.");
-    }
-  }, [uniformSizeItems, supplyItems, itemCounts, signature]);
+  if (!studentData) {
+    return (
+      <div className="fixed bottom-0 left-0 bg-white w-full rounded-t-md h-5/6 overflow-y-auto flex items-center justify-center">
+        <p className="text-red-600">학생 데이터를 불러올 수 없습니다.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed bottom-0 left-0 bg-white w-full rounded-t-md h-5/6 overflow-y-auto">
-      {/* 학생 정보 */}
-      <StudentInfo />
-
-      {/* 채촌 정보 */}
-      <MeasurementInfo />
+      <StudentInfo studentData={studentData} />
+      <MeasurementInfo studentData={studentData} />
 
       {!isMeasurementComplete ? (
         <>
-          {/* 사이즈 섹션 */}
           <SizeSection
             season={season}
             setSeason={setSeason}
-            uniformSizeItems={uniformSizeItems}
-            onAddItem={addUniformItem}
-            onRemoveItem={removeUniformItem}
-            onUpdateSize={updateUniformSize}
-            onUpdateCustomization={updateCustomization}
-            onUpdatePantsLength={updatePantsLength}
-            onUpdatePurchaseCount={updateUniformPurchaseCount}
+            uniformSizeItems={uniformItems.uniformSizeItems}
+            onAddItem={uniformItems.addItem}
+            onRemoveItem={uniformItems.removeItem}
+            onUpdateSize={uniformItems.updateSize}
+            onUpdateCustomization={uniformItems.updateCustomization}
+            onUpdatePantsLength={uniformItems.updatePantsLength}
+            onUpdatePurchaseCount={uniformItems.updatePurchaseCount}
           />
 
-          {/* 용품 섹션 */}
           <SupplySection
-            items={supplyItems}
-            onAddItem={addSupplyItem}
-            onRemoveItem={removeSupplyItem}
-            onUpdateItem={updateSupplyItem}
-            itemCounts={itemCounts}
-            setItemCounts={setItemCounts}
+            items={supplyItems.supplyItems}
+            onAddItem={supplyItems.addItem}
+            onRemoveItem={supplyItems.removeItem}
+            onUpdateItem={supplyItems.updateItem}
+            itemCounts={supplyItems.itemCounts}
+            setItemCounts={supplyItems.setItemCounts}
           />
 
-          {/* 측정 완료 버튼 */}
           <div className="p-6">
             <button
-              onClick={handleCompleteMeasurement}
+              onClick={onCompleteMeasurement}
               disabled={!canCompleteMeasurement}
               className={`w-full py-3 rounded-lg font-medium transition-colors ${
                 canCompleteMeasurement
@@ -309,14 +126,12 @@ export default function MeasurementSheet({
         </>
       ) : (
         <>
-          {/* 측정 완료 후 확정 내용 표시 */}
           <ConfirmedDataView
-            uniformSizeItems={uniformSizeItems}
-            supplyItems={supplyItems}
-            itemCounts={itemCounts}
+            uniformSizeItems={uniformItems.uniformSizeItems}
+            supplyItems={supplyItems.supplyItems}
+            itemCounts={supplyItems.itemCounts}
           />
 
-          {/* 서명 및 최종 확정 */}
           <div className="border-b-8 border-black/5 p-6">
             {mode === "readonly" ? (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -347,7 +162,7 @@ export default function MeasurementSheet({
                     수정하기
                   </button>
                   <button
-                    onClick={handleFinalConfirmation}
+                    onClick={onFinalConfirmation}
                     className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
                   >
                     최종 확정
@@ -364,47 +179,61 @@ export default function MeasurementSheet({
 
 /* ------------------ 분리된 UI 섹션 ------------------ */
 
-const StudentInfo = () => (
+const StudentInfo = ({
+  studentData,
+}: {
+  studentData: StudentMeasurementData;
+}) => (
   <div className="border-b-8 border-black/5 p-6">
     <p className="text-xs text-gray-600 pb-3.5">
-      {STUDENT_INFO.school.to} 측정 마감일 : {STUDENT_INFO.deadline}
+      {studentData.school_name} 측정 마감일 : {studentData.deadline || "-"}
     </p>
     <div className="flex justify-between gap-8">
       <div className="space-y-1 text-sm">
         <p>
           <span className="text-gray-600">출신학교</span>{" "}
-          {STUDENT_INFO.school.from} →
+          {studentData.previous_school} →
           <span className="text-gray-600 ml-2">입학학교</span>{" "}
-          {STUDENT_INFO.school.to}({STUDENT_INFO.school.year})
+          {studentData.school_name}({studentData.admission_year})
         </p>
         <p>
-          <span className="text-gray-600">학생이름</span>{" "}
-          {STUDENT_INFO.student.name} ({STUDENT_INFO.student.gender})
+          <span className="text-gray-600">학생이름</span> {studentData.name} (
+          {studentData.gender === "male" ? "남" : "여"})
           <span className="text-gray-600 ml-4">연락처</span>{" "}
-          {STUDENT_INFO.contact.join(" | ")}
+          {studentData.student_phone} | {studentData.guardian_phone}
         </p>
       </div>
       <ul className="text-xs text-gray-600 space-y-0.5">
-        <li>예약 시간 : {STUDENT_INFO.timestamps.reservation}</li>
-        <li>접수 시간 : {STUDENT_INFO.timestamps.reception}</li>
-        <li>측정 시작 : {STUDENT_INFO.timestamps.measurementStart}</li>
         <li>
-          측정 완료 : {STUDENT_INFO.timestamps.measurementComplete || "-"}
+          예약 시간 : {studentData.timestamps?.reservation || "-"}
+        </li>
+        <li>
+          접수 시간 : {studentData.timestamps?.reception || "-"}
+        </li>
+        <li>
+          측정 시작 : {studentData.timestamps?.measurement_start || "-"}
+        </li>
+        <li>
+          측정 완료 : {studentData.timestamps?.measurement_complete || "-"}
         </li>
       </ul>
     </div>
   </div>
 );
 
-const MeasurementInfo = () => (
+const MeasurementInfo = ({
+  studentData,
+}: {
+  studentData: StudentMeasurementData;
+}) => (
   <div className="border-b-8 border-black/5 p-6">
     <p className="text-xs text-gray-600 pb-2">채촌정보</p>
     <div className="grid grid-cols-4 gap-2">
       {[
-        MEASUREMENT_INFO.height,
-        MEASUREMENT_INFO.weight,
-        MEASUREMENT_INFO.shoulder,
-        MEASUREMENT_INFO.waist,
+        `키 ${studentData.body.height}cm`,
+        `몸무게 ${studentData.body.weight}kg`,
+        `어깨 ${studentData.body.shoulder}cm`,
+        `허리 ${studentData.body.waist}cm`,
       ].map((info, i) => (
         <div
           key={i}

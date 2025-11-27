@@ -133,6 +133,50 @@ interface ApiResponse<T> {
   data: T;
 }
 
+// 측정 데이터 응답
+export interface StudentMeasurementData {
+  id: number;
+  name: string;
+  gender: string;
+  birth_date: string;
+  student_phone: string;
+  guardian_phone: string;
+  previous_school: string;
+  admission_year: number;
+  admission_grade: number;
+  school_name: string;
+  address: string;
+  delivery: boolean;
+  body: {
+    height: number;
+    weight: number;
+    shoulder: number;
+    waist: number;
+  };
+  timestamps?: {
+    reservation?: string;
+    reception?: string;
+    measurement_start?: string;
+    measurement_complete?: string;
+  };
+  deadline?: string;
+}
+
+// 측정 시작
+export async function startMeasurement(studentId: number): Promise<void> {
+  await apiClient.post(`/api/v1/students/${studentId}/start-measurement`);
+}
+
+// 학생 측정 데이터 조회
+export async function getStartMeasurement(
+  studentId: number
+): Promise<StudentMeasurementData> {
+  const response = await apiClient.get<ApiResponse<StudentMeasurementData>>(
+    `/api/v1/students/${studentId}`
+  );
+  return response.data.data;
+}
+
 // 학생 생성
 export async function addStudent(
   formData: StudentFormData
