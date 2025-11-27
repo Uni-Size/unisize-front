@@ -2,7 +2,7 @@
 
 import { useStudentResponseStore } from "@/stores/useStudentResponseStore";
 import Image from "next/image";
-import { useState, useRef } from "react";
+import { useState } from "react";
 
 const itemData = {
   동복: [
@@ -35,19 +35,13 @@ export default function WaitingPage() {
   const { studentData } = useStudentResponseStore();
 
   const [activeTab, setActiveTab] = useState<"동복" | "하복">("동복");
-  const [touchStart, setTouchStart] = useState(0);
-  const [touchEnd, setTouchEnd] = useState(0);
-  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const tabs: ("동복" | "하복")[] = ["동복", "하복"];
 
   // 디버깅 로그
   console.log("=== Waiting 페이지 렌더링 ===");
   console.log("studentData:", studentData);
-  console.log(
-    "전체 store 상태:",
-    useStudentResponseStore.getState()
-  );
+  console.log("전체 store 상태:", useStudentResponseStore.getState());
 
   // API 응답 데이터가 없으면 로딩 표시
   if (!studentData) {
@@ -90,28 +84,6 @@ export default function WaitingPage() {
   console.log("동복 data:", data.동복);
   console.log("하복 data:", data.하복);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-
-    if (isLeftSwipe && activeTab === "동복") setActiveTab("하복");
-    if (isRightSwipe && activeTab === "하복") setActiveTab("동복");
-
-    setTouchStart(0);
-    setTouchEnd(0);
-  };
-
   type UniformData = {
     item: string;
     size: string;
@@ -127,52 +99,35 @@ export default function WaitingPage() {
     season: string;
     data: UniformData;
   }) => (
-    <div className="w-full">
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg mb-4">
-        <h3 className="text-lg font-bold text-gray-800 text-center">
-          {season}
-        </h3>
-      </div>
+    <div className="w-full bg-primary-50 p-4 rounded-lg subhead-line  ">
+      <h3 className="callout mb-6">{season}</h3>
 
-      <div className="space-y-2">
+      <div className="">
+        {/* 테이블 헤더 */}
+        <div className="grid grid-cols-3 pb-2 text-gray-600 border-b text-center border-gray-300">
+          <div>품목</div>
+          <div>추천사이즈</div>
+          <div>지원개수</div>
+        </div>
+
+        {/* 테이블 바디 */}
         {tableData.map((row, idx) => (
-          <div
-            key={idx}
-            className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <h4 className="font-medium text-gray-800 text-sm">
-                  {row.item}
-                </h4>
-                {row.selectableWith && row.selectableWith.length > 0 && (
-                  <p className="text-xs text-blue-600 mt-1">
-                    {row.selectableWith.join(", ")}와 교환 가능
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 mb-1">사이즈</div>
-                  <div className="font-bold text-blue-600 text-sm">
-                    {row.size}
-                  </div>
+          <div key={idx} className="grid grid-cols-3 py-2 text-center">
+            <div>
+              <div>{row.item}</div>
+              {row.selectableWith && row.selectableWith.length > 0 && (
+                <div className="text-xs text-primary-600 mt-1">
+                  {row.selectableWith.join(", ")}로 변경 가능
                 </div>
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 mb-1">개수</div>
-                  <div className="font-medium text-sm">
-                    {row.count === 0 ? (
-                      <span className="text-red-500 text-xs bg-red-50 px-2 py-1 rounded-full">
-                        제외
-                      </span>
-                    ) : (
-                      <span className="text-green-600 font-bold">
-                        {row.count}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
+              )}
+            </div>
+            <div>{row.size}</div>
+            <div>
+              {row.count === 0 ? (
+                <p className="text-xs text-primary-600 ">지원제외품목</p>
+              ) : (
+                row.count
+              )}
             </div>
           </div>
         ))}
@@ -181,15 +136,14 @@ export default function WaitingPage() {
   );
 
   return (
-    <section className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
+    <section>
       {/* 헤더 */}
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">
+      <div className="text-center m-6">
+        <p className="headline ">잠시만 기다려주세요.</p>
+        <h2 className="title2 my-2">
           {studentData.school_name} {studentData.name}
         </h2>
-        <p className="text-gray-600">
-          교복을 입어보실 수 있도록 준비해드리겠습니다.
-        </p>
+        <p className="title3 text-gray-700">교복 시착을 준비해드리겠습니다.</p>
       </div>
 
       {/* 탭 네비게이션 */}
@@ -210,13 +164,7 @@ export default function WaitingPage() {
       </div>
 
       {/* 컨텐츠 영역 */}
-      <div
-        ref={containerRef}
-        className="relative overflow-hidden"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+      <div className="relative overflow-hidden w-full">
         <div
           className="flex transition-transform duration-300 ease-out"
           style={{
@@ -224,27 +172,15 @@ export default function WaitingPage() {
           }}
         >
           {tabs.map((season) => (
-            <div key={season} className="w-full flex-shrink-0 px-1">
+            <div key={season} className="w-full flex-shrink-0">
               <TableView season={season} data={data[season]} />
             </div>
           ))}
         </div>
       </div>
 
-      {/* 인디케이터 */}
-      <div className="flex justify-center mt-4 space-x-2">
-        {tabs.map((tab) => (
-          <div
-            key={tab}
-            className={`w-2 h-2 rounded-full transition-colors duration-200 ${
-              activeTab === tab ? "bg-blue-600" : "bg-gray-300"
-            }`}
-          />
-        ))}
-      </div>
-
       <article className="mt-8">
-        <h3 className="text-xl font-bold text-gray-800 mb-4">
+        <h3 className="headline text-gray-800 mb-4">
           {activeTab}과 함께 입을만한 상품
         </h3>
         <div className="grid grid-cols-3 gap-4">
@@ -254,7 +190,7 @@ export default function WaitingPage() {
               href={product.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="block bg-gradient-to-r rounded-lg p-4 hover:shadow-md transition-shadow duration-200"
+              className="block bg-gradient-to-r rounded-lg hover:shadow-md transition-shadow duration-200"
             >
               <Image
                 src={product.thumbnail}
