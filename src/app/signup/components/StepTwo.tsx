@@ -110,8 +110,8 @@ export default function StepTwo({
               <input
                 type="radio"
                 name="gender"
-                value="boy"
-                checked={formData.gender === "boy"}
+                value="M"
+                checked={formData.gender === "M"}
                 onChange={(e) => setFormData("gender", e.target.value)}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
               />
@@ -121,8 +121,8 @@ export default function StepTwo({
               <input
                 type="radio"
                 name="gender"
-                value="girl"
-                checked={formData.gender === "girl"}
+                value="F"
+                checked={formData.gender === "F"}
                 onChange={(e) => setFormData("gender", e.target.value)}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
               />
