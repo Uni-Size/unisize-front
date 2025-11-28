@@ -1,23 +1,83 @@
+import { useState } from "react";
 import { useStudentFormStore } from "@/stores/useStudentFormStore";
 import { VALIDATION_RANGES } from "@/mocks/signupData";
+import Button from "@/components/ui/Button";
+import Image from "next/image";
 
 export default function StepThree({
-  back,
   submit,
+  prev,
 }: {
-  back: () => void;
   submit: () => void;
+  prev: () => void;
 }) {
+  const [subStep, setSubStep] = useState(0);
   const { formData, setBodyMeasurements } = useStudentFormStore();
 
-  return (
-    <section className="rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-        {formData.admissionSchool}에{" "}
-        {formData.admissionGrade === 1 ? "입학하는" : "전학오는"}
-        학생의 신체 정보를 알려주세요
-      </h2>
+  // 모든 필드가 입력되었는지 확인
+  const isFormValid =
+    formData.body.height > 0 &&
+    formData.body.weight > 0 &&
+    formData.body.shoulder > 0 &&
+    formData.body.waist > 0;
 
+  // 첫 번째 화면: 온보딩
+  if (subStep === 0) {
+    return (
+      <section>
+        <h2 className="title2 text-center mb-4">
+          학생의 신체 사이즈를 측정해주세요
+        </h2>
+        <p className="title3 text-center mb-8 text-gray-800">
+          정확한 교복 사이즈를 위해, <br /> 두꺼운 옷은 벗고 측정해주세요.
+        </p>
+
+        <Image
+          src="/student/body.svg"
+          alt="logo"
+          width={200}
+          height={100}
+          className="mx-auto"
+        />
+
+        <div className="m-2 text-gray-500 text-center">
+          시착 시, 얇은 반팔이 필요하신 경우 <br /> 교복용 반팔을 구매하실 수
+          있습니다.
+        </div>
+
+        <div className="flex gap-4 mt-6">
+          <Button
+            type="button"
+            onClick={prev}
+            variant="secondary"
+            className="flex-1"
+          >
+            이전
+          </Button>
+          <Button
+            type="button"
+            onClick={() => setSubStep(1)}
+            className="flex-1"
+          >
+            다음
+          </Button>
+        </div>
+      </section>
+    );
+  }
+
+  // 두 번째 화면: 측정값 입력
+  return (
+    <section>
+      <h2 className="title2 text-center mb-2">
+        학생의 신체 사이즈를 측정해주세요
+      </h2>
+      <p className="title3 text-center mb-14 text-gray-800">
+        두꺼운 옷을 입으신 경우,
+        <br />
+        교복 반팔을 매장에서 구매 후 착용하시면 <br /> 더 편리하게 측정할 수
+        있습니다.
+      </p>
       <div className="space-y-4">
         {/* 키 */}
         <div>
@@ -36,9 +96,7 @@ export default function StepThree({
             onChange={(e) =>
               setBodyMeasurements("height", Number(e.target.value))
             }
-            className="w-full border border-gray-300 rounded-md px-3 py-2
-                       focus:outline-none focus:ring-2 focus:ring-blue-500
-                       focus:border-transparent"
+            className="w-full"
             placeholder="키를 입력하세요"
           />
         </div>
@@ -60,9 +118,7 @@ export default function StepThree({
             onChange={(e) =>
               setBodyMeasurements("weight", Number(e.target.value))
             }
-            className="w-full border border-gray-300 rounded-md px-3 py-2
-                       focus:outline-none focus:ring-2 focus:ring-blue-500
-                       focus:border-transparent"
+            className="w-full"
             placeholder="몸무게를 입력하세요"
           />
         </div>
@@ -84,9 +140,7 @@ export default function StepThree({
             onChange={(e) =>
               setBodyMeasurements("shoulder", Number(e.target.value))
             }
-            className="w-full border border-gray-300 rounded-md px-3 py-2
-                       focus:outline-none focus:ring-2 focus:ring-blue-500
-                       focus:border-transparent"
+            className="w-full"
             placeholder="어깨넓이를 입력하세요"
           />
         </div>
@@ -97,7 +151,7 @@ export default function StepThree({
             htmlFor="waist"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
-            허리둘레 (inch)
+            허리둘레 (cm)
           </label>
           <input
             min={VALIDATION_RANGES.waist.min}
@@ -108,36 +162,30 @@ export default function StepThree({
             onChange={(e) =>
               setBodyMeasurements("waist", Number(e.target.value))
             }
-            className="w-full border border-gray-300 rounded-md px-3 py-2
-                       focus:outline-none focus:ring-2 focus:ring-blue-500
-                       focus:border-transparent"
+            className="w-full"
             placeholder="허리둘레를 입력하세요"
           />
         </div>
       </div>
 
-      {/* 버튼들 */}
-      <div className="flex gap-3">
-        <button
+      {/* 버튼 */}
+      <div className="flex gap-4 mt-6">
+        <Button
           type="button"
-          onClick={back}
-          className="w-full bg-gray-500 hover:bg-gray-600 text-white font-medium
-                     py-2 px-4 rounded-md transition duration-200 ease-in-out
-                     focus:outline-none focus:ring-2 focus:ring-gray-500
-                     focus:ring-offset-2 mt-6"
+          onClick={() => setSubStep(0)}
+          variant="secondary"
+          className="flex-1"
         >
-          학생 정보 변경하기
-        </button>
-        <button
+          이전
+        </Button>
+        <Button
           type="button"
           onClick={submit}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium
-                     py-2 px-4 rounded-md transition duration-200 ease-in-out
-                     focus:outline-none focus:ring-2 focus:ring-blue-500
-                     focus:ring-offset-2 mt-6"
+          disabled={!isFormValid}
+          className="flex-1"
         >
           제출하기
-        </button>
+        </Button>
       </div>
     </section>
   );

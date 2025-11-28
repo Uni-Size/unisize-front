@@ -6,37 +6,27 @@ export function middleware(request: NextRequest) {
   const accessToken = request.cookies.get('accessToken')?.value;
   const userRole = request.cookies.get('userRole')?.value;
 
-  // /admin 페이지 접근 시 인증 및 권한 체크 (로그인 페이지는 제외)
+  // /admin 페이지 접근 시 인증 및 권한 체크
   if (request.nextUrl.pathname.startsWith('/admin')) {
-    // 로그인 페이지는 인증 불필요
-    if (
-      request.nextUrl.pathname === '/admin/signin' ||
-      request.nextUrl.pathname === '/admin/staff-signin'
-    ) {
-      const response = NextResponse.next();
-      response.headers.set('x-invoke-path', request.nextUrl.pathname);
-      return response;
-    }
-
-    // 인증되지 않은 경우 어드민 로그인 페이지로 리다이렉트
+    // 인증되지 않은 경우 통합 로그인 페이지로 리다이렉트
     if (!accessToken) {
       const url = request.nextUrl.clone();
-      url.pathname = '/admin/signin';
+      url.pathname = '/staff/login';
       return NextResponse.redirect(url);
     }
 
     // admin 역할이 아닌 경우 접근 거부
     if (userRole !== 'admin') {
       const url = request.nextUrl.clone();
-      url.pathname = '/admin/signin'; // 어드민 로그인 페이지로 리다이렉트
+      url.pathname = '/staff/login';
       return NextResponse.redirect(url);
     }
   }
 
-  // /staff 페이지 접근 시 인증 체크 (단, /staff/signup은 제외)
+  // /staff 페이지 접근 시 인증 체크 (단, /staff/login은 제외)
   if (request.nextUrl.pathname.startsWith('/staff')) {
-    // 로그인/회원가입 페이지는 인증 불필요
-    if (request.nextUrl.pathname === '/staff/signup') {
+    // 로그인 페이지는 인증 불필요
+    if (request.nextUrl.pathname === '/staff/login') {
       const response = NextResponse.next();
       // pathname을 헤더에 추가
       response.headers.set('x-invoke-path', request.nextUrl.pathname);
@@ -46,7 +36,7 @@ export function middleware(request: NextRequest) {
     // 인증되지 않은 경우 로그인 페이지로 리다이렉트
     if (!accessToken) {
       const url = request.nextUrl.clone();
-      url.pathname = '/staff/signup';
+      url.pathname = '/staff/login';
       return NextResponse.redirect(url);
     }
   }

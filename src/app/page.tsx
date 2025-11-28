@@ -14,7 +14,7 @@ export default function Home() {
       </h4>
       <button
         type="button"
-        onClick={() => router.push("/signup")}
+        onClick={() => router.push("/add")}
         className="headline cursor-pointer"
       >
         <Image

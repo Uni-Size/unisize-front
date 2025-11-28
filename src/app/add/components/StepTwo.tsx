@@ -1,17 +1,27 @@
 import { useStudentFormStore } from "@/stores/useStudentFormStore";
 import { useState } from "react";
 import { PRIVACY_POLICY } from "@/mocks/signupData";
+import Button from "@/components/ui/Button";
 
 export default function StepTwo({
-  back,
   next,
+  prev,
 }: {
-  back: () => void;
   next: () => void;
+  prev: () => void;
 }) {
   const { formData, setFormData } = useStudentFormStore();
 
   const [errors, setErrors] = useState("");
+
+  // 모든 필드가 입력되었는지 확인
+  const isFormValid =
+    formData.name.trim() !== "" &&
+    formData.studentPhone.trim() !== "" &&
+    formData.guardianPhone.trim() !== "" &&
+    formData.birthDate !== "" &&
+    (formData.gender === "M" || formData.gender === "F") &&
+    formData.privacyConsent === true;
 
   const handleNext = () => {
     console.log(formData);
@@ -53,10 +63,10 @@ export default function StepTwo({
   };
 
   return (
-    <section className="rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-        {formData.admissionSchool}에{" "}
-        {formData.admissionGrade === 1 ? "입학하는" : "전학오는"}
+    <section>
+      <h2 className="title2 text-center mb-14">
+        {formData.admissionSchool}에
+        {formData.admissionGrade === 1 ? "입학하는" : "전학오는"} <br />
         학생의 정보를 알려주세요
       </h2>
 
@@ -74,9 +84,7 @@ export default function StepTwo({
             type="date"
             value={formData.birthDate}
             onChange={(e) => setFormData("birthDate", e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2
-                         focus:outline-none focus:ring-2 focus:ring-blue-500
-                         focus:border-transparent"
+            className="w-full"
           />
         </div>
 
@@ -93,9 +101,7 @@ export default function StepTwo({
             type="text"
             value={formData.name}
             onChange={(e) => setFormData("name", e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2
-                         focus:outline-none focus:ring-2 focus:ring-blue-500
-                         focus:border-transparent"
+            className="w-full"
             placeholder="학생 이름을 입력하세요"
           />
         </div>
@@ -110,8 +116,8 @@ export default function StepTwo({
               <input
                 type="radio"
                 name="gender"
-                value="boy"
-                checked={formData.gender === "boy"}
+                value="M"
+                checked={formData.gender === "M"}
                 onChange={(e) => setFormData("gender", e.target.value)}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
               />
@@ -121,8 +127,8 @@ export default function StepTwo({
               <input
                 type="radio"
                 name="gender"
-                value="girl"
-                checked={formData.gender === "girl"}
+                value="F"
+                checked={formData.gender === "F"}
                 onChange={(e) => setFormData("gender", e.target.value)}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
               />
@@ -147,9 +153,7 @@ export default function StepTwo({
               const formatted = formatPhoneNumber(e.target.value);
               setFormData("studentPhone", formatted);
             }}
-            className="w-full border border-gray-300 rounded-md px-3 py-2
-                         focus:outline-none focus:ring-2 focus:ring-blue-500
-                         focus:border-transparent"
+            className="w-full"
             placeholder="010-0000-0000"
             maxLength={13}
           />
@@ -171,9 +175,7 @@ export default function StepTwo({
               const formatted = formatPhoneNumber(e.target.value);
               setFormData("guardianPhone", formatted);
             }}
-            className="w-full border border-gray-300 rounded-md px-3 py-2
-                         focus:outline-none focus:ring-2 focus:ring-blue-500
-                         focus:border-transparent"
+            className="w-full"
             placeholder="010-0000-0000"
             maxLength={13}
           />
@@ -208,31 +210,24 @@ export default function StepTwo({
           </div>
         </div>
 
-        {/* 버튼들 */}
-        <div className="flex gap-3">
-          <button
+        {/* 버튼 */}
+        <div className="flex gap-4 mt-6">
+          <Button
             type="button"
-            onClick={back}
-            className="w-full bg-gray-500 hover:bg-gray-600 text-white font-medium
-                       py-2 px-4 rounded-md transition duration-200 ease-in-out
-                       focus:outline-none focus:ring-2 focus:ring-gray-500
-                       focus:ring-offset-2 mt-6"
+            onClick={prev}
+            variant="secondary"
+            className="flex-1"
           >
-            학교 변경하기
-          </button>
-          <button
+            이전
+          </Button>
+          <Button
             type="button"
             onClick={handleNext}
-            disabled={!formData.privacyConsent}
-            className={`w-full font-medium py-2 px-4 rounded-md transition duration-200 ease-in-out
-                       focus:outline-none focus:ring-2 focus:ring-offset-2 mt-6 ${
-                         formData.privacyConsent
-                           ? "bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500"
-                           : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                       }`}
+            disabled={!isFormValid}
+            className="flex-1"
           >
             다음
-          </button>
+          </Button>
         </div>
       </div>
     </section>

@@ -7,14 +7,13 @@ import TabNavigation, { Tab } from "./components/TabNavigation";
 
 // Tabs configuration for all admin pages
 const tabs: Tab[] = [
-  { id: "smart-uniform", label: "스마트학생복 정주점" },
-  { id: "invoice", label: "승창" },
-  { id: "reservation", label: "예약수량" },
-  { id: "order", label: "주문등록" },
+  { id: "smart-uniform", label: "스마트학생복 청주점" },
+  { id: "invoice", label: "송장" },
+  { id: "reservation", label: "학생예약" },
+  { id: "order", label: "본사주문" },
 ];
 
-// 권한 체크가 필요 없는 페이지들
-const PUBLIC_ADMIN_PAGES = ['/admin/signin', '/admin/staff-signin'];
+const PUBLIC_ADMIN_PAGES: string[] = [];
 
 export default function AdminLayout({
   children,
@@ -35,9 +34,9 @@ export default function AdminLayout({
     }
 
     // 클라이언트 사이드에서 권한 체크 (이중 방어)
-    if (staff && staff.role !== 'admin') {
-      console.error('관리자 권한이 없습니다. 어드민 로그인 페이지로 이동합니다.');
-      router.replace('/admin/signin');
+    if (staff && staff.role !== "admin") {
+      console.error("관리자 권한이 없습니다. 로그인 페이지로 이동합니다.");
+      router.replace("/staff/login");
     }
   }, [staff, router, pathname, isPublicPage]);
 
@@ -47,7 +46,7 @@ export default function AdminLayout({
   }
 
   // admin이 아닌 경우 렌더링하지 않음
-  if (staff && staff.role !== 'admin') {
+  if (staff && staff.role !== "admin") {
     return null;
   }
 

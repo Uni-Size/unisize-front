@@ -67,7 +67,7 @@ apiClient.interceptors.response.use(
       if (typeof window !== "undefined") {
         // 현재 경로가 로그인 페이지가 아닌 경우에만 리다이렉트
         const currentPath = window.location.pathname;
-        const isLoginPage = currentPath === "/admin/signin" || currentPath === "/staff/signup";
+        const isLoginPage = currentPath === "/staff/login";
 
         if (!isLoginPage) {
           // localStorage에서 토큰 삭제
@@ -83,7 +83,7 @@ apiClient.interceptors.response.use(
           localStorage.removeItem("auth-storage");
 
           // 로그인 페이지로 리다이렉트
-          window.location.href = "/staff/signup";
+          window.location.href = "/staff/login";
         }
       }
     }

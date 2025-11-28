@@ -21,9 +21,7 @@ export default function StudentTable({
 }: StudentTableProps) {
   return (
     <div className="overflow-x-auto">
-      <div className="text-sm text-gray-600 pt-4 pb-2">
-        총 {total}명 대기중
-      </div>
+      <div className="text-sm text-gray-600 pt-4 pb-2">총 {total}명 대기중</div>
 
       {isLoading && (
         <div className="flex justify-center items-center py-12">
@@ -83,7 +81,7 @@ export default function StudentTable({
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-900">{row.name}</td>
                 <td className="px-4 py-3 text-sm text-gray-900">
-                  {row.gender}
+                  {row.gender === "M" ? "남" : "여"}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-900">
                   {row.previous_school} → {row.school_name}
