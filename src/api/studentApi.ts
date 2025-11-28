@@ -133,6 +133,34 @@ interface ApiResponse<T> {
   data: T;
 }
 
+// 측정 시작 API 응답
+export interface UniformProduct {
+  product_id: number;
+  product_name: string;
+  category: string;
+  gender: "male" | "female" | "unisex";
+  price: number;
+  recommended_size: string;
+  available_sizes: string[];
+}
+
+export interface StartMeasurementResponse {
+  student_id: number;
+  student_name: string;
+  from_school: string;
+  to_school: string;
+  parent_phone: string;
+  school_deadline: string;
+  body_measurements: {
+    height: number;
+    weight: number;
+    shoulder: number;
+    waist: number;
+  };
+  uniform_products: UniformProduct[];
+  accessory_products: UniformProduct[] | null;
+}
+
 // 측정 데이터 응답
 export interface StudentMeasurementData {
   id: number;
@@ -163,8 +191,19 @@ export interface StudentMeasurementData {
 }
 
 // 측정 시작
-export async function startMeasurement(studentId: number): Promise<void> {
-  await apiClient.post(`/api/v1/students/${studentId}/start-measurement`);
+export async function startMeasurement(
+  studentId: number
+): Promise<StartMeasurementResponse> {
+  const response = await apiClient.post<ApiResponse<StartMeasurementResponse>>(
+    `/api/v1/students/${studentId}/start-measurement`
+  );
+
+  // API 응답이 { success: true, data: {...} } 형태일 경우를 대비
+  if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+    return (response.data as ApiResponse<StartMeasurementResponse>).data;
+  }
+
+  return response.data as StartMeasurementResponse;
 }
 
 // 학생 측정 데이터 조회
@@ -212,4 +251,54 @@ export async function addStudent(
 
   // API 응답이 { success: true, data: {...} } 형식이므로 data만 반환
   return response.data.data;
+}
+
+// 측정 주문 데이터 타입
+export interface MeasurementOrderItem {
+  item_id: string;
+  name: string;
+  season: "동복" | "하복";
+  selected_size: number;
+  customization: string;
+  pants_length?: string;
+  purchase_count: number;
+}
+
+export interface SupplyOrderItem {
+  id: string;
+  name: string;
+  category: string;
+  size: string;
+  count: number;
+}
+
+export interface MeasurementOrderRequest {
+  uniform_items: MeasurementOrderItem[];
+  supply_items: SupplyOrderItem[];
+}
+
+export interface FinalizeOrderRequest extends MeasurementOrderRequest {
+  signature: string;
+}
+
+// 임시 장바구니에 측정 주문 저장
+export async function submitMeasurementOrder(
+  studentId: number,
+  orderData: MeasurementOrderRequest
+): Promise<void> {
+  await apiClient.post(
+    `/api/v1/students/${studentId}/measurement-order`,
+    orderData
+  );
+}
+
+// 최종 주문 확정
+export async function finalizeMeasurementOrder(
+  studentId: number,
+  orderData: FinalizeOrderRequest
+): Promise<void> {
+  await apiClient.post(
+    `/api/v1/students/${studentId}/order/finalize`,
+    orderData
+  );
 }

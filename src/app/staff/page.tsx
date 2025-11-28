@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RegisterStudent, startMeasurement } from "@/api/studentApi";
+import {
+  RegisterStudent,
+  startMeasurement,
+  StartMeasurementResponse,
+} from "@/api/studentApi";
 import MeasurementSheet from "./components/MeasurementSheet";
 import ConfirmModal from "./components/ConfirmModal";
 import StudentTable from "./components/StudentTable";
@@ -13,6 +17,8 @@ export default function Page() {
   const [isMeasurementSheetOpen, setIsMeasurementSheetOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] =
     useState<RegisterStudent | null>(null);
+  const [measurementData, setMeasurementData] =
+    useState<StartMeasurementResponse | null>(null);
 
   const {
     students,
@@ -41,7 +47,8 @@ export default function Page() {
     if (!selectedStudent) return;
 
     try {
-      await startMeasurement(selectedStudent.id);
+      const data = await startMeasurement(selectedStudent.id);
+      setMeasurementData(data);
       setIsModalOpen(false);
       setIsMeasurementSheetOpen(true);
       refresh();
@@ -76,19 +83,13 @@ export default function Page() {
         />
       )}
 
-      {isMeasurementSheetOpen && selectedStudent && (
-        <section className="">
-          <div
-            className="absolute  top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm"
-            onClick={() => {
-              setIsMeasurementSheetOpen(false);
-            }}
-          ></div>
-          <MeasurementSheet
-            studentId={selectedStudent.id}
-            setIsMeasurementSheetOpen={setIsMeasurementSheetOpen}
-          />
-        </section>
+      {isMeasurementSheetOpen && selectedStudent && measurementData && (
+        <MeasurementSheet
+          studentId={selectedStudent.id}
+          measurementData={measurementData}
+          selectedStudent={selectedStudent}
+          setIsMeasurementSheetOpen={setIsMeasurementSheetOpen}
+        />
       )}
 
       <section>
