@@ -5,7 +5,7 @@ import {
   SUPPLY_ITEMS_CONFIG,
   UNIFORM_ITEMS,
 } from "@/mocks/measurementData";
-import type { StudentMeasurementData } from "@/api/studentApi";
+import type { StudentMeasurementData, StartMeasurementResponse, RegisterStudent } from "@/api/studentApi";
 import {
   MeasurementMode,
   UniformSizeItem,
@@ -18,18 +18,64 @@ import { useMeasurementData } from "../hooks/useMeasurementData";
 export default function MeasurementSheet({
   setIsMeasurementSheetOpen,
   studentId,
+  measurementData,
+  selectedStudent,
   mode = "new",
 }: {
   setIsMeasurementSheetOpen: (open: boolean) => void;
   studentId: number;
+  measurementData?: StartMeasurementResponse;
+  selectedStudent?: RegisterStudent;
   mode?: MeasurementMode;
 }) {
   const [season, setSeason] = useState<"동복" | "하복">("동복");
 
+  // API 응답의 uniform_products를 카테고리별로 그룹핑
+  const uniformProductsByCategory = {
+    동복: measurementData?.uniform_products
+      ?.filter((p) => p.category === "winter")
+      .map((p) => ({
+        id: String(p.product_id),
+        name: p.product_name,
+        availableSizes: p.available_sizes.map((s) => {
+          const sizeMap: Record<string, number> = {
+            XS: 85,
+            S: 90,
+            M: 95,
+            L: 100,
+            XL: 105,
+            XXL: 110,
+          };
+          return sizeMap[s] || 95;
+        }),
+        price: p.price,
+        provided: 1, // 기본 지원 개수
+      })) || [],
+    하복: measurementData?.uniform_products
+      ?.filter((p) => p.category === "summer")
+      .map((p) => ({
+        id: String(p.product_id),
+        name: p.product_name,
+        availableSizes: p.available_sizes.map((s) => {
+          const sizeMap: Record<string, number> = {
+            XS: 85,
+            S: 90,
+            M: 95,
+            L: 100,
+            XL: 105,
+            XXL: 110,
+          };
+          return sizeMap[s] || 95;
+        }),
+        price: p.price,
+        provided: 1, // 기본 지원 개수
+      })) || [],
+  };
+
   // 커스텀 훅으로 상태 관리 분리
   const uniformItems = useUniformItems();
   const supplyItems = useSupplyItems();
-  const measurementData = useMeasurementData(studentId, mode);
+  const measurementHook = useMeasurementData(studentId, mode, measurementData, selectedStudent);
 
   const {
     studentData,
@@ -40,16 +86,20 @@ export default function MeasurementSheet({
     setSignature,
     handleCompleteMeasurement,
     handleFinalConfirmation,
-  } = measurementData;
+  } = measurementHook;
 
   const canCompleteMeasurement = uniformItems.canComplete;
 
-  const onCompleteMeasurement = () => {
+  const onCompleteMeasurement = async () => {
     if (!canCompleteMeasurement) {
       alert("모든 바지 기장을 입력해주세요.");
       return;
     }
-    handleCompleteMeasurement();
+    await handleCompleteMeasurement(
+      uniformItems.uniformSizeItems,
+      supplyItems.supplyItems,
+      supplyItems.itemCounts
+    );
   };
 
   const onFinalConfirmation = () => {
@@ -88,6 +138,7 @@ export default function MeasurementSheet({
             season={season}
             setSeason={setSeason}
             uniformSizeItems={uniformItems.uniformSizeItems}
+            uniformProductsByCategory={uniformProductsByCategory}
             onAddItem={uniformItems.addItem}
             onRemoveItem={uniformItems.removeItem}
             onUpdateSize={uniformItems.updateSize}
@@ -246,10 +297,22 @@ const MeasurementInfo = ({
   </div>
 );
 
+interface UniformProductItem {
+  id: string;
+  name: string;
+  availableSizes: number[];
+  price: number;
+  provided: number;
+}
+
 interface SizeSectionProps {
   season: "동복" | "하복";
   setSeason: (s: "동복" | "하복") => void;
   uniformSizeItems: UniformSizeItem[];
+  uniformProductsByCategory: {
+    동복: UniformProductItem[];
+    하복: UniformProductItem[];
+  };
   onAddItem: (itemId: string, season: "동복" | "하복") => void;
   onRemoveItem: (id: string) => void;
   onUpdateSize: (id: string, size: number) => void;
@@ -262,6 +325,7 @@ const SizeSection = ({
   season,
   setSeason,
   uniformSizeItems,
+  uniformProductsByCategory,
   onAddItem,
   onRemoveItem,
   onUpdateSize,
@@ -280,8 +344,13 @@ const SizeSection = ({
       return acc;
     }, {} as Record<string, UniformSizeItem[]>);
 
+  // API 응답 데이터가 있으면 사용, 없으면 mock 데이터 사용
+  const availableProducts = uniformProductsByCategory[season].length > 0
+    ? uniformProductsByCategory[season]
+    : UNIFORM_ITEMS[season];
+
   // 모든 품목 목록 (순서 유지를 위해)
-  const allItemIds = UNIFORM_ITEMS[season].map((item) => item.id);
+  const allItemIds = availableProducts.map((item) => item.id);
 
   return (
     <div className="border-b-8 border-black/5 p-6">
@@ -321,7 +390,7 @@ const SizeSection = ({
 
       {/* 품목 리스트 - 품목별로 그룹화하여 표시 */}
       {allItemIds.map((itemId) => {
-        const baseItem = UNIFORM_ITEMS[season].find((i) => i.id === itemId);
+        const baseItem = availableProducts.find((i) => i.id === itemId);
         if (!baseItem) return null;
 
         const itemsOfType = groupedItems[itemId] || [];

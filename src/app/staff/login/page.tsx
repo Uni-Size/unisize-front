@@ -1,17 +1,28 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useEffect } from "react";
 import { login } from "@/api/authApi";
 import { useAuthStore } from "@/stores/authStore";
 
 function Page() {
   const router = useRouter();
-  const { setAuth } = useAuthStore();
+  const { setAuth, isAuthenticated, staff } = useAuthStore();
   const [employeeId, setEmployeeId] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // 이미 로그인된 경우 리다이렉트
+  useEffect(() => {
+    if (isAuthenticated && staff) {
+      if (staff.role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/staff");
+      }
+    }
+  }, [isAuthenticated, staff, router]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

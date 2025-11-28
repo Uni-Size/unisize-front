@@ -8,7 +8,8 @@
       "Bash(mv:*)",
       "Bash(wait)",
       "Bash(lsof:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
