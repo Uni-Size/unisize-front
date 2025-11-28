@@ -14,7 +14,7 @@ export function useAuth(requireAuth = false) {
   useEffect(() => {
     // 인증이 필요한데 인증되지 않은 경우 로그인 페이지로 리다이렉트
     if (requireAuth && !isAuthenticated) {
-      router.push('/staff/signup');
+      router.push('/staff/login');
     }
   }, [requireAuth, isAuthenticated, router]);
 
@@ -29,7 +29,7 @@ export function useAuth(requireAuth = false) {
       // store 상태 초기화
       clearAuth();
       // 로그인 페이지로 리다이렉트
-      router.push('/staff/signup');
+      router.push('/staff/login');
     }
   };
 

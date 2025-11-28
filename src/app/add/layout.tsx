@@ -3,5 +3,5 @@ export default function StaffLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <section>{children}</section>;
+  return <section className="w-sm mx-auto p-4">{children}</section>;
 }

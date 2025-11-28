@@ -144,6 +144,7 @@ function generateThemeColors(colors) {
 }
 
 const cssContent = `@import "tailwindcss";
+@import "./custom-inputs.css";
 
 @theme {
   /* Light mode colors */

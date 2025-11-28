@@ -1,6 +1,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
+import { logout } from "@/api/authApi";
 
 // 아이콘 컴포넌트 분리
 const SecurityIcon = ({ size = 44 }) => (
@@ -152,14 +153,16 @@ export function SecurityMaintenanceInfoCompact({
           </div>
         </div>
         {staff && (
-          <button
-            className=" text-gray-600 mt-1.5 pt-1.5 "
-            type="button"
-            onClick={() => router.push(`/staff/${staff.employee_name}`)}
-          >
-            <span className="text-sm text-gray-600">담당자 : </span>{" "}
-            {staff.employee_name}
-          </button>
+          <div className="flex items-center gap-2 mt-1.5 pt-1.5">
+            <button
+              className="text-gray-600"
+              type="button"
+              onClick={() => router.push(`/staff/${staff.employee_name}`)}
+            >
+              <span className="text-sm text-gray-600">담당자 : </span>{" "}
+              {staff.employee_name}
+            </button>
+          </div>
         )}
       </div>
     </div>

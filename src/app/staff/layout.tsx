@@ -22,13 +22,13 @@ export default function StaffLayout({
 
   // 인증 체크 (로그인 페이지가 아닌 경우)
   useEffect(() => {
-    if (isClient && !pathname.includes("/staff/signup") && !isAuthenticated) {
-      router.push("/staff/signup");
+    if (isClient && !pathname.includes("/staff/login") && !isAuthenticated) {
+      router.push("/staff/login");
     }
   }, [isClient, pathname, isAuthenticated, router]);
 
   // 로그인 페이지인지 확인
-  const isSignupPage = pathname === "/staff/signup";
+  const isSignupPage = pathname === "/staff/login";
 
   return (
     <section>

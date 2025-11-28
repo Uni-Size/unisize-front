@@ -4,7 +4,11 @@
       "Bash(npm run build:*)",
       "Bash(npm run dev:*)",
       "Bash(cat:*)",
-      "Bash(npm run tokens:build:*)"
+      "Bash(npm run tokens:build:*)",
+      "Bash(mv:*)",
+      "Bash(wait)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)"
     ],
     "deny": [],
     "ask": []
