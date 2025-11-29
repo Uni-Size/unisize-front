@@ -11,6 +11,11 @@ export interface StaffInfo {
   created_at: string;
   updated_at: string;
   last_login: string;
+  staff_stats?: {
+    total_students_handled: number;
+    today_students_handled: number;
+    currently_measuring: number;
+  };
 }
 
 interface AuthState {
