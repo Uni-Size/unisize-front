@@ -61,17 +61,14 @@ export function SecurityMaintenanceInfoFull() {
   );
 }
 
-export function SecurityMaintenanceInfoCompact({
-  total,
-  today,
-  simultaneous,
-}: {
-  total?: number;
-  today?: number;
-  simultaneous?: number;
-}) {
+export function SecurityMaintenanceInfoCompact() {
   const router = useRouter();
   const { staff } = useAuthStore();
+
+  // staff_stats에서 값 추출
+  const total = staff?.staff_stats?.total_students_handled ?? 0;
+  const today = staff?.staff_stats?.today_students_handled ?? 0;
+  const simultaneous = staff?.staff_stats?.currently_measuring ?? 0;
 
   return (
     <div className="border border-black/10 bg-[#FAFAFA] px-3 py-2 rounded text-left flex justify-between">
@@ -109,7 +106,7 @@ export function SecurityMaintenanceInfoCompact({
                 fill="#374151"
               />
             </svg>
-            <span className="font-medium text-gray-700">{total || 0}</span>
+            <span className="font-medium text-gray-700">{total}</span>
           </div>
           <div
             className="flex justify-between text-xs cursor-pointer hover:opacity-80 transition-opacity"
@@ -128,7 +125,7 @@ export function SecurityMaintenanceInfoCompact({
                 fill="#374151"
               />
             </svg>
-            <span className="font-medium text-gray-700">{today || 0}</span>
+            <span className="font-medium text-gray-700">{today}</span>
           </div>
           <div
             className="flex justify-between text-xs cursor-pointer hover:opacity-80 transition-opacity"
@@ -147,9 +144,7 @@ export function SecurityMaintenanceInfoCompact({
                 fill="#374151"
               />
             </svg>
-            <span className="font-medium text-gray-700">
-              {simultaneous ?? 0}
-            </span>
+            <span className="font-medium text-gray-700">{simultaneous}</span>
           </div>
         </div>
         {staff && (

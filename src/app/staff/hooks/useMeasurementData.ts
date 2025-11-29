@@ -11,7 +11,11 @@ import {
   type MeasurementOrderItem,
   type SupplyOrderItem,
 } from "@/api/studentApi";
-import { MeasurementMode, UniformSizeItem, SupplyItem } from "../components/types";
+import {
+  MeasurementMode,
+  UniformSizeItem,
+  SupplyItem,
+} from "../components/types";
 
 export const useMeasurementData = (
   studentId: number,
@@ -36,8 +40,6 @@ export const useMeasurementData = (
 
         // initialMeasurementData가 있으면 API 호출 대신 이 데이터를 사용
         if (initialMeasurementData) {
-          // StartMeasurementResponse를 StudentMeasurementData로 변환
-          // selectedStudent에서 추가 정보를 가져옴
           const convertedData: StudentMeasurementData = {
             id: initialMeasurementData.student_id,
             name: initialMeasurementData.student_name,
@@ -82,15 +84,17 @@ export const useMeasurementData = (
       itemCounts: Record<string, number>
     ): MeasurementOrderRequest => {
       // 교복 데이터 변환
-      const uniformItems: MeasurementOrderItem[] = uniformSizeItems.map((item) => ({
-        item_id: item.itemId,
-        name: item.name,
-        season: item.season,
-        selected_size: item.selectedSize,
-        customization: item.customization,
-        pants_length: item.pantsLength,
-        purchase_count: item.purchaseCount,
-      }));
+      const uniformItems: MeasurementOrderItem[] = uniformSizeItems.map(
+        (item) => ({
+          item_id: item.itemId,
+          name: item.name,
+          season: item.season,
+          selected_size: item.selectedSize,
+          customization: item.customization,
+          pants_length: item.pantsLength,
+          purchase_count: item.purchaseCount,
+        })
+      );
 
       // 용품 데이터 변환 (구입개수가 0인 항목 제외)
       const supplyItemsData: SupplyOrderItem[] = supplyItems
@@ -118,7 +122,11 @@ export const useMeasurementData = (
       itemCounts: Record<string, number>
     ) => {
       try {
-        const orderData = transformOrderData(uniformSizeItems, supplyItems, itemCounts);
+        const orderData = transformOrderData(
+          uniformSizeItems,
+          supplyItems,
+          itemCounts
+        );
         await submitMeasurementOrder(studentId, orderData);
         setIsMeasurementComplete(true);
       } catch (error) {
@@ -143,7 +151,11 @@ export const useMeasurementData = (
       }
 
       try {
-        const orderData = transformOrderData(uniformSizeItems, supplyItems, itemCounts);
+        const orderData = transformOrderData(
+          uniformSizeItems,
+          supplyItems,
+          itemCounts
+        );
         const finalizeData: FinalizeOrderRequest = {
           ...orderData,
           signature,
