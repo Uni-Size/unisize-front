@@ -9,7 +9,8 @@
       "Bash(wait)",
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npm i:*)"
     ],
     "deny": [],
     "ask": []

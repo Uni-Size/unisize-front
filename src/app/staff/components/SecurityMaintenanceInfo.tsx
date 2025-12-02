@@ -1,7 +1,6 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
-import { logout } from "@/api/authApi";
 
 // 아이콘 컴포넌트 분리
 const SecurityIcon = ({ size = 44 }) => (
@@ -150,7 +149,7 @@ export function SecurityMaintenanceInfoCompact() {
         {staff && (
           <div className="flex items-center gap-2 mt-1.5 pt-1.5">
             <button
-              className="text-gray-600"
+              className="text-gray-600 hover:text-gray-800 transition-colors"
               type="button"
               onClick={() => router.push(`/staff/${staff.employee_name}`)}
             >

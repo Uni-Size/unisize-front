@@ -1,16 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import {
-  SUPPLY_ITEMS_CONFIG,
-  UNIFORM_ITEMS,
-} from "@/mocks/measurementData";
-import type { StudentMeasurementData, StartMeasurementResponse, RegisterStudent } from "@/api/studentApi";
-import {
-  MeasurementMode,
-  UniformSizeItem,
-  SupplyItem,
-} from "./types";
+import { SUPPLY_ITEMS_CONFIG, UNIFORM_ITEMS } from "@/mocks/measurementData";
+import type {
+  StudentMeasurementData,
+  StartMeasurementResponse,
+  RegisterStudent,
+} from "@/api/studentApi";
+import { MeasurementMode, UniformSizeItem, SupplyItem } from "./types";
 import { useUniformItems } from "../hooks/useUniformItems";
 import { useSupplyItems } from "../hooks/useSupplyItems";
 import { useMeasurementData } from "../hooks/useMeasurementData";
@@ -32,50 +29,57 @@ export default function MeasurementSheet({
 
   // API 응답의 uniform_products를 카테고리별로 그룹핑
   const uniformProductsByCategory = {
-    동복: measurementData?.uniform_products
-      ?.filter((p) => p.category === "winter")
-      .map((p) => ({
-        id: String(p.product_id),
-        name: p.product_name,
-        availableSizes: p.available_sizes.map((s) => {
-          const sizeMap: Record<string, number> = {
-            XS: 85,
-            S: 90,
-            M: 95,
-            L: 100,
-            XL: 105,
-            XXL: 110,
-          };
-          return sizeMap[s] || 95;
-        }),
-        price: p.price,
-        provided: 1, // 기본 지원 개수
-      })) || [],
-    하복: measurementData?.uniform_products
-      ?.filter((p) => p.category === "summer")
-      .map((p) => ({
-        id: String(p.product_id),
-        name: p.product_name,
-        availableSizes: p.available_sizes.map((s) => {
-          const sizeMap: Record<string, number> = {
-            XS: 85,
-            S: 90,
-            M: 95,
-            L: 100,
-            XL: 105,
-            XXL: 110,
-          };
-          return sizeMap[s] || 95;
-        }),
-        price: p.price,
-        provided: 1, // 기본 지원 개수
-      })) || [],
+    동복:
+      measurementData?.uniform_products
+        ?.filter((p) => p.category === "winter")
+        .map((p) => ({
+          id: String(p.product_id),
+          name: p.product_name,
+          availableSizes: p.available_sizes.map((s) => {
+            const sizeMap: Record<string, number> = {
+              XS: 85,
+              S: 90,
+              M: 95,
+              L: 100,
+              XL: 105,
+              XXL: 110,
+            };
+            return sizeMap[s] || 95;
+          }),
+          price: p.price,
+          provided: 1, // 기본 지원 개수
+        })) || [],
+    하복:
+      measurementData?.uniform_products
+        ?.filter((p) => p.category === "summer")
+        .map((p) => ({
+          id: String(p.product_id),
+          name: p.product_name,
+          availableSizes: p.available_sizes.map((s) => {
+            const sizeMap: Record<string, number> = {
+              XS: 85,
+              S: 90,
+              M: 95,
+              L: 100,
+              XL: 105,
+              XXL: 110,
+            };
+            return sizeMap[s] || 95;
+          }),
+          price: p.price,
+          provided: 1, // 기본 지원 개수
+        })) || [],
   };
 
   // 커스텀 훅으로 상태 관리 분리
   const uniformItems = useUniformItems();
   const supplyItems = useSupplyItems();
-  const measurementHook = useMeasurementData(studentId, mode, measurementData, selectedStudent);
+  const measurementHook = useMeasurementData(
+    studentId,
+    mode,
+    measurementData,
+    selectedStudent
+  );
 
   const {
     studentData,
@@ -113,118 +117,142 @@ export default function MeasurementSheet({
 
   if (isLoading) {
     return (
-      <div className="fixed bottom-0 left-0 bg-white w-full rounded-t-md h-5/6 overflow-y-auto flex items-center justify-center">
-        <p className="text-gray-600">데이터를 불러오는 중...</p>
-      </div>
+      <>
+        {/* 오버레이 */}
+        <div
+          className="fixed inset-0 bg-black/30 z-40"
+          onClick={() => setIsMeasurementSheetOpen(false)}
+        />
+        {/* 시트 */}
+        <div className="fixed bottom-0 left-0 bg-white w-full rounded-t-md h-5/6 overflow-y-auto flex items-center justify-center z-50">
+          <p className="text-gray-600">데이터를 불러오는 중...</p>
+        </div>
+      </>
     );
   }
 
   if (!studentData) {
     return (
-      <div className="fixed bottom-0 left-0 bg-white w-full rounded-t-md h-5/6 overflow-y-auto flex items-center justify-center">
-        <p className="text-red-600">학생 데이터를 불러올 수 없습니다.</p>
-      </div>
+      <>
+        {/* 오버레이 */}
+        <div
+          className="fixed inset-0 bg-black/30 z-40"
+          onClick={() => setIsMeasurementSheetOpen(false)}
+        />
+        {/* 시트 */}
+        <div className="fixed bottom-0 left-0 bg-white w-full rounded-t-md h-5/6 overflow-y-auto flex items-center justify-center z-50">
+          <p className="text-red-600">학생 데이터를 불러올 수 없습니다.</p>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="fixed bottom-0 left-0 bg-white w-full rounded-t-md h-5/6 overflow-y-auto">
-      <StudentInfo studentData={studentData} />
-      <MeasurementInfo studentData={studentData} />
+    <>
+      {/* 오버레이 - 외부 클릭 시 시트 닫기 */}
+      <div
+        className="fixed inset-0 bg-black/30 z-40"
+        onClick={() => setIsMeasurementSheetOpen(false)}
+      />
+      {/* 시트 */}
+      <div className="fixed bottom-0 left-0 bg-white w-full rounded-t-md h-5/6 overflow-y-auto z-50">
+        <StudentInfo studentData={studentData} />
+        <MeasurementInfo studentData={studentData} />
 
-      {!isMeasurementComplete ? (
-        <>
-          <SizeSection
-            season={season}
-            setSeason={setSeason}
-            uniformSizeItems={uniformItems.uniformSizeItems}
-            uniformProductsByCategory={uniformProductsByCategory}
-            onAddItem={uniformItems.addItem}
-            onRemoveItem={uniformItems.removeItem}
-            onUpdateSize={uniformItems.updateSize}
-            onUpdateCustomization={uniformItems.updateCustomization}
-            onUpdatePantsLength={uniformItems.updatePantsLength}
-            onUpdatePurchaseCount={uniformItems.updatePurchaseCount}
-          />
+        {!isMeasurementComplete ? (
+          <>
+            <SizeSection
+              season={season}
+              setSeason={setSeason}
+              uniformSizeItems={uniformItems.uniformSizeItems}
+              uniformProductsByCategory={uniformProductsByCategory}
+              onAddItem={uniformItems.addItem}
+              onRemoveItem={uniformItems.removeItem}
+              onUpdateSize={uniformItems.updateSize}
+              onUpdateCustomization={uniformItems.updateCustomization}
+              onUpdatePantsLength={uniformItems.updatePantsLength}
+              onUpdatePurchaseCount={uniformItems.updatePurchaseCount}
+            />
 
-          <SupplySection
-            items={supplyItems.supplyItems}
-            onAddItem={supplyItems.addItem}
-            onRemoveItem={supplyItems.removeItem}
-            onUpdateItem={supplyItems.updateItem}
-            itemCounts={supplyItems.itemCounts}
-            setItemCounts={supplyItems.setItemCounts}
-          />
+            <SupplySection
+              items={supplyItems.supplyItems}
+              onAddItem={supplyItems.addItem}
+              onRemoveItem={supplyItems.removeItem}
+              onUpdateItem={supplyItems.updateItem}
+              itemCounts={supplyItems.itemCounts}
+              setItemCounts={supplyItems.setItemCounts}
+            />
 
-          <div className="p-6">
-            <button
-              onClick={onCompleteMeasurement}
-              disabled={!canCompleteMeasurement}
-              className={`w-full py-3 rounded-lg font-medium transition-colors ${
-                canCompleteMeasurement
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-            >
-              측정 완료
-            </button>
-            {!canCompleteMeasurement && (
-              <p className="text-xs text-red-500 mt-2 text-center">
-                모든 교복 사이즈를 확정하고 바지 기장을 입력해주세요.
-              </p>
-            )}
-          </div>
-        </>
-      ) : (
-        <>
-          <ConfirmedDataView
-            uniformSizeItems={uniformItems.uniformSizeItems}
-            supplyItems={supplyItems.supplyItems}
-            itemCounts={supplyItems.itemCounts}
-          />
-
-          <div className="border-b-8 border-black/5 p-6">
-            {mode === "readonly" ? (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm font-semibold text-yellow-800 mb-2">
-                  수정 불가 안내
+            <div className="p-6">
+              <button
+                onClick={onCompleteMeasurement}
+                disabled={!canCompleteMeasurement}
+                className={`w-full py-3 rounded-lg font-medium transition-colors ${
+                  canCompleteMeasurement
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                측정 완료
+              </button>
+              {!canCompleteMeasurement && (
+                <p className="text-xs text-red-500 mt-2 text-center">
+                  모든 교복 사이즈를 확정하고 바지 기장을 입력해주세요.
                 </p>
-                <p className="text-sm text-yellow-700">
-                  결제 완료 후 일정 기간이 지나 더 이상 수정할 수 없습니다.
-                  <br />
-                  변경이 필요한 경우 관리자에게 문의해주세요.
-                </p>
-              </div>
-            ) : (
-              <>
-                <p className="text-xs text-gray-600 pb-3.5">서명</p>
-                <input
-                  type="text"
-                  value={signature}
-                  onChange={(e) => setSignature(e.target.value)}
-                  placeholder="서명을 입력해주세요"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setIsMeasurementComplete(false)}
-                    className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-                  >
-                    수정하기
-                  </button>
-                  <button
-                    onClick={onFinalConfirmation}
-                    className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    최종 확정
-                  </button>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <ConfirmedDataView
+              uniformSizeItems={uniformItems.uniformSizeItems}
+              supplyItems={supplyItems.supplyItems}
+              itemCounts={supplyItems.itemCounts}
+            />
+
+            <div className="border-b-8 border-black/5 p-6">
+              {mode === "readonly" ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-yellow-800 mb-2">
+                    수정 불가 안내
+                  </p>
+                  <p className="text-sm text-yellow-700">
+                    결제 완료 후 일정 기간이 지나 더 이상 수정할 수 없습니다.
+                    <br />
+                    변경이 필요한 경우 관리자에게 문의해주세요.
+                  </p>
                 </div>
-              </>
-            )}
-          </div>
-        </>
-      )}
-    </div>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-600 pb-3.5">서명</p>
+                  <input
+                    type="text"
+                    value={signature}
+                    onChange={(e) => setSignature(e.target.value)}
+                    placeholder="서명을 입력해주세요"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setIsMeasurementComplete(false)}
+                      className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                    >
+                      수정하기
+                    </button>
+                    <button
+                      onClick={onFinalConfirmation}
+                      className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                    >
+                      최종 확정
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -255,15 +283,8 @@ const StudentInfo = ({
         </p>
       </div>
       <ul className="text-xs text-gray-600 space-y-0.5">
-        <li>
-          예약 시간 : {studentData.timestamps?.reservation || "-"}
-        </li>
-        <li>
-          접수 시간 : {studentData.timestamps?.reception || "-"}
-        </li>
-        <li>
-          측정 시작 : {studentData.timestamps?.measurement_start || "-"}
-        </li>
+        <li>접수 시간 : {studentData.timestamps?.reception || "-"}</li>
+        <li>측정 시작 : {studentData.timestamps?.measurement_start || "-"}</li>
         <li>
           측정 완료 : {studentData.timestamps?.measurement_complete || "-"}
         </li>
@@ -336,18 +357,22 @@ const SizeSection = ({
   // 현재 시즌의 아이템들을 품목별로 그룹화
   const groupedItems = uniformSizeItems
     .filter((item) => item.season === season)
-    .reduce((acc, item) => {
-      if (!acc[item.itemId]) {
-        acc[item.itemId] = [];
-      }
-      acc[item.itemId].push(item);
-      return acc;
-    }, {} as Record<string, UniformSizeItem[]>);
+    .reduce(
+      (acc, item) => {
+        if (!acc[item.itemId]) {
+          acc[item.itemId] = [];
+        }
+        acc[item.itemId].push(item);
+        return acc;
+      },
+      {} as Record<string, UniformSizeItem[]>
+    );
 
   // API 응답 데이터가 있으면 사용, 없으면 mock 데이터 사용
-  const availableProducts = uniformProductsByCategory[season].length > 0
-    ? uniformProductsByCategory[season]
-    : UNIFORM_ITEMS[season];
+  const availableProducts =
+    uniformProductsByCategory[season].length > 0
+      ? uniformProductsByCategory[season]
+      : UNIFORM_ITEMS[season];
 
   // 모든 품목 목록 (순서 유지를 위해)
   const allItemIds = availableProducts.map((item) => item.id);
@@ -576,13 +601,16 @@ const SupplySection = ({
   };
 
   // 품목별로 그룹화
-  const groupedItems = items.reduce((acc, item) => {
-    if (!acc[item.name]) {
-      acc[item.name] = [];
-    }
-    acc[item.name].push(item);
-    return acc;
-  }, {} as Record<string, SupplyItem[]>);
+  const groupedItems = items.reduce(
+    (acc, item) => {
+      if (!acc[item.name]) {
+        acc[item.name] = [];
+      }
+      acc[item.name].push(item);
+      return acc;
+    },
+    {} as Record<string, SupplyItem[]>
+  );
 
   return (
     <div className="border-b-8 border-black/5 p-6">
@@ -755,13 +783,16 @@ const ConfirmedDataView = ({
   itemCounts,
 }: ConfirmedDataViewProps) => {
   // 시즌별로 그룹화
-  const groupedBySeason = uniformSizeItems.reduce((acc, item) => {
-    if (!acc[item.season]) {
-      acc[item.season] = [];
-    }
-    acc[item.season].push(item);
-    return acc;
-  }, {} as Record<"동복" | "하복", UniformSizeItem[]>);
+  const groupedBySeason = uniformSizeItems.reduce(
+    (acc, item) => {
+      if (!acc[item.season]) {
+        acc[item.season] = [];
+      }
+      acc[item.season].push(item);
+      return acc;
+    },
+    {} as Record<"동복" | "하복", UniformSizeItem[]>
+  );
 
   return (
     <div className="border-b-8 border-black/5 p-6">
