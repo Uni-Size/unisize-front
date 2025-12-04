@@ -142,6 +142,17 @@ export interface UniformProduct {
   price: number;
   recommended_size: string;
   available_sizes: string[];
+  alternative_product_names: string[];
+  is_custom_detail_required: boolean;
+  free_quantity: number;
+}
+
+export interface RecommendedUniformItem {
+  product: string;
+  recommended_size: string;
+  quantity: number;
+  selectable_with?: string[];
+  gender: "male" | "female" | "unisex";
 }
 
 export interface StartMeasurementResponse {
@@ -159,6 +170,10 @@ export interface StartMeasurementResponse {
   };
   uniform_products: UniformProduct[];
   accessory_products: UniformProduct[] | null;
+  recommended_uniforms?: {
+    winter: RecommendedUniformItem[];
+    summer: RecommendedUniformItem[];
+  };
 }
 
 // 측정 데이터 응답
@@ -199,7 +214,11 @@ export async function startMeasurement(
   );
 
   // API 응답이 { success: true, data: {...} } 형태일 경우를 대비
-  if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+  if (
+    response.data &&
+    typeof response.data === "object" &&
+    "data" in response.data
+  ) {
     return (response.data as ApiResponse<StartMeasurementResponse>).data;
   }
 
@@ -253,7 +272,30 @@ export async function addStudent(
   return response.data.data;
 }
 
-// 측정 주문 데이터 타입
+// 측정 주문 데이터 타입 (새로운 API 형식)
+export interface UniformOrderItem {
+  product_id: number;
+  size: string;
+  custom_details: string;
+  free_quantity: number;
+  purchase_quantity: number;
+}
+
+export interface AccessoryOrderItem {
+  product_id: number;
+  size: string;
+  custom_details: string;
+  free_quantity: number;
+  purchase_quantity: number;
+}
+
+export interface CompleteMeasurementRequest {
+  uniform_items: UniformOrderItem[];
+  accessory_items: AccessoryOrderItem[];
+  notes: string;
+}
+
+// 레거시 타입 (하위 호환성)
 export interface MeasurementOrderItem {
   item_id: string;
   name: string;

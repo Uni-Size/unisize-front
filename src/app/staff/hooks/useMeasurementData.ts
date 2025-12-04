@@ -4,12 +4,10 @@ import {
   type StudentMeasurementData,
   type StartMeasurementResponse,
   type RegisterStudent,
-  submitMeasurementOrder,
-  finalizeMeasurementOrder,
-  type MeasurementOrderRequest,
-  type FinalizeOrderRequest,
-  type MeasurementOrderItem,
-  type SupplyOrderItem,
+  completeMeasurement,
+  type CompleteMeasurementRequest,
+  type UniformOrderItem,
+  type AccessoryOrderItem,
 } from "@/api/studentApi";
 import {
   MeasurementMode,
@@ -76,44 +74,49 @@ export const useMeasurementData = (
     fetchStudentData();
   }, [studentId, initialMeasurementData, selectedStudent]);
 
-  // 데이터 변환 헬퍼 함수
-  const transformOrderData = useCallback(
+  // 데이터 변환 헬퍼 함수 (새로운 API 형식)
+  const transformToCompleteMeasurementData = useCallback(
     (
       uniformSizeItems: UniformSizeItem[],
       supplyItems: SupplyItem[],
       itemCounts: Record<string, number>
-    ): MeasurementOrderRequest => {
+    ): CompleteMeasurementRequest => {
       // 교복 데이터 변환
-      const uniformItems: MeasurementOrderItem[] = uniformSizeItems.map(
-        (item) => ({
-          item_id: item.itemId,
-          name: item.name,
-          season: item.season,
-          selected_size: item.selectedSize,
-          customization: item.customization,
-          pants_length: item.pantsLength,
-          purchase_count: item.purchaseCount,
-        })
-      );
+      const uniformItems: UniformOrderItem[] = uniformSizeItems.map((item) => {
+        // 맞춤 정보 조합 (바지인 경우 기장 포함)
+        const customDetails = item.pantsLength
+          ? `기장: ${item.pantsLength}${item.customization ? `, ${item.customization}` : ""}`
+          : item.customization || "";
+
+        return {
+          product_id: item.productId || 0,
+          size: String(item.selectedSize),
+          custom_details: customDetails,
+          free_quantity: item.freeQuantity || 0,
+          purchase_quantity: item.purchaseCount,
+        };
+      });
 
       // 용품 데이터 변환 (구입개수가 0인 항목 제외)
-      const supplyItemsData: SupplyOrderItem[] = supplyItems
+      const accessoryItems: AccessoryOrderItem[] = supplyItems
         .filter((item) => (itemCounts[item.id] || 0) > 0)
         .map((item) => ({
-          id: item.id,
-          name: item.name,
-          category: item.category,
+          product_id: 0, // 용품은 product_id가 없으므로 0으로 설정
           size: item.size,
-          count: itemCounts[item.id] || 0,
+          custom_details: `${item.name} - ${item.category}`,
+          free_quantity: 0,
+          purchase_quantity: itemCounts[item.id] || 0,
         }));
 
       return {
         uniform_items: uniformItems,
-        supply_items: supplyItemsData,
+        accessory_items: accessoryItems,
+        notes: "",
       };
     },
     []
   );
+
 
   const handleCompleteMeasurement = useCallback(
     async (
@@ -122,20 +125,20 @@ export const useMeasurementData = (
       itemCounts: Record<string, number>
     ) => {
       try {
-        const orderData = transformOrderData(
+        const orderData = transformToCompleteMeasurementData(
           uniformSizeItems,
           supplyItems,
           itemCounts
         );
-        await submitMeasurementOrder(studentId, orderData);
+        await completeMeasurement(studentId, orderData);
         setIsMeasurementComplete(true);
       } catch (error) {
-        console.error("임시 장바구니 저장 실패:", error);
+        console.error("측정 완료 저장 실패:", error);
         alert("측정 데이터 저장에 실패했습니다.");
         throw error;
       }
     },
-    [studentId, transformOrderData]
+    [studentId, transformToCompleteMeasurementData]
   );
 
   const handleFinalConfirmation = useCallback(
@@ -151,17 +154,19 @@ export const useMeasurementData = (
       }
 
       try {
-        const orderData = transformOrderData(
+        const orderData = transformToCompleteMeasurementData(
           uniformSizeItems,
           supplyItems,
           itemCounts
         );
-        const finalizeData: FinalizeOrderRequest = {
+
+        // 서명 정보를 notes에 추가
+        const finalizeData: CompleteMeasurementRequest = {
           ...orderData,
-          signature,
+          notes: `서명: ${signature}`,
         };
 
-        await finalizeMeasurementOrder(studentId, finalizeData);
+        await completeMeasurement(studentId, finalizeData);
         alert("사이즈 확정 및 주문이 완료되었습니다.");
         setIsMeasurementSheetOpen(false);
       } catch (error) {
@@ -169,7 +174,7 @@ export const useMeasurementData = (
         alert("주문 확정에 실패했습니다.");
       }
     },
-    [studentId, signature, transformOrderData]
+    [studentId, signature, transformToCompleteMeasurementData]
   );
 
   return {
