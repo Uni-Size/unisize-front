@@ -5,14 +5,12 @@ import {
   UseMutationOptions,
 } from "@tanstack/react-query";
 import {
-  STUDENT_INFO,
-  MEASUREMENT_INFO,
   SUPPLY_ITEMS_CONFIG,
 } from "@/mocks/measurementData";
 
 // API 응답 타입
-export type StudentInfoResponse = typeof STUDENT_INFO;
-export type MeasurementInfoResponse = typeof MEASUREMENT_INFO;
+export type StudentInfoResponse = Record<string, unknown>;
+export type MeasurementInfoResponse = Record<string, unknown>;
 export type SupplyItemsConfigResponse = typeof SUPPLY_ITEMS_CONFIG;
 
 // 측정 완료 요청 타입
@@ -62,8 +60,8 @@ async function fetchStudentInfo(
   // 더미 데이터로 시뮬레이션
   return new Promise((resolve) => {
     setTimeout(() => {
-      console.log(`학생 정보 조회 (ID: ${studentId}):`, STUDENT_INFO);
-      resolve(STUDENT_INFO);
+      console.log(`학생 정보 조회 (ID: ${studentId})`);
+      resolve({});
     }, 300);
   });
 }
@@ -74,8 +72,8 @@ async function fetchMeasurementInfo(
   // 더미 데이터로 시뮬레이션
   return new Promise((resolve) => {
     setTimeout(() => {
-      console.log(`채촌 정보 조회 (ID: ${studentId}):`, MEASUREMENT_INFO);
-      resolve(MEASUREMENT_INFO);
+      console.log(`채촌 정보 조회 (ID: ${studentId})`);
+      resolve({});
     }, 300);
   });
 }
