@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SUPPLY_ITEMS_CONFIG, UNIFORM_ITEMS } from "@/mocks/measurementData";
+import { SUPPLY_ITEMS_CONFIG } from "@/mocks/measurementData";
 import type {
   StudentMeasurementData,
   StartMeasurementResponse,
@@ -27,52 +27,79 @@ export default function MeasurementSheet({
 }) {
   const [season, setSeason] = useState<"동복" | "하복">("동복");
 
-  // API 응답의 uniform_products를 카테고리별로 그룹핑
+  // recommended_uniforms와 uniform_products를 매칭하여 표시할 데이터 생성
+  const findMatchingProduct = (productName: string, category: string) => {
+    return measurementData?.uniform_products?.find(
+      (p) =>
+        p.category === category &&
+        (p.product_name.includes(productName) ||
+          productName.includes(p.product_name.split(" ")[0]))
+    );
+  };
+
   const uniformProductsByCategory = {
     동복:
-      measurementData?.uniform_products
-        ?.filter((p) => p.category === "winter")
-        .map((p) => ({
-          id: String(p.product_id),
-          name: p.product_name,
-          availableSizes: p.available_sizes.map((s) => {
-            const sizeMap: Record<string, number> = {
-              XS: 85,
-              S: 90,
-              M: 95,
-              L: 100,
-              XL: 105,
-              XXL: 110,
-            };
-            return sizeMap[s] || 95;
-          }),
-          price: p.price,
-          provided: 1, // 기본 지원 개수
-        })) || [],
+      measurementData?.recommended_uniforms?.winter?.map((item) => {
+        const matchedProduct = findMatchingProduct(item.product, "winter");
+        return {
+          id: matchedProduct
+            ? String(matchedProduct.product_id)
+            : item.product,
+          name: matchedProduct?.product_name || item.product,
+          recommendedSize: item.recommended_size,
+          availableSizes: matchedProduct
+            ? matchedProduct.available_sizes.map((s) => {
+                const sizeMap: Record<string, number> = {
+                  XS: 85,
+                  S: 90,
+                  M: 95,
+                  L: 100,
+                  XL: 105,
+                  XXL: 110,
+                };
+                return sizeMap[s] || Number(s) || 95;
+              })
+            : [95, 100, 105, 110],
+          price: matchedProduct?.price || 0,
+          provided: matchedProduct?.free_quantity ?? item.quantity,
+          quantity: item.quantity,
+          selectableWith: item.selectable_with,
+          gender: item.gender,
+        };
+      }) || [],
     하복:
-      measurementData?.uniform_products
-        ?.filter((p) => p.category === "summer")
-        .map((p) => ({
-          id: String(p.product_id),
-          name: p.product_name,
-          availableSizes: p.available_sizes.map((s) => {
-            const sizeMap: Record<string, number> = {
-              XS: 85,
-              S: 90,
-              M: 95,
-              L: 100,
-              XL: 105,
-              XXL: 110,
-            };
-            return sizeMap[s] || 95;
-          }),
-          price: p.price,
-          provided: 1, // 기본 지원 개수
-        })) || [],
+      measurementData?.recommended_uniforms?.summer?.map((item) => {
+        const matchedProduct = findMatchingProduct(item.product, "summer");
+        return {
+          id: matchedProduct
+            ? String(matchedProduct.product_id)
+            : item.product,
+          name: matchedProduct?.product_name || item.product,
+          recommendedSize: item.recommended_size,
+          availableSizes: matchedProduct
+            ? matchedProduct.available_sizes.map((s) => {
+                const sizeMap: Record<string, number> = {
+                  XS: 85,
+                  S: 90,
+                  M: 95,
+                  L: 100,
+                  XL: 105,
+                  XXL: 110,
+                };
+                return sizeMap[s] || Number(s) || 95;
+              })
+            : [95, 100, 105, 110],
+          price: matchedProduct?.price || 0,
+          provided: matchedProduct?.free_quantity ?? item.quantity,
+          quantity: item.quantity,
+          selectableWith: item.selectable_with,
+          gender: item.gender,
+        };
+      }) || [],
   };
 
   // 커스텀 훅으로 상태 관리 분리
-  const uniformItems = useUniformItems();
+  const uniformItems = useUniformItems(uniformProductsByCategory);
   const supplyItems = useSupplyItems();
   const measurementHook = useMeasurementData(
     studentId,
@@ -92,13 +119,7 @@ export default function MeasurementSheet({
     handleFinalConfirmation,
   } = measurementHook;
 
-  const canCompleteMeasurement = uniformItems.canComplete;
-
   const onCompleteMeasurement = async () => {
-    if (!canCompleteMeasurement) {
-      alert("모든 바지 기장을 입력해주세요.");
-      return;
-    }
     await handleCompleteMeasurement(
       uniformItems.uniformSizeItems,
       supplyItems.supplyItems,
@@ -186,20 +207,10 @@ export default function MeasurementSheet({
             <div className="p-6">
               <button
                 onClick={onCompleteMeasurement}
-                disabled={!canCompleteMeasurement}
-                className={`w-full py-3 rounded-lg font-medium transition-colors ${
-                  canCompleteMeasurement
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
+                className="w-full py-3 rounded-lg font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700"
               >
                 측정 완료
               </button>
-              {!canCompleteMeasurement && (
-                <p className="text-xs text-red-500 mt-2 text-center">
-                  모든 교복 사이즈를 확정하고 바지 기장을 입력해주세요.
-                </p>
-              )}
             </div>
           </>
         ) : (
@@ -321,9 +332,13 @@ const MeasurementInfo = ({
 interface UniformProductItem {
   id: string;
   name: string;
+  recommendedSize: string;
   availableSizes: number[];
   price: number;
   provided: number;
+  quantity: number;
+  selectableWith?: string[];
+  gender: "male" | "female" | "unisex";
 }
 
 interface SizeSectionProps {
@@ -368,11 +383,8 @@ const SizeSection = ({
       {} as Record<string, UniformSizeItem[]>
     );
 
-  // API 응답 데이터가 있으면 사용, 없으면 mock 데이터 사용
-  const availableProducts =
-    uniformProductsByCategory[season].length > 0
-      ? uniformProductsByCategory[season]
-      : UNIFORM_ITEMS[season];
+  // API 응답 데이터 사용
+  const availableProducts = uniformProductsByCategory[season];
 
   // 모든 품목 목록 (순서 유지를 위해)
   const allItemIds = availableProducts.map((item) => item.id);
@@ -458,8 +470,29 @@ const SizeSection = ({
                 (sum, i) => sum + i.purchaseCount,
                 0
               );
-              // 총 개수 = 지원개수 + 구입개수 합계
-              const totalCount = baseItem.provided + totalPurchaseCount;
+
+              // selectable_with로 연결된 품목들의 구입개수 합계 계산
+              let sharedPurchaseCount = totalPurchaseCount;
+              if (
+                "selectableWith" in baseItem &&
+                baseItem.selectableWith &&
+                baseItem.selectableWith.length > 0
+              ) {
+                // 연결된 다른 품목들의 구입개수도 합산
+                baseItem.selectableWith.forEach((linkedName) => {
+                  const linkedItems = uniformSizeItems.filter(
+                    (i) =>
+                      i.season === season &&
+                      i.name.includes(linkedName)
+                  );
+                  linkedItems.forEach((linkedItem) => {
+                    sharedPurchaseCount += linkedItem.purchaseCount;
+                  });
+                });
+              }
+
+              // 총 개수 = 지원개수 + 구입개수 합계 (selectable_with 공유 포함)
+              const totalCount = baseItem.provided + sharedPurchaseCount;
 
               return (
                 <div
@@ -483,7 +516,17 @@ const SizeSection = ({
                         -
                       </button>
                     )}
-                    <span className="font-medium">{item.name}</span>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{item.name}</span>
+                      {index === 0 &&
+                        "selectableWith" in baseItem &&
+                        baseItem.selectableWith &&
+                        baseItem.selectableWith.length > 0 && (
+                          <span className="text-xs text-gray-500">
+                            ({baseItem.selectableWith.join(", ")}와 호환 가능)
+                          </span>
+                        )}
+                    </div>
                   </div>
 
                   {/* 가격 */}
@@ -518,12 +561,7 @@ const SizeSection = ({
                           onUpdatePantsLength(item.id, e.target.value)
                         }
                         placeholder="예: 34 3/4"
-                        className={`w-full text-xs text-center border rounded px-2 py-1 ${
-                          !item.pantsLength ||
-                          item.pantsLength.trim().length === 0
-                            ? "border-red-300 bg-red-50"
-                            : "border-gray-300"
-                        }`}
+                        className="w-full text-xs text-center border rounded px-2 py-1 border-gray-300"
                       />
                     ) : (
                       <input
@@ -539,8 +577,21 @@ const SizeSection = ({
                   </div>
 
                   {/* 지원개수 */}
-                  <div className="text-center font-medium">
-                    {index === 0 ? baseItem.provided : 0}
+                  <div className="text-center">
+                    {index === 0 ? (
+                      <div className="flex flex-col items-center">
+                        <span className="font-medium">{baseItem.provided}</span>
+                        {"selectableWith" in baseItem &&
+                          baseItem.selectableWith &&
+                          baseItem.selectableWith.length > 0 && (
+                            <span className="text-xs text-blue-600">
+                              (공유)
+                            </span>
+                          )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">0</span>
+                    )}
                   </div>
 
                   {/* 구입개수 - 스테퍼 */}

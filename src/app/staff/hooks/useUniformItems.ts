@@ -1,8 +1,24 @@
 import { useState, useMemo, useCallback } from "react";
-import { UNIFORM_ITEMS } from "@/mocks/measurementData";
 import { UniformSizeItem } from "../components/types";
 
-export const useUniformItems = () => {
+interface UniformProductItem {
+  id: string;
+  name: string;
+  recommendedSize: string;
+  availableSizes: number[];
+  price: number;
+  provided: number;
+  quantity: number;
+  selectableWith?: string[];
+  gender: "male" | "female" | "unisex";
+}
+
+interface InitialData {
+  동복: UniformProductItem[];
+  하복: UniformProductItem[];
+}
+
+export const useUniformItems = (initialData: InitialData) => {
   const [uniformSizeItems, setUniformSizeItems] = useState<UniformSizeItem[]>(
     []
   );
@@ -11,44 +27,55 @@ export const useUniformItems = () => {
   useMemo(() => {
     if (uniformSizeItems.length === 0) {
       const initialItems: UniformSizeItem[] = [];
+
+      // recommended_uniforms 데이터 사용
       ["동복", "하복"].forEach((s) => {
-        const seasonItems = UNIFORM_ITEMS[s as "동복" | "하복"];
+        const seasonItems = initialData[s as "동복" | "하복"];
         seasonItems.forEach((item) => {
           initialItems.push({
             id: `${item.id}-${Date.now()}-${Math.random()}`,
             itemId: item.id,
+            productId: Number(item.id) || undefined,
             name: item.name,
             season: s as "동복" | "하복",
-            selectedSize: item.size,
-            customization: item.customization,
+            selectedSize: Number(item.recommendedSize) || item.availableSizes[0] || 95,
+            customization: "",
             pantsLength: item.name.includes("바지") ? "" : undefined,
             purchaseCount: 0,
+            freeQuantity: item.provided,
           });
         });
       });
+
       setUniformSizeItems(initialItems);
     }
-  }, [uniformSizeItems.length]);
+  }, [uniformSizeItems.length, initialData]);
 
   // 교복 아이템 추가
   const addItem = useCallback(
     (itemId: string, season: "동복" | "하복") => {
-      const uniformItem = UNIFORM_ITEMS[season].find((i) => i.id === itemId);
+      const uniformItem = initialData[season].find((i) => i.id === itemId);
+
       if (!uniformItem) return;
 
       const newItem: UniformSizeItem = {
         id: `${itemId}-${Date.now()}-${Math.random()}`,
         itemId,
+        productId: Number(itemId) || undefined,
         name: uniformItem.name,
         season,
-        selectedSize: uniformItem.size,
-        customization: uniformItem.customization,
+        selectedSize:
+          Number(uniformItem.recommendedSize) ||
+          uniformItem.availableSizes[0] ||
+          95,
+        customization: "",
         pantsLength: uniformItem.name.includes("바지") ? "" : undefined,
         purchaseCount: 1,
+        freeQuantity: uniformItem.provided,
       };
       setUniformSizeItems((prev) => [...prev, newItem]);
     },
-    []
+    [initialData]
   );
 
   // 교복 아이템 제거
@@ -98,14 +125,10 @@ export const useUniformItems = () => {
     );
   }, []);
 
-  // 측정 완료 가능 여부 검증
+  // 측정 완료 가능 여부 검증 (맞춤 정보는 필수 아님)
   const canComplete = useMemo(() => {
-    const allPantsLengthsFilled = uniformSizeItems
-      .filter((item) => item.name.includes("바지"))
-      .every((item) => item.pantsLength && item.pantsLength.trim().length > 0);
-
-    return allPantsLengthsFilled;
-  }, [uniformSizeItems]);
+    return true;
+  }, []);
 
   return {
     uniformSizeItems,
