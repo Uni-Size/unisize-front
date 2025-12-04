@@ -127,6 +127,18 @@ export async function getRegisterStudents(params?: {
   return response.data;
 }
 
+// 확정 진행중 리스트 조회
+export async function getMeasuringStudents(params?: {
+  page?: number;
+  limit?: number;
+}): Promise<RegisterStudentsResponse> {
+  const response = await apiClient.get<RegisterStudentsResponse>(
+    "/api/v1/students/measuring",
+    { params }
+  );
+  return response.data;
+}
+
 // API 응답 래퍼 타입
 interface ApiResponse<T> {
   success: boolean;
@@ -174,6 +186,9 @@ export interface StartMeasurementResponse {
     winter: RecommendedUniformItem[];
     summer: RecommendedUniformItem[];
   };
+  registered_at: string | null;
+  measurement_start_at: string | null;
+  measurement_end_at: string | null;
 }
 
 // 측정 데이터 응답
@@ -196,12 +211,9 @@ export interface StudentMeasurementData {
     shoulder: number;
     waist: number;
   };
-  timestamps?: {
-    reservation?: string;
-    reception?: string;
-    measurement_start?: string;
-    measurement_complete?: string;
-  };
+  measurement_end_at: null | string;
+  measurement_start_at: null | string;
+  registered_at: null | string;
   deadline?: string;
 }
 
@@ -341,17 +353,6 @@ export async function finalizeMeasurementOrder(
 ): Promise<void> {
   await apiClient.post(
     `/api/v1/students/${studentId}/order/finalize`,
-    orderData
-  );
-}
-
-// 측정 완료 (새로운 API 형식)
-export async function completeMeasurement(
-  studentId: number,
-  orderData: CompleteMeasurementRequest
-): Promise<void> {
-  await apiClient.post(
-    `/api/v1/students/${studentId}/complete-measurement`,
     orderData
   );
 }

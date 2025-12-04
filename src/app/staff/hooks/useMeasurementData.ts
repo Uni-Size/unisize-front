@@ -57,6 +57,9 @@ export const useMeasurementData = (
               shoulder: 0,
               waist: 0,
             },
+            registered_at: initialMeasurementData.registered_at || null,
+            measurement_start_at: initialMeasurementData.measurement_start_at || null,
+            measurement_end_at: initialMeasurementData.measurement_end_at || null,
             deadline: initialMeasurementData.school_deadline,
           };
           setStudentData(convertedData);

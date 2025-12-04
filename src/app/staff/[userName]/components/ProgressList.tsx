@@ -2,32 +2,16 @@
 
 import { useState, useEffect } from "react";
 import MeasurementSheet from "../../components/MeasurementSheet";
+import { useMeasuringStudents } from "../../hooks/useMeasuringStudents";
+import { RegisterStudent } from "@/api/studentApi";
 
-const data = Array.from({ length: 17 }, (_, i) => ({
-  no: i + 1,
-  timestamp: "25/01/12 12:34",
-  name: "김인철",
-  gender: "남",
-  fromSchool: "솔밭중학교",
-  toSchool: "청주고등학교",
-  category: "신입",
-  status: "pending",
-}));
-type Student = {
-  no: number;
-  timestamp: string;
-  name: string;
-  gender: string;
-  fromSchool: string;
-  toSchool: string;
-  category: string;
-  status: string;
-};
 export default function ProgressList() {
+  const { students, isLoading, error } = useMeasuringStudents();
   const [isMeasurementSheetOpen, setIsMeasurementSheetOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudent, setSelectedStudent] =
+    useState<RegisterStudent | null>(null);
 
-  const handleDetailClick = (student: Student) => {
+  const handleDetailClick = (student: RegisterStudent) => {
     setSelectedStudent(student);
     setIsMeasurementSheetOpen(true);
   };
@@ -43,6 +27,24 @@ export default function ProgressList() {
     };
   }, [isMeasurementSheetOpen]);
 
+  // 로딩 중일 때
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <div className="text-gray-500">로딩 중...</div>
+      </div>
+    );
+  }
+
+  // 에러가 있을 때
+  if (error) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       {isMeasurementSheetOpen && selectedStudent && (
@@ -55,7 +57,7 @@ export default function ProgressList() {
           ></div>
           <MeasurementSheet
             setIsMeasurementSheetOpen={setIsMeasurementSheetOpen}
-            studentId={selectedStudent.no}
+            studentId={selectedStudent.id}
             mode="edit"
           />
         </section>
@@ -88,30 +90,45 @@ export default function ProgressList() {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
-          {data.map((row) => (
-            <tr key={row.no} className="hover:bg-gray-50 transition-colors">
-              <td className="px-4 py-3 text-sm text-gray-900">{row.no}</td>
-              <td className="px-4 py-3 text-sm text-gray-900">
-                {row.timestamp}
-              </td>
-              <td className="px-4 py-3 text-sm text-gray-900">{row.name}</td>
-              <td className="px-4 py-3 text-sm text-gray-900">{row.gender}</td>
-              <td className="px-4 py-3 text-sm text-gray-900">
-                {row.fromSchool} → {row.toSchool}
-              </td>
-              <td className="px-4 py-3 text-sm text-gray-900">
-                {row.category}
-              </td>
-              <td className="px-4 py-3 text-sm">
-                <button
-                  className="text-blue-600 hover:text-blue-800 hover:underline"
-                  onClick={() => handleDetailClick(row)}
-                >
-                  ↗
-                </button>
+          {students.length === 0 ? (
+            <tr>
+              <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                확정 진행중인 학생이 없습니다.
               </td>
             </tr>
-          ))}
+          ) : (
+            students.map((student, index) => (
+              <tr
+                key={student.id}
+                className="hover:bg-gray-50 transition-colors"
+              >
+                <td className="px-4 py-3 text-sm text-gray-900">{index + 1}</td>
+                <td className="px-4 py-3 text-sm text-gray-900">
+                  {student.checked_in_at}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-900">
+                  {student.name}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-900">
+                  {student.gender === "male" ? "남" : "여"}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-900">
+                  {student.previous_school} → {student.school_name}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-900">
+                  {student.admission_grade === 1 ? "신입" : "재학"}
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  <button
+                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                    onClick={() => handleDetailClick(student)}
+                  >
+                    ↗
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>

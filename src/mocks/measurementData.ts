@@ -1,32 +1,3 @@
-// 학생 정보 더미 데이터
-export const STUDENT_INFO = {
-  school: {
-    from: "솔밭중학교",
-    to: "청주고등학교",
-    year: "26년 신입",
-  },
-  student: {
-    name: "김인철",
-    gender: "남",
-  },
-  contact: ["010-5571-8239", "010-5571-8233"],
-  deadline: "26/01/26",
-  timestamps: {
-    reservation: "25/01/12 15:00",
-    reception: "25/01/12 15:00",
-    measurementStart: "25/01/12 15:00",
-    measurementComplete: null,
-  },
-};
-
-// 채촌 정보 더미 데이터
-export const MEASUREMENT_INFO = {
-  height: "172cm",
-  weight: "90kg",
-  shoulder: "44cm",
-  waist: "32inch",
-};
-
 // 용품 아이템 설정 타입
 export type SupplyOption = {
   category: string;
