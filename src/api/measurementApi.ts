@@ -1,12 +1,10 @@
 import {
-  STUDENT_INFO,
-  MEASUREMENT_INFO,
   SUPPLY_ITEMS_CONFIG,
 } from "@/mocks/measurementData";
 
 // API 응답 타입
-export type StudentInfoResponse = typeof STUDENT_INFO;
-export type MeasurementInfoResponse = typeof MEASUREMENT_INFO;
+export type StudentInfoResponse = Record<string, unknown>;
+export type MeasurementInfoResponse = Record<string, unknown>;
 export type SupplyItemsConfigResponse = typeof SUPPLY_ITEMS_CONFIG;
 
 // 측정 완료 요청 타입
@@ -35,19 +33,19 @@ export type CompleteMeasurementRequest = {
 // 더미 API 함수들
 class MeasurementApi {
   // 학생 정보 조회
-  async getStudentInfo(studentId: string): Promise<StudentInfoResponse> {
+  async getStudentInfo(_studentId: string): Promise<StudentInfoResponse> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        resolve(STUDENT_INFO);
+        resolve({});
       }, 300);
     });
   }
 
   // 채촌 정보 조회
-  async getMeasurementInfo(studentId: string): Promise<MeasurementInfoResponse> {
+  async getMeasurementInfo(_studentId: string): Promise<MeasurementInfoResponse> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        resolve(MEASUREMENT_INFO);
+        resolve({});
       }, 300);
     });
   }

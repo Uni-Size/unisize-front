@@ -356,3 +356,14 @@ export async function finalizeMeasurementOrder(
     orderData
   );
 }
+
+// 측정 완료 (새로운 API 형식)
+export async function completeMeasurement(
+  studentId: number,
+  orderData: CompleteMeasurementRequest
+): Promise<void> {
+  await apiClient.post(
+    `/api/v1/students/${studentId}/complete-measurement`,
+    orderData
+  );
+}
