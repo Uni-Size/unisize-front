@@ -1,14 +1,12 @@
 import {
   STUDENT_INFO,
   MEASUREMENT_INFO,
-  UNIFORM_ITEMS,
   SUPPLY_ITEMS_CONFIG,
 } from "@/mocks/measurementData";
 
 // API 응답 타입
 export type StudentInfoResponse = typeof STUDENT_INFO;
 export type MeasurementInfoResponse = typeof MEASUREMENT_INFO;
-export type UniformItemsResponse = typeof UNIFORM_ITEMS;
 export type SupplyItemsConfigResponse = typeof SUPPLY_ITEMS_CONFIG;
 
 // 측정 완료 요청 타입
@@ -54,14 +52,6 @@ class MeasurementApi {
     });
   }
 
-  // 교복 아이템 목록 조회
-  async getUniformItems(): Promise<UniformItemsResponse> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(UNIFORM_ITEMS);
-      }, 300);
-    });
-  }
 
   // 용품 아이템 설정 조회
   async getSupplyItemsConfig(): Promise<SupplyItemsConfigResponse> {

@@ -7,14 +7,12 @@ import {
 import {
   STUDENT_INFO,
   MEASUREMENT_INFO,
-  UNIFORM_ITEMS,
   SUPPLY_ITEMS_CONFIG,
 } from "@/mocks/measurementData";
 
 // API 응답 타입
 export type StudentInfoResponse = typeof STUDENT_INFO;
 export type MeasurementInfoResponse = typeof MEASUREMENT_INFO;
-export type UniformItemsResponse = typeof UNIFORM_ITEMS;
 export type SupplyItemsConfigResponse = typeof SUPPLY_ITEMS_CONFIG;
 
 // 측정 완료 요청 타입
@@ -52,7 +50,6 @@ export const measurementKeys = {
     [...measurementKeys.all, "studentInfo", studentId] as const,
   measurementInfo: (studentId: string) =>
     [...measurementKeys.all, "measurementInfo", studentId] as const,
-  uniformItems: () => [...measurementKeys.all, "uniformItems"] as const,
   supplyItemsConfig: () =>
     [...measurementKeys.all, "supplyItemsConfig"] as const,
 };
@@ -83,15 +80,6 @@ async function fetchMeasurementInfo(
   });
 }
 
-async function fetchUniformItems(): Promise<UniformItemsResponse> {
-  // 더미 데이터로 시뮬레이션
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log("교복 아이템 목록 조회:", UNIFORM_ITEMS);
-      resolve(UNIFORM_ITEMS);
-    }, 300);
-  });
-}
 
 async function fetchSupplyItemsConfig(): Promise<SupplyItemsConfigResponse> {
   // 더미 데이터로 시뮬레이션
@@ -162,26 +150,7 @@ export function useMeasurementInfo(
   });
 }
 
-// 3. 교복 아이템 목록 조회
-export function useUniformItems(
-  options?: Omit<
-    UseQueryOptions<
-      UniformItemsResponse,
-      Error,
-      UniformItemsResponse,
-      readonly string[]
-    >,
-    "queryKey" | "queryFn"
-  >
-) {
-  return useQuery({
-    queryKey: measurementKeys.uniformItems(),
-    queryFn: fetchUniformItems,
-    ...options,
-  });
-}
-
-// 4. 용품 아이템 설정 조회
+// 3. 용품 아이템 설정 조회
 export function useSupplyItemsConfig(
   options?: Omit<
     UseQueryOptions<
@@ -200,7 +169,7 @@ export function useSupplyItemsConfig(
   });
 }
 
-// 5. 측정 완료 제출
+// 4. 측정 완료 제출
 export function useCompleteMeasurement(
   options?: UseMutationOptions<
     CompleteMeasurementResponse,
