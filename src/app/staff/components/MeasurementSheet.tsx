@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { SUPPLY_ITEMS_CONFIG } from "@/mocks/measurementData";
-import type {
-  StudentMeasurementData,
-  StartMeasurementResponse,
-  RegisterStudent,
+import {
+  type StudentMeasurementData,
+  type StartMeasurementResponse,
+  type RegisterStudent,
+  submitMeasurementOrder,
 } from "@/api/studentApi";
 import { MeasurementMode, UniformSizeItem, SupplyItem } from "./types";
 import { useUniformItems } from "../hooks/useUniformItems";
@@ -42,9 +43,7 @@ export default function MeasurementSheet({
       measurementData?.recommended_uniforms?.winter?.map((item) => {
         const matchedProduct = findMatchingProduct(item.product, "winter");
         return {
-          id: matchedProduct
-            ? String(matchedProduct.product_id)
-            : item.product,
+          id: matchedProduct ? String(matchedProduct.product_id) : item.product,
           name: matchedProduct?.product_name || item.product,
           recommendedSize: item.recommended_size,
           availableSizes: matchedProduct
@@ -71,9 +70,7 @@ export default function MeasurementSheet({
       measurementData?.recommended_uniforms?.summer?.map((item) => {
         const matchedProduct = findMatchingProduct(item.product, "summer");
         return {
-          id: matchedProduct
-            ? String(matchedProduct.product_id)
-            : item.product,
+          id: matchedProduct ? String(matchedProduct.product_id) : item.product,
           name: matchedProduct?.product_name || item.product,
           recommendedSize: item.recommended_size,
           availableSizes: matchedProduct
@@ -120,11 +117,39 @@ export default function MeasurementSheet({
   } = measurementHook;
 
   const onCompleteMeasurement = async () => {
-    await handleCompleteMeasurement(
-      uniformItems.uniformSizeItems,
-      supplyItems.supplyItems,
-      supplyItems.itemCounts
-    );
+    try {
+      // uniformSizeItems를 MeasurementOrderItem[] 형식으로 변환
+      const uniform_items = uniformItems.uniformSizeItems.map((item) => ({
+        item_id: item.itemId,
+        name: item.name,
+        season: item.season,
+        selected_size: item.selectedSize,
+        customization: item.customization,
+        pants_length: item.pantsLength,
+        purchase_count: item.purchaseCount,
+      }));
+
+      // supplyItems와 itemCounts를 SupplyOrderItem[] 형식으로 변환
+      const supply_items = supplyItems.supplyItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        size: item.size,
+        count: supplyItems.itemCounts[item.id] || 0,
+      }));
+
+      // submitMeasurementOrder 호출
+      await submitMeasurementOrder(studentId, {
+        uniform_items,
+        supply_items,
+      });
+
+      // 성공 시 측정 완료 상태로 변경
+      setIsMeasurementComplete(true);
+    } catch (error) {
+      console.error("측정 주문 제출 실패:", error);
+      alert("측정 주문 제출에 실패했습니다. 다시 시도해주세요.");
+    }
   };
 
   const onFinalConfirmation = () => {
@@ -276,7 +301,7 @@ const StudentInfo = ({
 }) => (
   <div className="border-b-8 border-black/5 p-6">
     <p className="text-xs text-gray-600 pb-3.5">
-      {studentData.school_name} 측정 마감일 : {studentData.deadline || "-"}
+      {studentData.school_name} 측정 마감일 : {studentData.deadline}
     </p>
     <div className="flex justify-between gap-8">
       <div className="space-y-1 text-sm">
@@ -294,11 +319,9 @@ const StudentInfo = ({
         </p>
       </div>
       <ul className="text-xs text-gray-600 space-y-0.5">
-        <li>접수 시간 : {studentData.timestamps?.reception || "-"}</li>
-        <li>측정 시작 : {studentData.timestamps?.measurement_start || "-"}</li>
-        <li>
-          측정 완료 : {studentData.timestamps?.measurement_complete || "-"}
-        </li>
+        <li>접수 시간 : {studentData.registered_at || "-"}</li>
+        <li>측정 시작 : {studentData.measurement_start_at || "-"}</li>
+        <li>측정 완료 : {studentData.measurement_end_at || "-"}</li>
       </ul>
     </div>
   </div>
@@ -311,12 +334,12 @@ const MeasurementInfo = ({
 }) => (
   <div className="border-b-8 border-black/5 p-6">
     <p className="text-xs text-gray-600 pb-2">채촌정보</p>
-    <div className="grid grid-cols-4 gap-2">
+    {/* <div className="grid grid-cols-4 gap-2">
       {[
-        `키 ${studentData.body.height}cm`,
-        `몸무게 ${studentData.body.weight}kg`,
-        `어깨 ${studentData.body.shoulder}cm`,
-        `허리 ${studentData.body.waist}cm`,
+        `키 ${studentData.body.height || 0}cm`,
+        `몸무게 ${studentData.body.weight || 0}kg`,
+        `어깨 ${studentData.body.shoulder || 0}cm`,
+        `허리 ${studentData.body.waist || 0}cm`,
       ].map((info, i) => (
         <div
           key={i}
@@ -325,7 +348,7 @@ const MeasurementInfo = ({
           {info}
         </div>
       ))}
-    </div>
+    </div> */}
   </div>
 );
 
@@ -481,9 +504,7 @@ const SizeSection = ({
                 // 연결된 다른 품목들의 구입개수도 합산
                 baseItem.selectableWith.forEach((linkedName) => {
                   const linkedItems = uniformSizeItems.filter(
-                    (i) =>
-                      i.season === season &&
-                      i.name.includes(linkedName)
+                    (i) => i.season === season && i.name.includes(linkedName)
                   );
                   linkedItems.forEach((linkedItem) => {
                     sharedPurchaseCount += linkedItem.purchaseCount;

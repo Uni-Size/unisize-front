@@ -198,10 +198,10 @@ function MeasurementInfoComponent({ studentId }: { studentId: string }) {
 
   return (
     <div>
-      <p>키: {data?.height}cm</p>
-      <p>몸무게: {data?.weight}kg</p>
-      <p>어깨: {data?.shoulder}cm</p>
-      <p>허리: {data?.waist}cm</p>
+      <p>키: {data?.height || 0}cm</p>
+      <p>몸무게: {data?.weight || 0}kg</p>
+      <p>어깨: {data?.shoulder || 0}cm</p>
+      <p>허리: {data?.waist || 0}cm</p>
     </div>
   );
 }
@@ -364,7 +364,10 @@ function RegistrationWithRefetch() {
 
 ```tsx
 import { useQueryClient } from "@tanstack/react-query";
-import { useCompleteMeasurement, measurementKeys } from "@/hooks/useMeasurementApi";
+import {
+  useCompleteMeasurement,
+  measurementKeys,
+} from "@/hooks/useMeasurementApi";
 
 function OptimisticUpdateExample({ studentId }: { studentId: string }) {
   const queryClient = useQueryClient();
@@ -411,20 +414,20 @@ function OptimisticUpdateExample({ studentId }: { studentId: string }) {
 
 ```typescript
 // Health API
-healthKeys.all                    // ["health"]
-healthKeys.check()                // ["health", "check"]
+healthKeys.all; // ["health"]
+healthKeys.check(); // ["health", "check"]
 
 // Signup API
-signupKeys.all                    // ["signup"]
-signupKeys.supportedSchools()     // ["signup", "supportedSchools"]
-signupKeys.schoolSupport(name)    // ["signup", "schoolSupport", name]
+signupKeys.all; // ["signup"]
+signupKeys.supportedSchools(); // ["signup", "supportedSchools"]
+signupKeys.schoolSupport(name); // ["signup", "schoolSupport", name]
 
 // Measurement API
-measurementKeys.all                      // ["measurement"]
-measurementKeys.studentInfo(id)          // ["measurement", "studentInfo", id]
-measurementKeys.measurementInfo(id)      // ["measurement", "measurementInfo", id]
-measurementKeys.uniformItems()           // ["measurement", "uniformItems"]
-measurementKeys.supplyItemsConfig()      // ["measurement", "supplyItemsConfig"]
+measurementKeys.all; // ["measurement"]
+measurementKeys.studentInfo(id); // ["measurement", "studentInfo", id]
+measurementKeys.measurementInfo(id); // ["measurement", "measurementInfo", id]
+measurementKeys.uniformItems(); // ["measurement", "uniformItems"]
+measurementKeys.supplyItemsConfig(); // ["measurement", "supplyItemsConfig"]
 ```
 
 이러한 구조를 사용하면 캐시를 효율적으로 관리하고 무효화할 수 있습니다.
@@ -463,7 +466,7 @@ npm install @tanstack/react-query-devtools
 
 ```tsx
 // src/providers/QueryProvider.tsx에 추가
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 export default function QueryProvider({ children }: QueryProviderProps) {
   return (

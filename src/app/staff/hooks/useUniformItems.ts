@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { UniformSizeItem } from "../components/types";
 
 interface UniformProductItem {
@@ -22,10 +22,11 @@ export const useUniformItems = (initialData: InitialData) => {
   const [uniformSizeItems, setUniformSizeItems] = useState<UniformSizeItem[]>(
     []
   );
+  const isInitialized = useRef(false);
 
   // 초기화: 각 교복 아이템에 대해 첫 번째 사이즈 항목을 추가
-  useMemo(() => {
-    if (uniformSizeItems.length === 0) {
+  useEffect(() => {
+    if (!isInitialized.current && uniformSizeItems.length === 0) {
       const initialItems: UniformSizeItem[] = [];
 
       // recommended_uniforms 데이터 사용
@@ -48,8 +49,9 @@ export const useUniformItems = (initialData: InitialData) => {
       });
 
       setUniformSizeItems(initialItems);
+      isInitialized.current = true;
     }
-  }, [uniformSizeItems.length, initialData]);
+  }, [initialData]);
 
   // 교복 아이템 추가
   const addItem = useCallback(
