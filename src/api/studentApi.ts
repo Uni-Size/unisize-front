@@ -247,6 +247,26 @@ export async function getStartMeasurement(
   return response.data.data;
 }
 
+// 측정 페이지 정보 조회 (확정 진행중)
+export async function getMeasurementPageInfo(
+  studentId: number
+): Promise<StartMeasurementResponse> {
+  const response = await apiClient.get<ApiResponse<StartMeasurementResponse>>(
+    `/api/v1/students/${studentId}/measurement-page`
+  );
+
+  // API 응답이 { success: true, data: {...} } 형태일 경우를 대비
+  if (
+    response.data &&
+    typeof response.data === "object" &&
+    "data" in response.data
+  ) {
+    return (response.data as ApiResponse<StartMeasurementResponse>).data;
+  }
+
+  return response.data as StartMeasurementResponse;
+}
+
 // 학생 생성
 export async function addStudent(
   formData: StudentFormData
@@ -362,8 +382,5 @@ export async function completeMeasurement(
   studentId: number,
   orderData: CompleteMeasurementRequest
 ): Promise<void> {
-  await apiClient.post(
-    `/api/v1/students/${studentId}/complete-measurement`,
-    orderData
-  );
+  await apiClient.post(`/api/v1/students/${studentId}/finalize`, orderData);
 }

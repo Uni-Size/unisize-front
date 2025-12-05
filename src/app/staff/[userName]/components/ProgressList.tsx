@@ -3,17 +3,30 @@
 import { useState, useEffect } from "react";
 import MeasurementSheet from "../../components/MeasurementSheet";
 import { useMeasuringStudents } from "../../hooks/useMeasuringStudents";
-import { RegisterStudent } from "@/api/studentApi";
+import {
+  RegisterStudent,
+  getMeasurementPageInfo,
+  StartMeasurementResponse,
+} from "@/api/studentApi";
 
 export default function ProgressList() {
   const { students, isLoading, error } = useMeasuringStudents();
   const [isMeasurementSheetOpen, setIsMeasurementSheetOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] =
     useState<RegisterStudent | null>(null);
+  const [measurementData, setMeasurementData] =
+    useState<StartMeasurementResponse | null>(null);
 
-  const handleDetailClick = (student: RegisterStudent) => {
-    setSelectedStudent(student);
-    setIsMeasurementSheetOpen(true);
+  const handleDetailClick = async (student: RegisterStudent) => {
+    try {
+      const data = await getMeasurementPageInfo(student.id);
+      setMeasurementData(data);
+      setSelectedStudent(student);
+      setIsMeasurementSheetOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch measurement page info:", error);
+      alert("측정 정보를 불러오는데 실패했습니다.");
+    }
   };
 
   useEffect(() => {
@@ -47,20 +60,13 @@ export default function ProgressList() {
 
   return (
     <div className="relative">
-      {isMeasurementSheetOpen && selectedStudent && (
-        <section className="fixed inset-0 z-50">
-          <div
-            className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm"
-            onClick={() => {
-              setIsMeasurementSheetOpen(false);
-            }}
-          ></div>
-          <MeasurementSheet
-            setIsMeasurementSheetOpen={setIsMeasurementSheetOpen}
-            studentId={selectedStudent.id}
-            mode="edit"
-          />
-        </section>
+      {isMeasurementSheetOpen && selectedStudent && measurementData && (
+        <MeasurementSheet
+          studentId={selectedStudent.id}
+          measurementData={measurementData}
+          selectedStudent={selectedStudent}
+          setIsMeasurementSheetOpen={setIsMeasurementSheetOpen}
+        />
       )}
 
       <table className="w-full">
