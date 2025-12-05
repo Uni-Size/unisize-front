@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { SUPPLY_ITEMS_CONFIG } from "@/mocks/measurementData";
 import {
   type StudentMeasurementData,
@@ -261,14 +261,11 @@ export default function MeasurementSheet({
               ) : (
                 <>
                   <p className="text-xs text-gray-600 pb-3.5">서명</p>
-                  <input
-                    type="text"
-                    value={signature}
-                    onChange={(e) => setSignature(e.target.value)}
-                    placeholder="서명을 입력해주세요"
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  <SignatureCanvas
+                    signature={signature}
+                    setSignature={setSignature}
                   />
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 mt-4">
                     <button
                       onClick={() => setIsMeasurementComplete(false)}
                       className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
@@ -849,6 +846,210 @@ interface ConfirmedDataViewProps {
   itemCounts: Record<string, number>;
 }
 
+const SignatureCanvas = ({
+  signature,
+  setSignature,
+}: {
+  signature: string;
+  setSignature: (signature: string) => void;
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  // 캔버스 초기화 (최초 1회만)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // 캔버스를 표시되는 크기와 동일하게 설정
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // 캔버스 초기화
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+  }, []);
+
+  // 서명 로드 (signature가 변경될 때)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    if (signature && signature.startsWith("data:image")) {
+      // 기존 서명이 있으면 로드
+      const img = new Image();
+      img.onload = () => {
+        // 캔버스를 지우고 이미지 그리기
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        // 그리기 스타일 재설정
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+      };
+      img.src = signature;
+    } else if (signature === "") {
+      // 서명이 비어있으면 캔버스 지우기
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // 그리기 스타일 재설정
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+    }
+  }, [signature]);
+
+  const getScaledCoordinates = (
+    canvas: HTMLCanvasElement,
+    clientX: number,
+    clientY: number
+  ) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    };
+  };
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    setIsDrawing(true);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const coords = getScaledCoordinates(canvas, e.clientX, e.clientY);
+    ctx.beginPath();
+    ctx.moveTo(coords.x, coords.y);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const coords = getScaledCoordinates(canvas, e.clientX, e.clientY);
+    ctx.lineTo(coords.x, coords.y);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    if (!isDrawing) return;
+    setIsDrawing(false);
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // 캔버스를 base64로 변환
+    const base64 = canvas.toDataURL("image/png");
+    setSignature(base64);
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // 캔버스를 지우고 다시 초기화
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 그리기 스타일 재설정
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    setSignature("");
+  };
+
+  // 터치 이벤트 처리
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    setIsDrawing(true);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const touch = e.touches[0];
+    const coords = getScaledCoordinates(canvas, touch.clientX, touch.clientY);
+    ctx.beginPath();
+    ctx.moveTo(coords.x, coords.y);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (!isDrawing) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const touch = e.touches[0];
+    const coords = getScaledCoordinates(canvas, touch.clientX, touch.clientY);
+    ctx.lineTo(coords.x, coords.y);
+    ctx.stroke();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    stopDrawing();
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="border border-gray-300 rounded-lg overflow-hidden">
+        <canvas
+          ref={canvasRef}
+          className="w-full h-[200px] bg-white cursor-crosshair touch-none"
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        />
+      </div>
+      <button
+        type="button"
+        onClick={clearCanvas}
+        className="w-full py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+      >
+        서명 지우기
+      </button>
+    </div>
+  );
+};
+
 const ConfirmedDataView = ({
   uniformSizeItems,
   supplyItems,
@@ -875,17 +1076,31 @@ const ConfirmedDataView = ({
         const items = groupedBySeason[season] || [];
         if (items.length === 0) return null;
 
+        // 시즌별 총 금액 계산
+        const totalAmount = items.reduce((sum, item) => {
+          const itemPrice = item.price || 0;
+          const itemPurchaseCount = item.purchaseCount || 0;
+          return sum + itemPrice * itemPurchaseCount;
+        }, 0);
+
         return (
           <div key={season} className="mb-6">
-            <h3 className="text-sm font-semibold mb-2">교복 ({season})</h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-sm font-semibold">교복 ({season})</h3>
+              <p className="text-sm font-semibold text-blue-600">
+                {season} 총 금액: {totalAmount.toLocaleString()}원
+              </p>
+            </div>
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="py-2 px-3 text-left">품목</th>
+                    <th className="py-2 px-3 text-center">가격</th>
                     <th className="py-2 px-3 text-center">선택 사이즈</th>
                     <th className="py-2 px-3 text-center">맞춤 정보</th>
-                    <th className="py-2 px-3 text-center">구입개수</th>
+                    <th className="py-2 px-3 text-center">지원개수</th>
+                    <th className="py-2 px-3 text-center">추가개수</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -895,6 +1110,9 @@ const ConfirmedDataView = ({
                     return (
                       <tr key={item.id} className="border-b last:border-b-0">
                         <td className="py-2 px-3 font-medium">{item.name}</td>
+                        <td className="py-2 px-3 text-center text-xs text-gray-600">
+                          {(item.price || 0).toLocaleString()}원
+                        </td>
                         <td className="py-2 px-3 text-center">
                           {item.selectedSize}
                         </td>
@@ -904,6 +1122,9 @@ const ConfirmedDataView = ({
                             : item.customization || "-"}
                         </td>
                         <td className="py-2 px-3 text-center font-semibold">
+                          {item.freeQuantity || 0}
+                        </td>
+                        <td className="py-2 px-3 text-center font-semibold text-blue-600">
                           {item.purchaseCount}
                         </td>
                       </tr>

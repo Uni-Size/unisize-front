@@ -44,6 +44,7 @@ export const useUniformItems = (initialData: InitialData) => {
             pantsLength: item.name.includes("바지") ? "" : undefined,
             purchaseCount: 0,
             freeQuantity: item.provided,
+            price: item.price,
           });
         });
       });
@@ -74,6 +75,7 @@ export const useUniformItems = (initialData: InitialData) => {
         pantsLength: uniformItem.name.includes("바지") ? "" : undefined,
         purchaseCount: 1,
         freeQuantity: uniformItem.provided,
+        price: uniformItem.price,
       };
       setUniformSizeItems((prev) => [...prev, newItem]);
     },

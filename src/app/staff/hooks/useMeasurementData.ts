@@ -152,7 +152,13 @@ export const useMeasurementData = (
       setIsMeasurementSheetOpen: (open: boolean) => void
     ) => {
       if (!signature || signature.trim().length === 0) {
-        alert("서명을 입력해주세요.");
+        alert("서명을 작성해주세요.");
+        return;
+      }
+
+      // base64 이미지인지 확인
+      if (!signature.startsWith("data:image")) {
+        alert("서명을 작성해주세요.");
         return;
       }
 
@@ -163,10 +169,10 @@ export const useMeasurementData = (
           itemCounts
         );
 
-        // 서명 정보를 notes에 추가
+        // 서명 정보를 notes에 추가 (base64 이미지 데이터)
         const finalizeData: CompleteMeasurementRequest = {
           ...orderData,
-          notes: `서명: ${signature}`,
+          notes: `서명 이미지: ${signature}`,
         };
 
         await completeMeasurement(studentId, finalizeData);

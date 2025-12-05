@@ -16,6 +16,7 @@ export type UniformSizeItem = {
   pantsLength?: string;
   purchaseCount: number;
   freeQuantity?: number;
+  price?: number;
 };
 
 export type MeasurementMode = "new" | "edit" | "readonly";
