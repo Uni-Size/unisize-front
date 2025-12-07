@@ -162,7 +162,14 @@ export interface UniformProduct {
 export interface RecommendedUniformItem {
   product: string;
   recommended_size: string;
+  supported_quantity: number;
   quantity: number;
+  price: number;
+  available_sizes: Array<{
+    size: string;
+    in_stock: boolean;
+    stock_count: number;
+  }>;
   selectable_with?: string[];
   gender: "male" | "female" | "unisex";
 }

@@ -33,6 +33,9 @@ export const useUniformItems = (initialData: InitialData) => {
       ["동복", "하복"].forEach((s) => {
         const seasonItems = initialData[s as "동복" | "하복"];
         seasonItems.forEach((item) => {
+          // 구입 개수 = 총 개수(quantity) - 지원 개수(provided)
+          const initialPurchaseCount = Math.max(0, item.quantity - item.provided);
+
           initialItems.push({
             id: `${item.id}-${Date.now()}-${Math.random()}`,
             itemId: item.id,
@@ -42,7 +45,7 @@ export const useUniformItems = (initialData: InitialData) => {
             selectedSize: Number(item.recommendedSize) || item.availableSizes[0] || 95,
             customization: "",
             pantsLength: item.name.includes("바지") ? "" : undefined,
-            purchaseCount: 0,
+            purchaseCount: initialPurchaseCount,
             freeQuantity: item.provided,
             price: item.price,
           });
