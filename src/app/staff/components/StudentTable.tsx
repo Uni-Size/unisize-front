@@ -34,10 +34,10 @@ export default function StudentTable({
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor("id", {
+      columnHelper.display({
+        id: "number",
         header: "No.",
-        cell: (info) => info.getValue(),
-        enableSorting: false,
+        cell: (info) => info.row.index + 1,
       }),
       columnHelper.accessor("checked_in_at", {
         header: "접수시간",

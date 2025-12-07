@@ -6,14 +6,8 @@ import {
   type RegisterStudent,
   completeMeasurement,
   type CompleteMeasurementRequest,
-  type UniformOrderItem,
-  type AccessoryOrderItem,
 } from "@/api/studentApi";
-import {
-  MeasurementMode,
-  UniformSizeItem,
-  SupplyItem,
-} from "../components/types";
+import { MeasurementMode } from "../components/types";
 
 export const useMeasurementData = (
   studentId: number,
@@ -77,114 +71,52 @@ export const useMeasurementData = (
     fetchStudentData();
   }, [studentId, initialMeasurementData, selectedStudent]);
 
-  // 데이터 변환 헬퍼 함수 (새로운 API 형식)
-  const transformToCompleteMeasurementData = useCallback(
-    (
-      uniformSizeItems: UniformSizeItem[],
-      supplyItems: SupplyItem[],
-      itemCounts: Record<string, number>
-    ): CompleteMeasurementRequest => {
-      // 교복 데이터 변환
-      const uniformItems: UniformOrderItem[] = uniformSizeItems.map((item) => {
-        // 맞춤 정보 조합 (바지인 경우 기장 포함)
-        const customDetails = item.pantsLength
-          ? `기장: ${item.pantsLength}${item.customization ? `, ${item.customization}` : ""}`
-          : item.customization || "";
+  // 데이터 변환 헬퍼 함수는 더 이상 필요 없음 (notes와 signature만 전송)
 
-        return {
-          product_id: item.productId || 0,
-          size: String(item.selectedSize),
-          custom_details: customDetails,
-          free_quantity: item.freeQuantity || 0,
-          purchase_quantity: item.purchaseCount,
-        };
-      });
 
-      // 용품 데이터 변환 (구입개수가 0인 항목 제외)
-      const accessoryItems: AccessoryOrderItem[] = supplyItems
-        .filter((item) => (itemCounts[item.id] || 0) > 0)
-        .map((item) => ({
-          product_id: 0, // 용품은 product_id가 없으므로 0으로 설정
-          size: item.size,
-          custom_details: `${item.name} - ${item.category}`,
-          free_quantity: 0,
-          purchase_quantity: itemCounts[item.id] || 0,
-        }));
-
-      return {
-        uniform_items: uniformItems,
-        accessory_items: accessoryItems,
+  const handleCompleteMeasurement = useCallback(async () => {
+    try {
+      // notes와 signature만 전송 (교복 데이터는 전송하지 않음)
+      const orderData: CompleteMeasurementRequest = {
         notes: "",
+        signature: "",
       };
-    },
-    []
-  );
+      await completeMeasurement(studentId, orderData);
+      setIsMeasurementComplete(true);
+    } catch (error) {
+      console.error("측정 완료 저장 실패:", error);
+      alert("측정 데이터 저장에 실패했습니다.");
+      throw error;
+    }
+  }, [studentId]);
 
+  const handleFinalConfirmation = useCallback(async () => {
+    if (!signature || signature.trim().length === 0) {
+      alert("서명을 작성해주세요.");
+      throw new Error("서명이 필요합니다.");
+    }
 
-  const handleCompleteMeasurement = useCallback(
-    async (
-      uniformSizeItems: UniformSizeItem[],
-      supplyItems: SupplyItem[],
-      itemCounts: Record<string, number>
-    ) => {
-      try {
-        const orderData = transformToCompleteMeasurementData(
-          uniformSizeItems,
-          supplyItems,
-          itemCounts
-        );
-        await completeMeasurement(studentId, orderData);
-        setIsMeasurementComplete(true);
-      } catch (error) {
-        console.error("측정 완료 저장 실패:", error);
-        alert("측정 데이터 저장에 실패했습니다.");
-        throw error;
-      }
-    },
-    [studentId, transformToCompleteMeasurementData]
-  );
+    // base64 이미지인지 확인
+    if (!signature.startsWith("data:image")) {
+      alert("서명을 작성해주세요.");
+      throw new Error("서명이 필요합니다.");
+    }
 
-  const handleFinalConfirmation = useCallback(
-    async (
-      uniformSizeItems: UniformSizeItem[],
-      supplyItems: SupplyItem[],
-      itemCounts: Record<string, number>,
-      setIsMeasurementSheetOpen: (open: boolean) => void
-    ) => {
-      if (!signature || signature.trim().length === 0) {
-        alert("서명을 작성해주세요.");
-        return;
-      }
+    try {
+      // notes와 signature만 전송 (교복 데이터는 전송하지 않음)
+      const finalizeData: CompleteMeasurementRequest = {
+        notes: "",
+        signature: signature,
+      };
 
-      // base64 이미지인지 확인
-      if (!signature.startsWith("data:image")) {
-        alert("서명을 작성해주세요.");
-        return;
-      }
-
-      try {
-        const orderData = transformToCompleteMeasurementData(
-          uniformSizeItems,
-          supplyItems,
-          itemCounts
-        );
-
-        // 서명 정보를 notes에 추가 (base64 이미지 데이터)
-        const finalizeData: CompleteMeasurementRequest = {
-          ...orderData,
-          notes: `서명 이미지: ${signature}`,
-        };
-
-        await completeMeasurement(studentId, finalizeData);
-        alert("사이즈 확정 및 주문이 완료되었습니다.");
-        setIsMeasurementSheetOpen(false);
-      } catch (error) {
-        console.error("최종 확정 실패:", error);
-        alert("주문 확정에 실패했습니다.");
-      }
-    },
-    [studentId, signature, transformToCompleteMeasurementData]
-  );
+      await completeMeasurement(studentId, finalizeData);
+      alert("사이즈 확정 및 주문이 완료되었습니다.");
+    } catch (error) {
+      console.error("최종 확정 실패:", error);
+      alert("주문 확정에 실패했습니다.");
+      throw error;
+    }
+  }, [studentId, signature]);
 
   return {
     studentData,

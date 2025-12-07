@@ -10,7 +10,7 @@ import {
 } from "@/api/studentApi";
 
 export default function ProgressList() {
-  const { students, isLoading, error } = useMeasuringStudents();
+  const { students, isLoading, error, refresh } = useMeasuringStudents();
   const [isMeasurementSheetOpen, setIsMeasurementSheetOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] =
     useState<RegisterStudent | null>(null);
@@ -66,6 +66,7 @@ export default function ProgressList() {
           measurementData={measurementData}
           selectedStudent={selectedStudent}
           setIsMeasurementSheetOpen={setIsMeasurementSheetOpen}
+          onSuccess={refresh}
         />
       )}
 
