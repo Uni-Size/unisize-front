@@ -30,39 +30,22 @@ export default function MeasurementSheet({
 }) {
   const [season, setSeason] = useState<"동복" | "하복">("동복");
 
-  // recommended_uniforms와 uniform_products를 매칭하여 표시할 데이터 생성
-  const findMatchingProduct = (productName: string, category: string) => {
-    return measurementData?.uniform_products?.find(
-      (p) =>
-        p.category === category &&
-        (p.product_name.includes(productName) ||
-          productName.includes(p.product_name.split(" ")[0]))
-    );
-  };
-
+  // recommended_uniforms 데이터를 표시 형식으로 변환
   const uniformProductsByCategory = {
     동복:
       measurementData?.recommended_uniforms?.winter?.map((item) => {
-        const matchedProduct = findMatchingProduct(item.product, "winter");
         return {
-          id: matchedProduct ? String(matchedProduct.product_id) : item.product,
-          name: matchedProduct?.product_name || item.product,
+          id: item.product,
+          name: item.product,
           recommendedSize: item.recommended_size,
-          availableSizes: matchedProduct
-            ? matchedProduct.available_sizes.map((s) => {
-                const sizeMap: Record<string, number> = {
-                  XS: 85,
-                  S: 90,
-                  M: 95,
-                  L: 100,
-                  XL: 105,
-                  XXL: 110,
-                };
-                return sizeMap[s] || Number(s) || 95;
+          availableSizes: item.available_sizes.length > 0
+            ? item.available_sizes.map((s) => {
+                // 숫자형 사이즈는 그대로, 문자형은 숫자로 변환
+                return Number(s.size) || 95;
               })
             : [95, 100, 105, 110],
-          price: matchedProduct?.price || 0,
-          provided: matchedProduct?.free_quantity ?? item.quantity,
+          price: item.price,
+          provided: item.supported_quantity,
           quantity: item.quantity,
           selectableWith: item.selectable_with,
           gender: item.gender,
@@ -70,26 +53,18 @@ export default function MeasurementSheet({
       }) || [],
     하복:
       measurementData?.recommended_uniforms?.summer?.map((item) => {
-        const matchedProduct = findMatchingProduct(item.product, "summer");
         return {
-          id: matchedProduct ? String(matchedProduct.product_id) : item.product,
-          name: matchedProduct?.product_name || item.product,
+          id: item.product,
+          name: item.product,
           recommendedSize: item.recommended_size,
-          availableSizes: matchedProduct
-            ? matchedProduct.available_sizes.map((s) => {
-                const sizeMap: Record<string, number> = {
-                  XS: 85,
-                  S: 90,
-                  M: 95,
-                  L: 100,
-                  XL: 105,
-                  XXL: 110,
-                };
-                return sizeMap[s] || Number(s) || 95;
+          availableSizes: item.available_sizes.length > 0
+            ? item.available_sizes.map((s) => {
+                // 숫자형 사이즈는 그대로, 문자형은 숫자로 변환
+                return Number(s.size) || 95;
               })
             : [95, 100, 105, 110],
-          price: matchedProduct?.price || 0,
-          provided: matchedProduct?.free_quantity ?? item.quantity,
+          price: item.price,
+          provided: item.supported_quantity,
           quantity: item.quantity,
           selectableWith: item.selectable_with,
           gender: item.gender,
@@ -336,7 +311,7 @@ const MeasurementInfo = ({
 }) => (
   <div className="border-b-8 border-black/5 p-6">
     <p className="text-xs text-gray-600 pb-2">채촌정보</p>
-    {/* <div className="grid grid-cols-4 gap-2">
+    <div className="grid grid-cols-4 gap-2">
       {[
         `키 ${studentData.body.height || 0}cm`,
         `몸무게 ${studentData.body.weight || 0}kg`,
@@ -350,7 +325,7 @@ const MeasurementInfo = ({
           {info}
         </div>
       ))}
-    </div> */}
+    </div>
   </div>
 );
 
