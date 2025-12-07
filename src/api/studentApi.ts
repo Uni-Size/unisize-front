@@ -322,9 +322,8 @@ export interface AccessoryOrderItem {
 }
 
 export interface CompleteMeasurementRequest {
-  uniform_items: UniformOrderItem[];
-  accessory_items: AccessoryOrderItem[];
   notes: string;
+  signature: string;
 }
 
 // 레거시 타입 (하위 호환성)
@@ -382,5 +381,8 @@ export async function completeMeasurement(
   studentId: number,
   orderData: CompleteMeasurementRequest
 ): Promise<void> {
-  await apiClient.post(`/api/v1/students/${studentId}/finalize`, orderData);
+  await apiClient.post(
+    `/api/v1/students/${studentId}/complete-measurement`,
+    orderData
+  );
 }

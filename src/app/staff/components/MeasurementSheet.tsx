@@ -19,12 +19,14 @@ export default function MeasurementSheet({
   measurementData,
   selectedStudent,
   mode = "new",
+  onSuccess,
 }: {
   setIsMeasurementSheetOpen: (open: boolean) => void;
   studentId: number;
   measurementData?: StartMeasurementResponse;
   selectedStudent?: RegisterStudent;
   mode?: MeasurementMode;
+  onSuccess?: () => void;
 }) {
   const [season, setSeason] = useState<"동복" | "하복">("동복");
 
@@ -152,13 +154,16 @@ export default function MeasurementSheet({
     }
   };
 
-  const onFinalConfirmation = () => {
-    handleFinalConfirmation(
-      uniformItems.uniformSizeItems,
-      supplyItems.supplyItems,
-      supplyItems.itemCounts,
-      setIsMeasurementSheetOpen
-    );
+  const onFinalConfirmation = async () => {
+    try {
+      await handleFinalConfirmation();
+      // 성공 시 시트 닫기 및 리스트 재조회
+      setIsMeasurementSheetOpen(false);
+      onSuccess?.();
+    } catch (error) {
+      // 에러는 handleFinalConfirmation 내부에서 처리됨
+      console.error("최종 확정 처리 중 에러:", error);
+    }
   };
 
   if (isLoading) {
