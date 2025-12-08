@@ -172,6 +172,16 @@ export interface RecommendedUniformItem {
   }>;
   selectable_with?: string[];
   gender: "male" | "female" | "unisex";
+  is_customization_required?: boolean;
+}
+
+export interface SupplyItemResponse {
+  product_id: number;
+  name: string;
+  category: string;
+  season: string;
+  price: number;
+  quantity: number;
 }
 
 export interface StartMeasurementResponse {
@@ -193,6 +203,7 @@ export interface StartMeasurementResponse {
     winter: RecommendedUniformItem[];
     summer: RecommendedUniformItem[];
   };
+  supply_items?: SupplyItemResponse[];
   registered_at: string | null;
   measurement_start_at: string | null;
   measurement_end_at: string | null;
@@ -340,7 +351,6 @@ export interface MeasurementOrderItem {
   season: "동복" | "하복";
   selected_size: number;
   customization: string;
-  pants_length?: string;
   purchase_count: number;
 }
 

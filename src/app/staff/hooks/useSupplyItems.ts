@@ -1,10 +1,45 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { SUPPLY_ITEMS_CONFIG } from "@/mocks/measurementData";
 import { SupplyItem } from "../components/types";
 
-export const useSupplyItems = () => {
+interface ApiSupplyItem {
+  product_id: number;
+  name: string;
+  category: string;
+  season: string;
+  price: number;
+  quantity: number;
+}
+
+export const useSupplyItems = (initialSupplyItems?: ApiSupplyItem[]) => {
   const [supplyItems, setSupplyItems] = useState<SupplyItem[]>([]);
   const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
+  const isInitialized = useRef(false);
+
+  // 초기화: API 응답의 supply_items로 초기 상태 설정
+  useEffect(() => {
+    if (!isInitialized.current && initialSupplyItems && initialSupplyItems.length > 0) {
+      const initialItems: SupplyItem[] = initialSupplyItems.map((item) => ({
+        id: `${item.product_id}-${Date.now()}-${Math.random()}`,
+        name: item.name,
+        category: item.category,
+        size: "-", // 기본값 (API에서 사이즈 정보가 없으면 기본값 사용)
+        product_id: item.product_id,
+        price: item.price,
+        quantity: item.quantity,
+        season: item.season,
+      }));
+
+      const initialCounts: Record<string, number> = {};
+      initialItems.forEach((item) => {
+        initialCounts[item.id] = item.quantity || 0;
+      });
+
+      setSupplyItems(initialItems);
+      setItemCounts(initialCounts);
+      isInitialized.current = true;
+    }
+  }, [initialSupplyItems]);
 
   const addItem = useCallback(
     (itemName: keyof typeof SUPPLY_ITEMS_CONFIG) => {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { SUPPLY_ITEMS_CONFIG } from "@/mocks/measurementData";
 import {
   type StudentMeasurementData,
   type StartMeasurementResponse,
@@ -29,6 +28,8 @@ export default function MeasurementSheet({
   onSuccess?: () => void;
 }) {
   const [season, setSeason] = useState<"동복" | "하복">("동복");
+  const [showCustomizationModal, setShowCustomizationModal] = useState(false);
+  const [missingCustomizationItems, setMissingCustomizationItems] = useState<string[]>([]);
 
   // recommended_uniforms 데이터를 표시 형식으로 변환
   const uniformProductsByCategory = {
@@ -49,6 +50,7 @@ export default function MeasurementSheet({
           quantity: item.quantity,
           selectableWith: item.selectable_with,
           gender: item.gender,
+          isCustomizationRequired: item.is_customization_required,
         };
       }) || [],
     하복:
@@ -68,13 +70,14 @@ export default function MeasurementSheet({
           quantity: item.quantity,
           selectableWith: item.selectable_with,
           gender: item.gender,
+          isCustomizationRequired: item.is_customization_required,
         };
       }) || [],
   };
 
   // 커스텀 훅으로 상태 관리 분리
   const uniformItems = useUniformItems(uniformProductsByCategory);
-  const supplyItems = useSupplyItems();
+  const supplyItems = useSupplyItems(measurementData?.supply_items);
   const measurementHook = useMeasurementData(
     studentId,
     mode,
@@ -93,36 +96,72 @@ export default function MeasurementSheet({
     handleFinalConfirmation,
   } = measurementHook;
 
-  const onCompleteMeasurement = async () => {
-    try {
-      // uniformSizeItems를 MeasurementOrderItem[] 형식으로 변환
-      const uniform_items = uniformItems.uniformSizeItems.map((item) => ({
+  const submitMeasurementData = async () => {
+    // uniformSizeItems를 MeasurementOrderItem[] 형식으로 변환
+    const uniform_items = uniformItems.uniformSizeItems.map((item) => {
+      return {
         item_id: item.itemId,
         name: item.name,
         season: item.season,
         selected_size: item.selectedSize,
-        customization: item.customization,
-        pants_length: item.pantsLength,
+        customization: item.customization || " ",
         purchase_count: item.purchaseCount,
-      }));
+      };
+    });
 
-      // supplyItems와 itemCounts를 SupplyOrderItem[] 형식으로 변환
-      const supply_items = supplyItems.supplyItems.map((item) => ({
-        id: item.id,
-        name: item.name,
-        category: item.category,
-        size: item.size,
-        count: supplyItems.itemCounts[item.id] || 0,
-      }));
+    // supplyItems와 itemCounts를 SupplyOrderItem[] 형식으로 변환
+    const supply_items = supplyItems.supplyItems.map((item) => ({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      size: item.size,
+      count: supplyItems.itemCounts[item.id] || 0,
+    }));
 
-      // submitMeasurementOrder 호출
-      await submitMeasurementOrder(studentId, {
-        uniform_items,
-        supply_items,
+    // submitMeasurementOrder 호출
+    await submitMeasurementOrder(studentId, {
+      uniform_items,
+      supply_items,
+    });
+
+    // 성공 시 측정 완료 상태로 변경
+    setIsMeasurementComplete(true);
+  };
+
+  const onCompleteMeasurement = async () => {
+    try {
+      // 맞춤 정보 검증
+      const itemsMissingCustomization: string[] = [];
+
+      uniformItems.uniformSizeItems.forEach((item) => {
+        if (item.isCustomizationRequired) {
+          const hasCustomization = item.customization && item.customization.trim().length > 0;
+
+          if (!hasCustomization) {
+            itemsMissingCustomization.push(`${item.name} (${item.season})`);
+          }
+        }
       });
 
-      // 성공 시 측정 완료 상태로 변경
-      setIsMeasurementComplete(true);
+      // 맞춤 정보가 없는 품목이 있으면 모달 표시
+      if (itemsMissingCustomization.length > 0) {
+        setMissingCustomizationItems(itemsMissingCustomization);
+        setShowCustomizationModal(true);
+        return;
+      }
+
+      // 맞춤 정보가 모두 있으면 바로 제출
+      await submitMeasurementData();
+    } catch (error) {
+      console.error("측정 주문 제출 실패:", error);
+      alert("측정 주문 제출에 실패했습니다. 다시 시도해주세요.");
+    }
+  };
+
+  const onConfirmWithoutCustomization = async () => {
+    try {
+      setShowCustomizationModal(false);
+      await submitMeasurementData();
     } catch (error) {
       console.error("측정 주문 제출 실패:", error);
       alert("측정 주문 제출에 실패했습니다. 다시 시도해주세요.");
@@ -196,15 +235,11 @@ export default function MeasurementSheet({
               onRemoveItem={uniformItems.removeItem}
               onUpdateSize={uniformItems.updateSize}
               onUpdateCustomization={uniformItems.updateCustomization}
-              onUpdatePantsLength={uniformItems.updatePantsLength}
               onUpdatePurchaseCount={uniformItems.updatePurchaseCount}
             />
 
             <SupplySection
               items={supplyItems.supplyItems}
-              onAddItem={supplyItems.addItem}
-              onRemoveItem={supplyItems.removeItem}
-              onUpdateItem={supplyItems.updateItem}
               itemCounts={supplyItems.itemCounts}
               setItemCounts={supplyItems.setItemCounts}
             />
@@ -265,6 +300,14 @@ export default function MeasurementSheet({
           </>
         )}
       </div>
+
+      {/* 맞춤 정보 누락 모달 */}
+      <CustomizationRequiredModal
+        isOpen={showCustomizationModal}
+        missingItems={missingCustomizationItems}
+        onClose={() => setShowCustomizationModal(false)}
+        onConfirm={onConfirmWithoutCustomization}
+      />
     </>
   );
 }
@@ -339,6 +382,7 @@ interface UniformProductItem {
   quantity: number;
   selectableWith?: string[];
   gender: "male" | "female" | "unisex";
+  isCustomizationRequired?: boolean;
 }
 
 interface SizeSectionProps {
@@ -353,7 +397,6 @@ interface SizeSectionProps {
   onRemoveItem: (id: string) => void;
   onUpdateSize: (id: string, size: number) => void;
   onUpdateCustomization: (id: string, customization: string) => void;
-  onUpdatePantsLength: (id: string, length: string) => void;
   onUpdatePurchaseCount: (id: string, delta: number) => void;
 }
 
@@ -366,7 +409,6 @@ const SizeSection = ({
   onRemoveItem,
   onUpdateSize,
   onUpdateCustomization,
-  onUpdatePantsLength,
   onUpdatePurchaseCount,
 }: SizeSectionProps) => {
   // 현재 시즌의 아이템들을 품목별로 그룹화
@@ -549,18 +591,10 @@ const SizeSection = ({
                     </select>
                   </div>
 
-                  {/* 맞춤 (바지인 경우 기장 입력) */}
+                  {/* 맞춤 정보 입력 */}
                   <div className="text-center">
-                    {isPants ? (
-                      <input
-                        type="text"
-                        value={item.pantsLength || ""}
-                        onChange={(e) =>
-                          onUpdatePantsLength(item.id, e.target.value)
-                        }
-                        placeholder="예: 34 3/4"
-                        className="w-full text-xs text-center border rounded px-2 py-1 border-gray-300"
-                      />
+                    {item.isCustomizationRequired === false ? (
+                      <span className="text-gray-400">-</span>
                     ) : (
                       <input
                         type="text"
@@ -568,7 +602,7 @@ const SizeSection = ({
                         onChange={(e) =>
                           onUpdateCustomization(item.id, e.target.value)
                         }
-                        placeholder="맞춤 정보"
+                        placeholder={isPants ? "예: 34 3/4" : "맞춤 정보"}
                         className="w-full text-xs text-center border rounded px-2 py-1 border-gray-300"
                       />
                     )}
@@ -623,22 +657,12 @@ const SizeSection = ({
 
 interface SupplySectionProps {
   items: SupplyItem[];
-  onAddItem: (itemName: keyof typeof SUPPLY_ITEMS_CONFIG) => void;
-  onRemoveItem: (itemId: string) => void;
-  onUpdateItem: (
-    itemId: string,
-    field: "category" | "size",
-    value: string
-  ) => void;
   itemCounts: Record<string, number>;
   setItemCounts: React.Dispatch<React.SetStateAction<Record<string, number>>>;
 }
 
 const SupplySection = ({
   items,
-  onAddItem,
-  onRemoveItem,
-  onUpdateItem,
   itemCounts,
   setItemCounts,
 }: SupplySectionProps) => {
@@ -649,158 +673,76 @@ const SupplySection = ({
     }));
   };
 
-  // 품목별로 그룹화
-  const groupedItems = items.reduce(
-    (acc, item) => {
-      if (!acc[item.name]) {
-        acc[item.name] = [];
-      }
-      acc[item.name].push(item);
-      return acc;
-    },
-    {} as Record<string, SupplyItem[]>
-  );
-
   return (
     <div className="border-b-8 border-black/5 p-6">
       <p className="text-xs text-gray-600 pb-3.5">용품</p>
 
-      {/* 헤더 (5열) */}
-      <div className="grid grid-cols-5 gap-2 text-xs text-center font-semibold bg-gray-50 py-2 rounded">
-        {["품목", "종류", "사이즈", "구입개수", "비고"].map((h) => (
+      {/* 헤더 (6열로 변경: 품목, 가격, 종류, 사이즈, 구입개수, 시즌) */}
+      <div className="grid grid-cols-6 gap-2 text-xs text-center font-semibold bg-gray-50 py-2 rounded">
+        {["품목", "가격", "종류", "사이즈", "구입개수", "시즌"].map((h) => (
           <div key={h}>{h}</div>
         ))}
       </div>
 
-      {/* 용품 리스트 - 품목별 그룹으로 표시 */}
-      {Object.entries(SUPPLY_ITEMS_CONFIG)
-        .filter(([itemName]) => itemName !== "명찰") // 명찰 제외
-        .map(([itemName, config]) => {
-          const itemsOfType = groupedItems[config.name] || [];
-          const hasItems = itemsOfType.length > 0;
+      {/* 용품 리스트 - API에서 받아온 supply_items를 모두 표시 */}
+      {items.length === 0 ? (
+        <div className="py-8 text-center text-gray-400">
+          용품 정보가 없습니다.
+        </div>
+      ) : (
+        items.map((item) => {
+          const purchaseCount = itemCounts[item.id] || 0;
 
           return (
-            <div key={itemName}>
-              {/* 첫 번째 아이템이 없으면 + 버튼만 표시 */}
-              {!hasItems && (
-                <div className="grid grid-cols-5 gap-2 py-3 text-sm border-b items-center hover:bg-gray-50">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() =>
-                        onAddItem(itemName as keyof typeof SUPPLY_ITEMS_CONFIG)
-                      }
-                      className="w-5 h-5 flex items-center justify-center rounded bg-yellow-400 hover:bg-yellow-500 text-white font-bold text-xs"
-                    >
-                      +
-                    </button>
-                    <span className="font-medium">{config.name}</span>
-                  </div>
-                  <div className="text-center text-xs text-gray-400">-</div>
-                  <div className="text-center text-gray-400">-</div>
-                  <div className="text-center text-gray-400">0</div>
-                  <div className="text-center text-gray-400">-</div>
-                </div>
-              )}
+            <div
+              key={item.id}
+              className="grid grid-cols-6 gap-2 py-3 text-sm border-b items-center hover:bg-gray-50"
+            >
+              {/* 품목 */}
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{item.name}</span>
+              </div>
 
-              {/* 추가된 아이템들 표시 */}
-              {itemsOfType.map((item, index) => {
-                const purchaseCount = itemCounts[item.id] || 0;
-                const availableOptions = config.options;
+              {/* 가격 */}
+              <div className="text-xs text-gray-500 text-center">
+                {item.price ? `${item.price.toLocaleString()}원` : "-"}
+              </div>
 
-                // 종류 옵션 (중복 제거)
-                const categoryOptions = [
-                  ...new Set(availableOptions.map((opt) => opt.category)),
-                ];
+              {/* 종류 */}
+              <div className="text-center">
+                <span className="text-xs text-gray-700">{item.category}</span>
+              </div>
 
-                // 사이즈 옵션 (중복 제거)
-                const sizeOptions = [
-                  ...new Set(availableOptions.map((opt) => opt.size)),
-                ];
+              {/* 사이즈 */}
+              <div className="text-center">
+                <span className="text-xs text-gray-700">{item.size}</span>
+              </div>
 
-                return (
-                  <div
-                    key={item.id}
-                    className="grid grid-cols-5 gap-2 py-3 text-sm border-b items-center hover:bg-gray-50"
-                  >
-                    <div className="flex items-center gap-2">
-                      {index === 0 && (
-                        <button
-                          onClick={() =>
-                            onAddItem(
-                              itemName as keyof typeof SUPPLY_ITEMS_CONFIG
-                            )
-                          }
-                          className="w-5 h-5 flex items-center justify-center rounded bg-yellow-400 hover:bg-yellow-500 text-white font-bold text-xs"
-                        >
-                          +
-                        </button>
-                      )}
-                      {index > 0 && (
-                        <button
-                          onClick={() => onRemoveItem(item.id)}
-                          className="w-5 h-5 flex items-center justify-center rounded bg-gray-300 hover:bg-gray-400 text-white font-bold text-xs"
-                        >
-                          -
-                        </button>
-                      )}
-                      <span className="font-medium">{item.name}</span>
-                    </div>
+              {/* 구입개수 */}
+              <div className="flex items-center justify-center gap-1">
+                <CountButton onClick={() => updateCount(item.id, -1)}>
+                  -
+                </CountButton>
+                <span className="w-6 text-center font-medium">
+                  {purchaseCount}
+                </span>
+                <CountButton onClick={() => updateCount(item.id, 1)}>
+                  +
+                </CountButton>
+              </div>
 
-                    {/* 종류 선택 - 항상 드롭다운 */}
-                    <div className="text-center">
-                      <select
-                        value={item.category}
-                        onChange={(e) =>
-                          onUpdateItem(item.id, "category", e.target.value)
-                        }
-                        className="text-xs text-gray-700 border rounded px-1 py-0.5 bg-white"
-                      >
-                        {categoryOptions.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* 사이즈 선택 - 항상 드롭다운 */}
-                    <div className="text-center">
-                      <select
-                        value={item.size}
-                        onChange={(e) =>
-                          onUpdateItem(item.id, "size", e.target.value)
-                        }
-                        className="text-xs text-gray-700 border rounded px-1 py-0.5 bg-white"
-                      >
-                        {sizeOptions.map((size) => (
-                          <option key={size} value={size}>
-                            {size}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* 구입개수 */}
-                    <div className="flex items-center justify-center gap-1">
-                      <CountButton onClick={() => updateCount(item.id, -1)}>
-                        -
-                      </CountButton>
-                      <span className="w-6 text-center font-medium">
-                        {purchaseCount}
-                      </span>
-                      <CountButton onClick={() => updateCount(item.id, 1)}>
-                        +
-                      </CountButton>
-                    </div>
-
-                    {/* 비고 */}
-                    <div className="text-center text-gray-400">-</div>
-                  </div>
-                );
-              })}
+              {/* 시즌 */}
+              <div className="text-center">
+                <span className="text-xs text-gray-600">
+                  {item.season === "all" ? "전체" :
+                   item.season === "winter" ? "동복" :
+                   item.season === "summer" ? "하복" : item.season || "-"}
+                </span>
+              </div>
             </div>
           );
-        })}
+        })
+      )}
     </div>
   );
 };
@@ -1085,8 +1027,6 @@ const ConfirmedDataView = ({
                 </thead>
                 <tbody>
                   {items.map((item) => {
-                    const isPants = item.name.includes("바지");
-
                     return (
                       <tr key={item.id} className="border-b last:border-b-0">
                         <td className="py-2 px-3 font-medium">{item.name}</td>
@@ -1097,9 +1037,7 @@ const ConfirmedDataView = ({
                           {item.selectedSize}
                         </td>
                         <td className="py-2 px-3 text-center">
-                          {isPants
-                            ? `기장: ${item.pantsLength || "-"}`
-                            : item.customization || "-"}
+                          {item.customization || "-"}
                         </td>
                         <td className="py-2 px-3 text-center font-semibold">
                           {item.freeQuantity || 0}
@@ -1153,5 +1091,57 @@ const ConfirmedDataView = ({
         </div>
       )}
     </div>
+  );
+};
+
+const CustomizationRequiredModal = ({
+  isOpen,
+  missingItems,
+  onClose,
+  onConfirm,
+}: {
+  isOpen: boolean;
+  missingItems: string[];
+  onClose: () => void;
+  onConfirm: () => void;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <>
+      {/* 모달 오버레이 */}
+      <div
+        className="fixed inset-0 bg-black/50 z-60"
+        onClick={onClose}
+      />
+      {/* 모달 컨텐츠 */}
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-70 max-w-md w-full mx-4">
+        <h3 className="text-lg font-semibold mb-4 text-yellow-600">
+          맞춤 정보 누락
+        </h3>
+        <p className="text-sm text-gray-700 mb-4">
+          다음 품목의 맞춤 정보가 입력되지 않았습니다:
+        </p>
+        <ul className="list-disc list-inside mb-6 text-sm text-gray-600 space-y-1">
+          {missingItems.map((item, index) => (
+            <li key={index}>{item}</li>
+          ))}
+        </ul>
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+          >
+            맞춤 정보 입력하기
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            확인 후 진행
+          </button>
+        </div>
+      </div>
+    </>
   );
 };

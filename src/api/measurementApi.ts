@@ -1,6 +1,4 @@
-import {
-  SUPPLY_ITEMS_CONFIG,
-} from "@/mocks/measurementData";
+import { SUPPLY_ITEMS_CONFIG } from "@/mocks/measurementData";
 
 // API 응답 타입
 export type StudentInfoResponse = Record<string, unknown>;
@@ -17,7 +15,6 @@ export type CompleteMeasurementRequest = {
     season: "동복" | "하복";
     selectedSize: number;
     customization: string;
-    pantsLength?: string;
     purchaseCount: number;
   }>;
   supplyItems: Array<{
@@ -42,14 +39,15 @@ class MeasurementApi {
   }
 
   // 채촌 정보 조회
-  async getMeasurementInfo(_studentId: string): Promise<MeasurementInfoResponse> {
+  async getMeasurementInfo(
+    _studentId: string
+  ): Promise<MeasurementInfoResponse> {
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({});
       }, 300);
     });
   }
-
 
   // 용품 아이템 설정 조회
   async getSupplyItemsConfig(): Promise<SupplyItemsConfigResponse> {

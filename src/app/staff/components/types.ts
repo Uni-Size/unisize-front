@@ -3,6 +3,10 @@ export type SupplyItem = {
   name: string;
   category: string;
   size: string;
+  product_id?: number;
+  price?: number;
+  quantity?: number;
+  season?: string;
 };
 
 export type UniformSizeItem = {
@@ -13,10 +17,10 @@ export type UniformSizeItem = {
   season: "동복" | "하복";
   selectedSize: number;
   customization: string;
-  pantsLength?: string;
   purchaseCount: number;
   freeQuantity?: number;
   price?: number;
+  isCustomizationRequired?: boolean;
 };
 
 export type MeasurementMode = "new" | "edit" | "readonly";
