@@ -110,13 +110,15 @@ export default function MeasurementSheet({
     });
 
     // supplyItems와 itemCounts를 SupplyOrderItem[] 형식으로 변환
-    const supply_items = supplyItems.supplyItems.map((item) => ({
-      id: item.id,
-      name: item.name,
-      category: item.category,
-      size: item.size,
-      count: supplyItems.itemCounts[item.id] || 0,
-    }));
+    const supply_items = supplyItems.supplyItems
+      .filter((item) => item.product_id !== undefined)
+      .map((item) => ({
+        id: item.product_id!,
+        name: item.name,
+        category: item.category,
+        size: item.size,
+        count: supplyItems.itemCounts[item.id] || 0,
+      }));
 
     // submitMeasurementOrder 호출
     await submitMeasurementOrder(studentId, {
@@ -242,6 +244,9 @@ export default function MeasurementSheet({
               items={supplyItems.supplyItems}
               itemCounts={supplyItems.itemCounts}
               setItemCounts={supplyItems.setItemCounts}
+              onAddSameItem={supplyItems.addSameItem}
+              onRemoveItem={supplyItems.removeItem}
+              onUpdateItem={supplyItems.updateItem}
             />
 
             <div className="p-6">
@@ -659,12 +664,18 @@ interface SupplySectionProps {
   items: SupplyItem[];
   itemCounts: Record<string, number>;
   setItemCounts: React.Dispatch<React.SetStateAction<Record<string, number>>>;
+  onAddSameItem: (baseItem: SupplyItem) => void;
+  onRemoveItem: (itemId: string) => void;
+  onUpdateItem: (itemId: string, field: "category" | "size", value: string) => void;
 }
 
 const SupplySection = ({
   items,
   itemCounts,
   setItemCounts,
+  onAddSameItem,
+  onRemoveItem,
+  onUpdateItem,
 }: SupplySectionProps) => {
   const updateCount = (itemId: string, delta: number) => {
     setItemCounts((prev) => ({
@@ -673,75 +684,99 @@ const SupplySection = ({
     }));
   };
 
+  // 품목별로 그룹화 (product_id로)
+  const groupedItems = items.reduce(
+    (acc, item) => {
+      const key = item.product_id?.toString() || item.name;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(item);
+      return acc;
+    },
+    {} as Record<string, SupplyItem[]>
+  );
+
   return (
     <div className="border-b-8 border-black/5 p-6">
       <p className="text-xs text-gray-600 pb-3.5">용품</p>
 
-      {/* 헤더 (6열로 변경: 품목, 가격, 종류, 사이즈, 구입개수, 시즌) */}
-      <div className="grid grid-cols-6 gap-2 text-xs text-center font-semibold bg-gray-50 py-2 rounded">
-        {["품목", "가격", "종류", "사이즈", "구입개수", "시즌"].map((h) => (
+      {/* 헤더 (4열: 품목, 가격, 사이즈, 구입개수) */}
+      <div className="grid grid-cols-4 gap-2 text-xs text-center font-semibold bg-gray-50 py-2 rounded">
+        {["품목", "가격", "사이즈", "구입개수"].map((h) => (
           <div key={h}>{h}</div>
         ))}
       </div>
 
-      {/* 용품 리스트 - API에서 받아온 supply_items를 모두 표시 */}
+      {/* 용품 리스트 - 품목별 그룹으로 표시 */}
       {items.length === 0 ? (
         <div className="py-8 text-center text-gray-400">
           용품 정보가 없습니다.
         </div>
       ) : (
-        items.map((item) => {
-          const purchaseCount = itemCounts[item.id] || 0;
+        Object.entries(groupedItems).map(([key, itemsOfType]) => (
+          <div key={key}>
+            {itemsOfType.map((item, index) => {
+              const purchaseCount = itemCounts[item.id] || 0;
 
-          return (
-            <div
-              key={item.id}
-              className="grid grid-cols-6 gap-2 py-3 text-sm border-b items-center hover:bg-gray-50"
-            >
-              {/* 품목 */}
-              <div className="flex items-center gap-2">
-                <span className="font-medium">{item.name}</span>
-              </div>
+              return (
+                <div
+                  key={item.id}
+                  className="grid grid-cols-4 gap-2 py-3 text-sm border-b items-center hover:bg-gray-50"
+                >
+                  {/* 품목 */}
+                  <div className="flex items-center gap-2">
+                    {index === 0 ? (
+                      <button
+                        onClick={() => onAddSameItem(item)}
+                        className="w-5 h-5 flex items-center justify-center rounded bg-yellow-400 hover:bg-yellow-500 text-white font-bold text-xs"
+                      >
+                        +
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onRemoveItem(item.id)}
+                        className="w-5 h-5 flex items-center justify-center rounded bg-gray-300 hover:bg-gray-400 text-white font-bold text-xs"
+                      >
+                        -
+                      </button>
+                    )}
+                    <span className="font-medium">{item.name}</span>
+                  </div>
 
-              {/* 가격 */}
-              <div className="text-xs text-gray-500 text-center">
-                {item.price ? `${item.price.toLocaleString()}원` : "-"}
-              </div>
+                  {/* 가격 */}
+                  <div className="text-xs text-gray-500 text-center">
+                    {item.price ? `${item.price.toLocaleString()}원` : "-"}
+                  </div>
 
-              {/* 종류 */}
-              <div className="text-center">
-                <span className="text-xs text-gray-700">{item.category}</span>
-              </div>
+                  {/* 사이즈 - 드롭다운으로 변경 */}
+                  <div className="text-center">
+                    <input
+                      type="text"
+                      value={item.size}
+                      onChange={(e) => onUpdateItem(item.id, "size", e.target.value)}
+                      placeholder="사이즈"
+                      className="w-full text-xs text-center border rounded px-2 py-1 border-gray-300"
+                    />
+                  </div>
 
-              {/* 사이즈 */}
-              <div className="text-center">
-                <span className="text-xs text-gray-700">{item.size}</span>
-              </div>
-
-              {/* 구입개수 */}
-              <div className="flex items-center justify-center gap-1">
-                <CountButton onClick={() => updateCount(item.id, -1)}>
-                  -
-                </CountButton>
-                <span className="w-6 text-center font-medium">
-                  {purchaseCount}
-                </span>
-                <CountButton onClick={() => updateCount(item.id, 1)}>
-                  +
-                </CountButton>
-              </div>
-
-              {/* 시즌 */}
-              <div className="text-center">
-                <span className="text-xs text-gray-600">
-                  {item.season === "all" ? "전체" :
-                   item.season === "winter" ? "동복" :
-                   item.season === "summer" ? "하복" : item.season || "-"}
-                </span>
-              </div>
-            </div>
-          );
-        })
+                  {/* 구입개수 */}
+                  <div className="flex items-center justify-center gap-1">
+                    <CountButton onClick={() => updateCount(item.id, -1)}>
+                      -
+                    </CountButton>
+                    <span className="w-6 text-center font-medium">
+                      {purchaseCount}
+                    </span>
+                    <CountButton onClick={() => updateCount(item.id, 1)}>
+                      +
+                    </CountButton>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))
       )}
     </div>
   );

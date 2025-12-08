@@ -41,6 +41,21 @@ export const useSupplyItems = (initialSupplyItems?: ApiSupplyItem[]) => {
     }
   }, [initialSupplyItems]);
 
+  // 같은 품목의 새 사이즈 추가 (복사 기능)
+  const addSameItem = useCallback((baseItem: SupplyItem) => {
+    const newItem: SupplyItem = {
+      ...baseItem,
+      id: `${baseItem.product_id}-${Date.now()}-${Math.random()}`,
+      size: baseItem.size,
+    };
+    setSupplyItems((prev) => [...prev, newItem]);
+    // 새 아이템의 수량은 0으로 초기화
+    setItemCounts((prev) => ({
+      ...prev,
+      [newItem.id]: 0,
+    }));
+  }, []);
+
   const addItem = useCallback(
     (itemName: keyof typeof SUPPLY_ITEMS_CONFIG) => {
       const config = SUPPLY_ITEMS_CONFIG[itemName];
@@ -58,6 +73,11 @@ export const useSupplyItems = (initialSupplyItems?: ApiSupplyItem[]) => {
 
   const removeItem = useCallback((itemId: string) => {
     setSupplyItems((prev) => prev.filter((item) => item.id !== itemId));
+    setItemCounts((prev) => {
+      const newCounts = { ...prev };
+      delete newCounts[itemId];
+      return newCounts;
+    });
   }, []);
 
   const updateItem = useCallback(
@@ -83,6 +103,7 @@ export const useSupplyItems = (initialSupplyItems?: ApiSupplyItem[]) => {
     itemCounts,
     setItemCounts,
     addItem,
+    addSameItem,
     removeItem,
     updateItem,
     updateCount,
