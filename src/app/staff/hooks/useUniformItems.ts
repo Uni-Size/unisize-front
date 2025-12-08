@@ -11,6 +11,7 @@ interface UniformProductItem {
   quantity: number;
   selectableWith?: string[];
   gender: "male" | "female" | "unisex";
+  isCustomizationRequired?: boolean;
 }
 
 interface InitialData {
@@ -44,10 +45,10 @@ export const useUniformItems = (initialData: InitialData) => {
             season: s as "동복" | "하복",
             selectedSize: Number(item.recommendedSize) || item.availableSizes[0] || 95,
             customization: "",
-            pantsLength: item.name.includes("바지") ? "" : undefined,
             purchaseCount: initialPurchaseCount,
             freeQuantity: item.provided,
             price: item.price,
+            isCustomizationRequired: item.isCustomizationRequired,
           });
         });
       });
@@ -75,10 +76,10 @@ export const useUniformItems = (initialData: InitialData) => {
           uniformItem.availableSizes[0] ||
           95,
         customization: "",
-        pantsLength: uniformItem.name.includes("바지") ? "" : undefined,
         purchaseCount: 1,
         freeQuantity: uniformItem.provided,
         price: uniformItem.price,
+        isCustomizationRequired: uniformItem.isCustomizationRequired,
       };
       setUniformSizeItems((prev) => [...prev, newItem]);
     },
@@ -109,15 +110,6 @@ export const useUniformItems = (initialData: InitialData) => {
     []
   );
 
-  // 바지 기장 변경
-  const updatePantsLength = useCallback((id: string, length: string) => {
-    setUniformSizeItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, pantsLength: length } : item
-      )
-    );
-  }, []);
-
   // 교복 구입 개수 변경
   const updatePurchaseCount = useCallback((id: string, delta: number) => {
     setUniformSizeItems((prev) =>
@@ -143,7 +135,6 @@ export const useUniformItems = (initialData: InitialData) => {
     removeItem,
     updateSize,
     updateCustomization,
-    updatePantsLength,
     updatePurchaseCount,
     canComplete,
   };

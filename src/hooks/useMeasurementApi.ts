@@ -4,9 +4,7 @@ import {
   UseQueryOptions,
   UseMutationOptions,
 } from "@tanstack/react-query";
-import {
-  SUPPLY_ITEMS_CONFIG,
-} from "@/mocks/measurementData";
+import { SUPPLY_ITEMS_CONFIG } from "@/mocks/measurementData";
 
 // API 응답 타입
 export type StudentInfoResponse = Record<string, unknown>;
@@ -23,7 +21,6 @@ export type CompleteMeasurementRequest = {
     season: "동복" | "하복";
     selectedSize: number;
     customization: string;
-    pantsLength?: string;
     purchaseCount: number;
   }>;
   supplyItems: Array<{
@@ -77,7 +74,6 @@ async function fetchMeasurementInfo(
     }, 300);
   });
 }
-
 
 async function fetchSupplyItemsConfig(): Promise<SupplyItemsConfigResponse> {
   // 더미 데이터로 시뮬레이션
