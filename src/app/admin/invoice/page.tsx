@@ -5,23 +5,12 @@ import StudentDetailModal, {
   StudentDetailData,
 } from "../components/StudentDetailModal";
 import AdditionalPurchaseSlide from "../components/AdditionalPurchaseSlide";
-
-interface Student {
-  no: number;
-  grade: string;
-  school: string;
-  studentName: string;
-  gender: string;
-  schoolPhone: string;
-  parentPhone: string;
-  estimatedAmount: string;
-  reservationStatus: string;
-  reservationDate: string;
-  resultStatus: string;
-  resultDate: string;
-}
+import { usePaymentPending } from "@/hooks/usePaymentPending";
 
 export default function SmartUniformSearch() {
+  // API 데이터 가져오기
+  const { students, isLoading, error, total, hasMore, loadMore, refresh } = usePaymentPending();
+
   const [searchKeyword, setSearchKeyword] = useState("");
   const [selectedGrades, setSelectedGrades] = useState({
     신입: false,
@@ -117,23 +106,6 @@ export default function SmartUniformSearch() {
     ],
   };
 
-  // Sample data
-  const students: Student[] = Array(13)
-    .fill(null)
-    .map((_, index) => ({
-      no: 1,
-      grade: "신입",
-      school: "청주고등학교",
-      studentName: "김인철",
-      gender: "남",
-      schoolPhone: "010-5571-8239",
-      parentPhone: "010-4810-2606",
-      estimatedAmount: "112,335원",
-      reservationStatus: "사이즈확정완료",
-      reservationDate: "25/01/12 15:00",
-      resultStatus: "결제완료",
-      resultDate: "25/01/12 15:00",
-    }));
 
   const handleStudentClick = () => {
     setSelectedStudent(studentDetailData);
@@ -392,43 +364,63 @@ export default function SmartUniformSearch() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {students.map((student, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm">{student.no}</td>
-                    <td className="px-4 py-3 text-sm">{student.grade}</td>
-                    <td className="px-4 py-3 text-sm">{student.school}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <button
-                        onClick={handleStudentClick}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {student.studentName}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-sm">{student.gender}</td>
-                    <td className="px-4 py-3 text-sm">{student.schoolPhone}</td>
-                    <td className="px-4 py-3 text-sm">{student.parentPhone}</td>
-                    <td className="px-4 py-3 text-sm">
-                      {student.estimatedAmount}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-block bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
-                        {student.reservationStatus}
-                      </span>
-                      <div className="text-xs text-gray-600 mt-1">
-                        {student.reservationDate}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-block bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
-                        {student.resultStatus}
-                      </span>
-                      <div className="text-xs text-gray-600 mt-1">
-                        {student.resultDate}
-                      </div>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+                      로딩 중...
                     </td>
                   </tr>
-                ))}
+                ) : error ? (
+                  <tr>
+                    <td colSpan={10} className="px-4 py-8 text-center text-red-500">
+                      {error}
+                    </td>
+                  </tr>
+                ) : students.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+                      결제 대기 중인 학생이 없습니다.
+                    </td>
+                  </tr>
+                ) : (
+                  students.map((student, index) => (
+                    <tr key={student.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm">{index + 1}</td>
+                      <td className="px-4 py-3 text-sm">{student.grade}</td>
+                      <td className="px-4 py-3 text-sm">{student.school}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <button
+                          onClick={handleStudentClick}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {student.student_name}
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{student.gender}</td>
+                      <td className="px-4 py-3 text-sm">{student.student_phone}</td>
+                      <td className="px-4 py-3 text-sm">{student.parent_phone}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {student.estimated_amount.toLocaleString()}원
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-block bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
+                          {student.reservation_status}
+                        </span>
+                        <div className="text-xs text-gray-600 mt-1">
+                          {student.reservation_date}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-block bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
+                          {student.result_status}
+                        </span>
+                        <div className="text-xs text-gray-600 mt-1">
+                          {student.result_date}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

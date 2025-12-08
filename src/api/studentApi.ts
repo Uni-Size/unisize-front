@@ -355,7 +355,7 @@ export interface MeasurementOrderItem {
 }
 
 export interface SupplyOrderItem {
-  id: string;
+  id: number;
   name: string;
   category: string;
   size: string;

@@ -2,36 +2,23 @@
 
 import { useState, useEffect } from "react";
 import MeasurementSheet from "../../components/MeasurementSheet";
-
-const data = Array.from({ length: 17 }, (_, i) => ({
-  no: i + 1,
-  timestamp: "25/01/12 12:34",
-  name: "김인철",
-  gender: "남",
-  fromSchool: "솔밭중학교",
-  toSchool: "청주고등학교",
-  category: "신입",
-  status: "pending",
-}));
-
-type Student = {
-  no: number;
-  timestamp: string;
-  name: string;
-  gender: string;
-  fromSchool: string;
-  toSchool: string;
-  category: string;
-  status: string;
-};
+import { usePaymentPending } from "@/hooks/usePaymentPending";
+import type { PaymentPendingStudent } from "@/api/paymentApi";
 
 export default function PaymentList() {
+  const { students, isLoading, error, hasMore, loadMore, refresh } = usePaymentPending();
   const [isMeasurementSheetOpen, setIsMeasurementSheetOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<PaymentPendingStudent | null>(null);
 
-  const handleDetailClick = (student: Student) => {
+  const handleDetailClick = (student: PaymentPendingStudent) => {
     setSelectedStudent(student);
     setIsMeasurementSheetOpen(true);
+  };
+
+  const handleSheetClose = () => {
+    setIsMeasurementSheetOpen(false);
+    // 시트 닫을 때 데이터 새로고침
+    refresh();
   };
 
   useEffect(() => {
@@ -51,71 +38,96 @@ export default function PaymentList() {
         <section className="fixed inset-0 z-50">
           <div
             className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm"
-            onClick={() => {
-              setIsMeasurementSheetOpen(false);
-            }}
+            onClick={handleSheetClose}
           ></div>
           <MeasurementSheet
-            setIsMeasurementSheetOpen={setIsMeasurementSheetOpen}
-            studentId={selectedStudent.no}
+            setIsMeasurementSheetOpen={handleSheetClose}
+            studentId={selectedStudent.id}
             mode="readonly"
           />
         </section>
       )}
 
-      <table className="w-full">
-        <thead className="bg-gray-50 border-b-2 border-gray-200">
-          <tr>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-              No.
-            </th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100">
-              <div className="flex items-center gap-1">접수시간</div>
-            </th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100">
-              <div className="flex items-center gap-1">학생이름</div>
-            </th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-              성별
-            </th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 min-w-[280px]">
-              출신학교 → 입학학교
-            </th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-              분류
-            </th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-              상세
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200">
-          {data.map((row) => (
-            <tr key={row.no} className="hover:bg-gray-50 transition-colors">
-              <td className="px-4 py-3 text-sm text-gray-900">{row.no}</td>
-              <td className="px-4 py-3 text-sm text-gray-900">
-                {row.timestamp}
-              </td>
-              <td className="px-4 py-3 text-sm text-gray-900">{row.name}</td>
-              <td className="px-4 py-3 text-sm text-gray-900">{row.gender}</td>
-              <td className="px-4 py-3 text-sm text-gray-900">
-                {row.fromSchool} → {row.toSchool}
-              </td>
-              <td className="px-4 py-3 text-sm text-gray-900">
-                {row.category}
-              </td>
-              <td className="px-4 py-3 text-sm">
-                <button
-                  className="text-blue-600 hover:text-blue-800 hover:underline"
-                  onClick={() => handleDetailClick(row)}
-                >
-                  ↗
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {isLoading ? (
+        <div className="py-8 text-center text-gray-500">
+          로딩 중...
+        </div>
+      ) : error ? (
+        <div className="py-8 text-center text-red-500">
+          {error}
+        </div>
+      ) : students.length === 0 ? (
+        <div className="py-8 text-center text-gray-500">
+          결제 대기 중인 학생이 없습니다.
+        </div>
+      ) : (
+        <>
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b-2 border-gray-200">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  No.
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  결제일
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  학생이름
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  성별
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  학교
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  학년
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  상세
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {students.map((student, index) => (
+                <tr key={student.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-sm text-gray-900">{index + 1}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {student.result_date}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">{student.student_name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">{student.gender}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {student.school}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {student.grade}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <button
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                      onClick={() => handleDetailClick(student)}
+                    >
+                      ↗
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {hasMore && (
+            <div className="mt-4 text-center">
+              <button
+                onClick={loadMore}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                더 보기
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
