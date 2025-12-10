@@ -29,7 +29,9 @@ export default function MeasurementSheet({
 }) {
   const [season, setSeason] = useState<"동복" | "하복">("동복");
   const [showCustomizationModal, setShowCustomizationModal] = useState(false);
-  const [missingCustomizationItems, setMissingCustomizationItems] = useState<string[]>([]);
+  const [missingCustomizationItems, setMissingCustomizationItems] = useState<
+    string[]
+  >([]);
 
   // recommended_uniforms 데이터를 표시 형식으로 변환
   const uniformProductsByCategory = {
@@ -39,12 +41,13 @@ export default function MeasurementSheet({
           id: item.product,
           name: item.product,
           recommendedSize: item.recommended_size,
-          availableSizes: item.available_sizes.length > 0
-            ? item.available_sizes.map((s) => {
-                // 숫자형 사이즈는 그대로, 문자형은 숫자로 변환
-                return Number(s.size) || 95;
-              })
-            : [95, 100, 105, 110],
+          availableSizes:
+            item.available_sizes.length > 0
+              ? item.available_sizes.map((s) => {
+                  // 숫자형 사이즈는 그대로, 문자형은 숫자로 변환
+                  return Number(s.size) || 95;
+                })
+              : [95, 100, 105, 110],
           price: item.price,
           provided: item.supported_quantity,
           quantity: item.quantity,
@@ -59,12 +62,13 @@ export default function MeasurementSheet({
           id: item.product,
           name: item.product,
           recommendedSize: item.recommended_size,
-          availableSizes: item.available_sizes.length > 0
-            ? item.available_sizes.map((s) => {
-                // 숫자형 사이즈는 그대로, 문자형은 숫자로 변환
-                return Number(s.size) || 95;
-              })
-            : [95, 100, 105, 110],
+          availableSizes:
+            item.available_sizes.length > 0
+              ? item.available_sizes.map((s) => {
+                  // 숫자형 사이즈는 그대로, 문자형은 숫자로 변환
+                  return Number(s.size) || 95;
+                })
+              : [95, 100, 105, 110],
           price: item.price,
           provided: item.supported_quantity,
           quantity: item.quantity,
@@ -110,15 +114,16 @@ export default function MeasurementSheet({
     });
 
     // supplyItems와 itemCounts를 SupplyOrderItem[] 형식으로 변환
+    // count가 0인 항목은 제외
     const supply_items = supplyItems.supplyItems
       .filter((item) => item.product_id !== undefined)
       .map((item) => ({
-        id: item.product_id!,
+        item_id: item.product_id!,
         name: item.name,
-        category: item.category,
-        size: item.size,
-        count: supplyItems.itemCounts[item.id] || 0,
-      }));
+        selected_size: item.size,
+        purchase_count: supplyItems.itemCounts[item.id] || 0,
+      }))
+      .filter((item) => item.count > 0);
 
     // submitMeasurementOrder 호출
     await submitMeasurementOrder(studentId, {
@@ -137,7 +142,8 @@ export default function MeasurementSheet({
 
       uniformItems.uniformSizeItems.forEach((item) => {
         if (item.isCustomizationRequired) {
-          const hasCustomization = item.customization && item.customization.trim().length > 0;
+          const hasCustomization =
+            item.customization && item.customization.trim().length > 0;
 
           if (!hasCustomization) {
             itemsMissingCustomization.push(`${item.name} (${item.season})`);
@@ -666,7 +672,11 @@ interface SupplySectionProps {
   setItemCounts: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   onAddSameItem: (baseItem: SupplyItem) => void;
   onRemoveItem: (itemId: string) => void;
-  onUpdateItem: (itemId: string, field: "category" | "size", value: string) => void;
+  onUpdateItem: (
+    itemId: string,
+    field: "category" | "size",
+    value: string
+  ) => void;
 }
 
 const SupplySection = ({
@@ -749,15 +759,34 @@ const SupplySection = ({
                     {item.price ? `${item.price.toLocaleString()}원` : "-"}
                   </div>
 
-                  {/* 사이즈 - 드롭다운으로 변경 */}
+                  {/* 사이즈 - 드롭다운 */}
                   <div className="text-center">
-                    <input
-                      type="text"
-                      value={item.size}
-                      onChange={(e) => onUpdateItem(item.id, "size", e.target.value)}
-                      placeholder="사이즈"
-                      className="w-full text-xs text-center border rounded px-2 py-1 border-gray-300"
-                    />
+                    {item.available_sizes && item.available_sizes.length > 0 ? (
+                      <select
+                        value={item.size}
+                        onChange={(e) =>
+                          onUpdateItem(item.id, "size", e.target.value)
+                        }
+                        className="w-full text-xs text-center border rounded px-2 py-1 border-gray-300 bg-white"
+                      >
+                        <option value="">선택</option>
+                        {item.available_sizes.map((sizeOption) => (
+                          <option key={sizeOption.size} value={sizeOption.size}>
+                            {sizeOption.size}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={item.size}
+                        onChange={(e) =>
+                          onUpdateItem(item.id, "size", e.target.value)
+                        }
+                        placeholder="사이즈"
+                        className="w-full text-xs text-center border rounded px-2 py-1 border-gray-300"
+                      />
+                    )}
                   </div>
 
                   {/* 구입개수 */}
@@ -1145,10 +1174,7 @@ const CustomizationRequiredModal = ({
   return (
     <>
       {/* 모달 오버레이 */}
-      <div
-        className="fixed inset-0 bg-black/50 z-60"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black/50 z-60" onClick={onClose} />
       {/* 모달 컨텐츠 */}
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-70 max-w-md w-full mx-4">
         <h3 className="text-lg font-semibold mb-4 text-yellow-600">

@@ -25,14 +25,14 @@ export function useStudents() {
           limit: 20,
         });
 
-        if (response.success && response.data.students) {
+        if (response.success && response.data && Array.isArray(response.data.students)) {
           setStudents((prev) =>
             isInitial
               ? response.data.students
               : [...prev, ...response.data.students]
           );
-          setTotal(response.data.total);
-          setHasMore(response.meta.page < response.meta.total_pages);
+          setTotal(response.data.total || 0);
+          setHasMore(response.meta?.page < response.meta?.total_pages);
         } else {
           setError(
             response.error?.message || "데이터를 불러오는데 실패했습니다."

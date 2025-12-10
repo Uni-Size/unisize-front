@@ -1,24 +1,22 @@
 import { apiClient } from "@/lib/apiClient";
 
-// 결제 대기 학생 정보
+// 결제 대기 주문 정보
 export interface PaymentPendingStudent {
-  id: number;
-  grade: string;
-  school: string;
+  order_id: number;
+  order_number: string;
   student_name: string;
   gender: string;
-  student_phone: string;
-  parent_phone: string;
-  estimated_amount: number;
-  reservation_status: string;
-  reservation_date: string;
-  result_status: string;
-  result_date: string;
+  school_name: string;
+  measurement_end_time: string;
+  category_summary: string;
+  total_amount: number;
+  paid_amount: number;
+  remaining_amount: number;
 }
 
 interface PaymentPendingResponse {
   data: {
-    students: PaymentPendingStudent[];
+    orders: PaymentPendingStudent[];
     total: number;
   };
   meta: {

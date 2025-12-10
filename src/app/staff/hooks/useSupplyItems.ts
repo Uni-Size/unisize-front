@@ -5,10 +5,15 @@ import { SupplyItem } from "../components/types";
 interface ApiSupplyItem {
   product_id: number;
   name: string;
-  category: string;
-  season: string;
+  category?: string;
+  season?: string;
   price: number;
   quantity: number;
+  available_sizes?: Array<{
+    size: string;
+    in_stock: boolean;
+    stock_count: number;
+  }>;
 }
 
 export const useSupplyItems = (initialSupplyItems?: ApiSupplyItem[]) => {
@@ -19,16 +24,32 @@ export const useSupplyItems = (initialSupplyItems?: ApiSupplyItem[]) => {
   // 초기화: API 응답의 supply_items로 초기 상태 설정
   useEffect(() => {
     if (!isInitialized.current && initialSupplyItems && initialSupplyItems.length > 0) {
-      const initialItems: SupplyItem[] = initialSupplyItems.map((item) => ({
-        id: `${item.product_id}-${Date.now()}-${Math.random()}`,
-        name: item.name,
-        category: item.category,
-        size: "-", // 기본값 (API에서 사이즈 정보가 없으면 기본값 사용)
-        product_id: item.product_id,
-        price: item.price,
-        quantity: item.quantity,
-        season: item.season,
-      }));
+      const initialItems: SupplyItem[] = initialSupplyItems.map((item) => {
+        // 사이즈 결정 로직:
+        // 1. 기본값: 빈 문자열 (선택 안됨)
+        // 2. quantity >= 1 && available_sizes.length === 1이면 해당 사이즈를 디폴트로 설정
+        let defaultSize = "";
+
+        if (
+          item.quantity >= 1 &&
+          item.available_sizes &&
+          item.available_sizes.length === 1
+        ) {
+          defaultSize = item.available_sizes[0].size;
+        }
+
+        return {
+          id: `${item.product_id}-${Date.now()}-${Math.random()}`,
+          name: item.name,
+          category: item.category || "",
+          size: defaultSize,
+          product_id: item.product_id,
+          price: item.price,
+          quantity: item.quantity,
+          season: item.season,
+          available_sizes: item.available_sizes,
+        };
+      });
 
       const initialCounts: Record<string, number> = {};
       initialItems.forEach((item) => {
@@ -43,10 +64,21 @@ export const useSupplyItems = (initialSupplyItems?: ApiSupplyItem[]) => {
 
   // 같은 품목의 새 사이즈 추가 (복사 기능)
   const addSameItem = useCallback((baseItem: SupplyItem) => {
+    // 새로 추가하는 아이템은 사이즈를 초기화
+    // quantity가 없거나 0이면 빈 문자열로, 1 이상이고 available_sizes가 1개만 있으면 해당 사이즈로
+    let defaultSize = "";
+    if (
+      baseItem.available_sizes &&
+      baseItem.available_sizes.length === 1 &&
+      (baseItem.quantity || 0) >= 1
+    ) {
+      defaultSize = baseItem.available_sizes[0].size;
+    }
+
     const newItem: SupplyItem = {
       ...baseItem,
       id: `${baseItem.product_id}-${Date.now()}-${Math.random()}`,
-      size: baseItem.size,
+      size: defaultSize,
     };
     setSupplyItems((prev) => [...prev, newItem]);
     // 새 아이템의 수량은 0으로 초기화
