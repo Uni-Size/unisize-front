@@ -4,6 +4,7 @@ import { apiClient } from "@/lib/apiClient";
 export interface PaymentPendingStudent {
   order_id: number;
   order_number: string;
+  student_id: number;
   student_name: string;
   gender: string;
   school_name: string;

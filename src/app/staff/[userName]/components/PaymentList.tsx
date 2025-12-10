@@ -140,7 +140,7 @@ export default function PaymentList() {
           ></div>
           <MeasurementSheet
             setIsMeasurementSheetOpen={handleSheetClose}
-            studentId={selectedStudent.order_id}
+            studentId={selectedStudent.student_id}
             mode="readonly"
           />
         </section>
