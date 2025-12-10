@@ -12,23 +12,39 @@ import {
 import MeasurementSheet from "../../components/MeasurementSheet";
 import { usePaymentPending } from "@/hooks/usePaymentPending";
 import type { PaymentPendingStudent } from "@/api/paymentApi";
+import { getMeasurementOrderPendingPageInfo } from "@/api/studentApi";
 
 const columnHelper = createColumnHelper<PaymentPendingStudent>();
 
 export default function PaymentList() {
-  const { students, isLoading, error, total, hasMore, isFetchingMore, loadMore, refresh } = usePaymentPending();
+  const {
+    students,
+    isLoading,
+    error,
+    total,
+    hasMore,
+    isFetchingMore,
+    loadMore,
+    refresh,
+  } = usePaymentPending();
   const [isMeasurementSheetOpen, setIsMeasurementSheetOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<PaymentPendingStudent | null>(null);
+  const [selectedStudent, setSelectedStudent] =
+    useState<PaymentPendingStudent | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
 
-  const handleDetailClick = (student: PaymentPendingStudent) => {
-    setSelectedStudent(student);
-    setIsMeasurementSheetOpen(true);
+  const handleDetailClick = async (student: PaymentPendingStudent) => {
+    try {
+      // const data = await getMeasurementOrderPendingPageInfo(student.id);/
+      setSelectedStudent(student);
+      setIsMeasurementSheetOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch measurement page info:", error);
+      alert("측정 정보를 불러오는데 실패했습니다.");
+    }
   };
 
   const handleSheetClose = () => {
     setIsMeasurementSheetOpen(false);
-    // 시트 닫을 때 데이터 새로고침
     refresh();
   };
 
@@ -213,8 +229,14 @@ export default function PaymentList() {
                   className="hover:bg-gray-50 transition-colors"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-3 text-sm text-gray-900">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    <td
+                      key={cell.id}
+                      className="px-4 py-3 text-sm text-gray-900"
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </td>
                   ))}
                 </tr>
