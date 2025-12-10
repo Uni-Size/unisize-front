@@ -260,7 +260,7 @@ export async function getStartMeasurement(
   studentId: number
 ): Promise<StudentMeasurementData> {
   const response = await apiClient.get<ApiResponse<StudentMeasurementData>>(
-    `/api/v1/students/${studentId}`
+    `/api/v1/students/${studentId}/measurement-page`
   );
   return response.data.data;
 }
