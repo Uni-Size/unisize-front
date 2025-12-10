@@ -384,7 +384,7 @@ export default function SmartUniformSearch() {
                   </tr>
                 ) : (
                   students.map((student, index) => (
-                    <tr key={student.id} className="hover:bg-gray-50">
+                    <tr key={student.order_id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm">{index + 1}</td>
                       <td className="px-4 py-3 text-sm">{student.grade}</td>
                       <td className="px-4 py-3 text-sm">{student.school}</td>

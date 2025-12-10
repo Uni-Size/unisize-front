@@ -8,11 +8,20 @@ export interface PaymentPendingStudent {
   student_name: string;
   gender: string;
   school_name: string;
+  school: string;
+  grade: string;
+  student_phone: string;
+  parent_phone: string;
   measurement_end_time: string;
   category_summary: string;
   total_amount: number;
   paid_amount: number;
   remaining_amount: number;
+  estimated_amount: number;
+  reservation_status: string;
+  reservation_date: string;
+  result_status: string;
+  result_date: string;
 }
 
 interface PaymentPendingResponse {
