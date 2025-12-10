@@ -96,7 +96,6 @@ export default function MeasurementSheet({
     setIsMeasurementComplete,
     signature,
     setSignature,
-    handleCompleteMeasurement,
     handleFinalConfirmation,
   } = measurementHook;
 
@@ -123,7 +122,7 @@ export default function MeasurementSheet({
         selected_size: item.size,
         purchase_count: supplyItems.itemCounts[item.id] || 0,
       }))
-      .filter((item) => item.count > 0);
+      .filter((item) => item.purchase_count > 0);
 
     // submitMeasurementOrder 호출
     await submitMeasurementOrder(studentId, {
