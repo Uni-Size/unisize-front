@@ -1,14 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+  createColumnHelper,
+  getSortedRowModel,
+  SortingState,
+} from "@tanstack/react-table";
 import MeasurementSheet from "../../components/MeasurementSheet";
 import { usePaymentPending } from "@/hooks/usePaymentPending";
 import type { PaymentPendingStudent } from "@/api/paymentApi";
 
+const columnHelper = createColumnHelper<PaymentPendingStudent>();
+
 export default function PaymentList() {
-  const { students, isLoading, error, hasMore, loadMore, refresh } = usePaymentPending();
+  const { students, isLoading, error, total, hasMore, isFetchingMore, loadMore, refresh } = usePaymentPending();
   const [isMeasurementSheetOpen, setIsMeasurementSheetOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<PaymentPendingStudent | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   const handleDetailClick = (student: PaymentPendingStudent) => {
     setSelectedStudent(student);
@@ -20,6 +31,93 @@ export default function PaymentList() {
     // 시트 닫을 때 데이터 새로고침
     refresh();
   };
+
+  // Infinite scroll observer
+  const observer = useRef<IntersectionObserver | null>(null);
+  const lastElementRef = useCallback(
+    (node: HTMLTableRowElement | null) => {
+      if (isLoading || isFetchingMore) return;
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          loadMore();
+        }
+      });
+      if (node) observer.current.observe(node);
+    },
+    [isLoading, isFetchingMore, hasMore, loadMore]
+  );
+
+  const columns = useMemo(
+    () => [
+      columnHelper.display({
+        id: "number",
+        header: "No.",
+        cell: (info) => info.row.index + 1,
+      }),
+      columnHelper.accessor("order_number", {
+        header: "주문번호",
+        cell: (info) => info.getValue(),
+        enableSorting: false,
+      }),
+      columnHelper.accessor("student_name", {
+        header: "학생이름",
+        cell: (info) => info.getValue(),
+        enableSorting: false,
+      }),
+      columnHelper.accessor("gender", {
+        header: "성별",
+        cell: (info) => (info.getValue() === "M" ? "남" : "여"),
+        enableSorting: true,
+      }),
+      columnHelper.accessor("school_name", {
+        header: "학교",
+        cell: (info) => info.getValue(),
+        enableSorting: false,
+      }),
+      columnHelper.accessor("measurement_end_time", {
+        header: "측정완료시간",
+        cell: (info) => info.getValue(),
+        enableSorting: false,
+      }),
+      columnHelper.accessor("total_amount", {
+        header: "총 금액",
+        cell: (info) => `${info.getValue().toLocaleString()}원`,
+        enableSorting: true,
+      }),
+      columnHelper.accessor("remaining_amount", {
+        header: "미결제 금액",
+        cell: (info) => `${info.getValue().toLocaleString()}원`,
+        enableSorting: true,
+      }),
+      columnHelper.display({
+        id: "actions",
+        header: "상세",
+        cell: (info) => (
+          <button
+            className="text-blue-600 hover:text-blue-800 hover:underline"
+            onClick={() => handleDetailClick(info.row.original)}
+          >
+            ↗
+          </button>
+        ),
+      }),
+    ],
+    []
+  );
+
+  const table = useReactTable({
+    data: students,
+    columns,
+    state: {
+      sorting,
+    },
+    onSortingChange: setSorting,
+    enableSorting: true,
+    enableSortingRemoval: true,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
 
   useEffect(() => {
     if (isMeasurementSheetOpen) {
@@ -42,92 +140,95 @@ export default function PaymentList() {
           ></div>
           <MeasurementSheet
             setIsMeasurementSheetOpen={handleSheetClose}
-            studentId={selectedStudent.id}
+            studentId={selectedStudent.order_id}
             mode="readonly"
           />
         </section>
       )}
 
-      {isLoading ? (
-        <div className="py-8 text-center text-gray-500">
-          로딩 중...
-        </div>
-      ) : error ? (
-        <div className="py-8 text-center text-red-500">
-          {error}
-        </div>
-      ) : students.length === 0 ? (
-        <div className="py-8 text-center text-gray-500">
-          결제 대기 중인 학생이 없습니다.
-        </div>
-      ) : (
-        <>
+      <div className="overflow-x-auto">
+        <div className="text-sm text-gray-600 pt-4 pb-2">총 {total}건</div>
+
+        {isLoading && (
+          <div className="flex justify-center items-center py-12">
+            <div className="text-gray-500">로딩 중...</div>
+          </div>
+        )}
+
+        {error && (
+          <div className="flex justify-center items-center py-12">
+            <div className="text-red-500">{error}</div>
+          </div>
+        )}
+
+        {!isLoading && !error && students.length === 0 && (
+          <div className="flex justify-center items-center py-12">
+            <div className="text-gray-500">결제 대기 중인 주문이 없습니다.</div>
+          </div>
+        )}
+
+        {!isLoading && !error && students.length > 0 && (
           <table className="w-full">
             <thead className="bg-gray-50 border-b-2 border-gray-200">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                  No.
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                  결제일
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                  학생이름
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                  성별
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                  학교
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                  학년
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                  상세
-                </th>
-              </tr>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
+                      className="px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                    >
+                      {header.isPlaceholder ? null : (
+                        <div
+                          className={
+                            header.column.getCanSort()
+                              ? "cursor-pointer hover:bg-gray-100 flex items-center gap-1"
+                              : "flex items-center gap-1"
+                          }
+                          onClick={header.column.getToggleSortingHandler()}
+                        >
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                          {header.column.getCanSort() && (
+                            <span>
+                              {{
+                                asc: "🔼",
+                                desc: "🔽",
+                              }[header.column.getIsSorted() as string] ?? "↕️"}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              ))}
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {students.map((student, index) => (
-                <tr key={student.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-sm text-gray-900">{index + 1}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {student.result_date}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">{student.student_name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">{student.gender}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {student.school}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {student.grade}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    <button
-                      className="text-blue-600 hover:text-blue-800 hover:underline"
-                      onClick={() => handleDetailClick(student)}
-                    >
-                      ↗
-                    </button>
-                  </td>
+              {table.getRowModel().rows.map((row, index) => (
+                <tr
+                  key={row.id}
+                  ref={index === students.length - 1 ? lastElementRef : null}
+                  className="hover:bg-gray-50 transition-colors"
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className="px-4 py-3 text-sm text-gray-900">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
           </table>
+        )}
 
-          {hasMore && (
-            <div className="mt-4 text-center">
-              <button
-                onClick={loadMore}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                더 보기
-              </button>
-            </div>
-          )}
-        </>
-      )}
+        {isFetchingMore && (
+          <div className="flex justify-center items-center py-6">
+            <div className="text-gray-500">더 많은 데이터를 불러오는 중...</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

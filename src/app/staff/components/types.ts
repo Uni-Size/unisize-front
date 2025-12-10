@@ -7,6 +7,11 @@ export type SupplyItem = {
   price?: number;
   quantity?: number;
   season?: string;
+  available_sizes?: Array<{
+    size: string;
+    in_stock: boolean;
+    stock_count: number;
+  }>;
 };
 
 export type UniformSizeItem = {
