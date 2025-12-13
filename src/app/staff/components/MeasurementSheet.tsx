@@ -117,12 +117,13 @@ export default function MeasurementSheet({
     const supply_items = supplyItems.supplyItems
       .filter((item) => item.product_id !== undefined)
       .map((item) => ({
-        item_id: item.product_id!,
+        id: item.product_id!,
         name: item.name,
-        selected_size: item.size,
-        purchase_count: supplyItems.itemCounts[item.id] || 0,
+        category: item.category || "",
+        size: item.size,
+        count: supplyItems.itemCounts[item.id] || 0,
       }))
-      .filter((item) => item.purchase_count > 0);
+      .filter((item) => item.count > 0);
 
     // submitMeasurementOrder 호출
     await submitMeasurementOrder(studentId, {
