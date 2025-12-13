@@ -24,6 +24,10 @@ COPY . .
 ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 
+# Ensure token directory and build scripts exist
+RUN ls -la token/ || echo "Warning: token directory not found"
+RUN ls -la build-*.js || echo "Warning: build scripts not found"
+
 RUN npm run build
 
 # Production image, copy all the files and run next
