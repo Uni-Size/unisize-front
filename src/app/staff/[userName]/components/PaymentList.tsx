@@ -247,7 +247,7 @@ export default function PaymentList() {
 
         {isFetchingMore && (
           <div className="flex justify-center items-center py-6">
-            <div className="text-gray-500">더 많은 데이터를 불러오는 중...</div>
+            <div className="text-gray-500">더 많은 데이터...</div>
           </div>
         )}
       </div>
