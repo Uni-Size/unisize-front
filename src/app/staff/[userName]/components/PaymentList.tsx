@@ -238,7 +238,8 @@ export default function PaymentList() {
                         cell.getContext()
                       )}
                     </td>
-                  ))}
+                  ))}{" "}
+                  what name
                 </tr>
               ))}
             </tbody>
