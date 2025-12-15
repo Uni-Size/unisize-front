@@ -12,7 +12,10 @@ import {
 import MeasurementSheet from "../../components/MeasurementSheet";
 import { usePaymentPending } from "@/hooks/usePaymentPending";
 import type { PaymentPendingStudent } from "@/api/paymentApi";
-import { getMeasurementOrderPendingPageInfo } from "@/api/studentApi";
+import {
+  getStaffOrderDetail,
+  type StartMeasurementResponse,
+} from "@/api/studentApi";
 
 const columnHelper = createColumnHelper<PaymentPendingStudent>();
 
@@ -30,11 +33,14 @@ export default function PaymentList() {
   const [isMeasurementSheetOpen, setIsMeasurementSheetOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] =
     useState<PaymentPendingStudent | null>(null);
+  const [measurementData, setMeasurementData] =
+    useState<StartMeasurementResponse | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const handleDetailClick = async (student: PaymentPendingStudent) => {
     try {
-      // const data = await getMeasurementOrderPendingPageInfo(student.id);/
+      const data = await getStaffOrderDetail(student.order_id);
+      setMeasurementData(data);
       setSelectedStudent(student);
       setIsMeasurementSheetOpen(true);
     } catch (error) {
@@ -45,6 +51,8 @@ export default function PaymentList() {
 
   const handleSheetClose = () => {
     setIsMeasurementSheetOpen(false);
+    setMeasurementData(null);
+    setSelectedStudent(null);
     refresh();
   };
 
@@ -157,6 +165,7 @@ export default function PaymentList() {
           <MeasurementSheet
             setIsMeasurementSheetOpen={handleSheetClose}
             studentId={selectedStudent.student_id}
+            measurementData={measurementData || undefined}
             mode="readonly"
           />
         </section>
@@ -238,8 +247,7 @@ export default function PaymentList() {
                         cell.getContext()
                       )}
                     </td>
-                  ))}{" "}
-                  what name
+                  ))}
                 </tr>
               ))}
             </tbody>

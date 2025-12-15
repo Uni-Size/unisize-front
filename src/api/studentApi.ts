@@ -303,6 +303,25 @@ export async function getMeasurementOrderPendingPageInfo(
 
   return response.data as StartMeasurementResponse;
 }
+// 결제 전 학생 상세 정보 조회 (staff용)
+export async function getStaffOrderDetail(
+  orderId: number
+): Promise<StartMeasurementResponse> {
+  const response = await apiClient.get<ApiResponse<StartMeasurementResponse>>(
+    `/api/v1/staff/orders/${orderId}`
+  );
+
+  // API 응답이 { success: true, data: {...} } 형태일 경우를 대비
+  if (
+    response.data &&
+    typeof response.data === "object" &&
+    "data" in response.data
+  ) {
+    return (response.data as ApiResponse<StartMeasurementResponse>).data;
+  }
+
+  return response.data as StartMeasurementResponse;
+}
 // 학생 생성
 export async function addStudent(
   formData: StudentFormData
@@ -373,11 +392,10 @@ export interface MeasurementOrderItem {
 }
 
 export interface SupplyOrderItem {
-  id: number;
+  item_id: number;
   name: string;
-  category: string;
-  size: string;
-  count: number;
+  selected_size: string;
+  purchase_count: number;
 }
 
 export interface MeasurementOrderRequest {
