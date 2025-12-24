@@ -39,22 +39,29 @@ jobs:
           echo "🚀 Starting deployment..."
 
           SSH_CMD="ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || '2022' }} ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}"
-          SCP_CMD="scp -i ~/.ssh/deploy_key -P ${{ secrets.SSH_PORT || '2022' }}"
           DEPLOY_PATH="/opt/unisize/frontend"
 
           # Test connection
           $SSH_CMD "echo 'Connected to server'"
 
-          # Copy docker-compose.yml to server
-          echo "📤 Uploading docker-compose.prod.yml..."
-          $SCP_CMD docker-compose.yml ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${DEPLOY_PATH}/docker-compose.prod.yml
+          # Create deploy directory if not exists
+          echo "📁 Creating deployment directory..."
+          $SSH_CMD "mkdir -p ${DEPLOY_PATH}"
 
-          # Verify docker-compose file exists
-          $SSH_CMD "ls -la ${DEPLOY_PATH}/docker-compose.prod.yml"
+          # Copy all necessary files to server
+          echo "📤 Uploading files..."
+          rsync -avz --delete -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || '2022' }}" \
+            --exclude 'node_modules' \
+            --exclude '.next' \
+            --exclude '.git' \
+            ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${DEPLOY_PATH}/
 
-          # Deploy with automatic docker login
-          echo "🐳 Pulling and deploying containers..."
-          $SSH_CMD "cd ${DEPLOY_PATH} && echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin && docker-compose -f docker-compose.prod.yml pull && docker-compose -f docker-compose.prod.yml down || true && docker-compose -f docker-compose.prod.yml up -d && docker logout ghcr.io"
+          # Build and deploy on server
+          echo "🐳 Building and deploying containers on server..."
+          $SSH_CMD "cd ${DEPLOY_PATH} && \
+            docker-compose -f docker-compose.yml down || true && \
+            docker-compose -f docker-compose.yml build --build-arg NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL }} && \
+            docker-compose -f docker-compose.yml up -d"
 
           echo "✅ Deployment completed"
 

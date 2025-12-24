@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useProducts } from "@/hooks/useProductManagement";
+import { useProducts, useAddProduct } from "@/hooks/useProductManagement";
 import type { GetProductsParams } from "@/api/productApi";
+import AddProductModal, {
+  type AddProductFormData,
+} from "@/app/admin/components/AddProductModal";
 
 export default function ProductManagementPage() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -14,6 +17,9 @@ export default function ProductManagementPage() {
 
   // 검색 임시 상태 (입력 중인 값)
   const [tempSearch, setTempSearch] = useState<string>("");
+
+  // 모달 상태
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Query 파라미터 구성
   const queryParams: GetProductsParams = {
@@ -32,6 +38,9 @@ export default function ProductManagementPage() {
   const products = data?.products || [];
   const total = data?.total || 0;
   const totalPages = data?.total_pages || 1;
+
+  // 제품 추가 mutation
+  const addProductMutation = useAddProduct();
 
   // 검색 실행
   const handleSearch = () => {
@@ -53,6 +62,18 @@ export default function ProductManagementPage() {
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
+  };
+
+  // 제품 추가 핸들러
+  const handleAddProduct = async (formData: AddProductFormData) => {
+    try {
+      await addProductMutation.mutateAsync(formData);
+      setIsAddModalOpen(false);
+      alert("제품이 성공적으로 추가되었습니다.");
+    } catch (error) {
+      console.error("제품 추가 실패:", error);
+      alert("제품 추가에 실패했습니다. 다시 시도해주세요.");
+    }
   };
 
   // 페이지네이션 버튼 생성
@@ -125,8 +146,16 @@ export default function ProductManagementPage() {
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">상품 관리</h2>
-          <div className="text-sm text-gray-600">
-            총 <span className="font-bold text-blue-600">{total}</span>개
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-600">
+              총 <span className="font-bold text-blue-600">{total}</span>개
+            </div>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-medium"
+            >
+              + 제품 추가
+            </button>
           </div>
         </div>
 
@@ -326,6 +355,14 @@ export default function ProductManagementPage() {
           {currentPage} / {totalPages} 페이지 (전체 {total}개)
         </div>
       )}
+
+      {/* 제품 추가 모달 */}
+      <AddProductModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSubmit={handleAddProduct}
+        isLoading={addProductMutation.isPending}
+      />
     </div>
   );
 }

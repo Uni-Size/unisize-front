@@ -2,7 +2,12 @@ version: "3.8"
 
 services:
   unisize-front:
-    image: ghcr.io/uni-size/unisize-front:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+    image: unisize-front:latest
     container_name: unisize-front
     restart: unless-stopped
     ports:
