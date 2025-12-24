@@ -78,6 +78,19 @@ export async function getCurrentStaff(): Promise<StaffInfo> {
   return response.data.data;
 }
 
+// 스태프 회원가입 요청 타입
+export interface RegisterStaffRequest {
+  employee_id: string;
+  employee_name: string;
+  gender: "M" | "F";
+  password: string;
+}
+
+// 스태프 회원가입
+export async function registerStaff(data: RegisterStaffRequest): Promise<void> {
+  await apiClient.post<ApiResponse<void>>("/api/v1/auth/register", data);
+}
+
 // 로그아웃
 export async function logout(): Promise<void> {
   try {

@@ -10,7 +10,8 @@
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
       "Bash(git checkout:*)",
-      "Bash(npm i:*)"
+      "Bash(npm i:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

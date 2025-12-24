@@ -11,6 +11,8 @@ import { MeasurementMode, UniformSizeItem, SupplyItem } from "./types";
 import { useUniformItems } from "../hooks/useUniformItems";
 import { useSupplyItems } from "../hooks/useSupplyItems";
 import { useMeasurementData } from "../hooks/useMeasurementData";
+import thermalPrinter, { type PrintData } from "@/lib/printer/thermalPrinter";
+import PrintConfirmModal from "./PrintConfirmModal";
 
 export default function MeasurementSheet({
   setIsMeasurementSheetOpen,
@@ -32,6 +34,7 @@ export default function MeasurementSheet({
   const [missingCustomizationItems, setMissingCustomizationItems] = useState<
     string[]
   >([]);
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   // recommended_uniforms 데이터를 표시 형식으로 변환
   const uniformProductsByCategory = {
@@ -178,12 +181,69 @@ export default function MeasurementSheet({
   const onFinalConfirmation = async () => {
     try {
       await handleFinalConfirmation();
-      // 성공 시 시트 닫기 및 리스트 재조회
-      setIsMeasurementSheetOpen(false);
-      onSuccess?.();
+      // 성공 시 프린트 모달 표시
+      setShowPrintModal(true);
     } catch (error) {
       // 에러는 handleFinalConfirmation 내부에서 처리됨
       console.error("최종 확정 처리 중 에러:", error);
+    }
+  };
+
+  const handlePrintAndClose = async () => {
+    if (!studentData) return;
+
+    try {
+      // 프린터 연결
+      const connected = await thermalPrinter.connect();
+      if (!connected) {
+        throw new Error("프린터 연결 실패");
+      }
+
+      // 프린트 데이터 준비
+      const printData: PrintData = {
+        schoolName: studentData.school_name,
+        studentName: studentData.name,
+        studentPhone: studentData.student_phone,
+        guardianPhone: studentData.guardian_phone,
+        previousSchool: studentData.previous_school,
+        admissionYear: studentData.admission_year,
+        gender: studentData.gender === "male" ? "남" : "여",
+        uniformItems: uniformItems.uniformSizeItems.map((item) => ({
+          season: item.season,
+          name: item.name,
+          size: item.selectedSize,
+          customization: item.customization || "",
+          quantity: (item.freeQuantity || 0) + item.purchaseCount,
+        })),
+        supplyItems: supplyItems.supplyItems
+          .filter((item) => supplyItems.itemCounts[item.id] > 0)
+          .map((item) => ({
+            name: item.name,
+            size: item.size,
+            quantity: supplyItems.itemCounts[item.id],
+          })),
+      };
+
+      // 프린트 실행
+      await thermalPrinter.printReceipt(printData);
+
+      // 프린터 연결 해제
+      thermalPrinter.disconnect();
+
+      // 성공 메시지
+      alert("송장이 프린트되었습니다.");
+    } catch (error) {
+      console.error("프린트 오류:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "프린트에 실패했습니다. 프린터를 확인해주세요."
+      );
+    } finally {
+      setShowPrintModal(false);
+      // 시트 닫기 및 리스트 재조회
+      setIsMeasurementSheetOpen(false);
+      onSuccess?.();
     }
   };
 
@@ -317,6 +377,14 @@ export default function MeasurementSheet({
         missingItems={missingCustomizationItems}
         onClose={() => setShowCustomizationModal(false)}
         onConfirm={onConfirmWithoutCustomization}
+      />
+
+      {/* 프린트 확인 모달 */}
+      <PrintConfirmModal
+        isOpen={showPrintModal}
+        schoolName={studentData?.school_name || ""}
+        studentName={studentData?.name || ""}
+        onConfirm={handlePrintAndClose}
       />
     </>
   );
