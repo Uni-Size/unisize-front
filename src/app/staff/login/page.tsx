@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState, useEffect } from "react";
 import { login } from "@/api/authApi";
 import { useAuthStore } from "@/stores/authStore";
+import { AxiosError } from "axios";
+import type { ApiResponse } from "@/api/authApi";
 
 function Page() {
   const router = useRouter();
@@ -48,7 +50,15 @@ function Page() {
       }
     } catch (err) {
       console.error("로그인 실패:", err);
-      setError("아이디 또는 비밀번호가 올바르지 않습니다.");
+
+      // Axios 에러에서 서버 응답 메시지 추출
+      if (err instanceof AxiosError && err.response?.data) {
+        const errorData = err.response.data as ApiResponse<unknown>;
+        // 서버에서 보낸 에러 메시지 사용
+        setError(errorData.error?.message || "로그인에 실패했습니다.");
+      } else {
+        setError("아이디 또는 비밀번호가 올바르지 않습니다.");
+      }
     } finally {
       setIsLoading(false);
     }
