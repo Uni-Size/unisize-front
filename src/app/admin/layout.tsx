@@ -7,7 +7,6 @@ import TabNavigation, { Tab } from "./components/TabNavigation";
 
 const tabs: Tab[] = [
   { id: "smart-uniform", label: "스마트학생복 청주점" },
-  { id: "invoice", label: "송장" },
   { id: "reservation", label: "학생예약" },
   { id: "order", label: "본사주문" },
   { id: "staff-management", label: "스태프관리" },
