@@ -2,14 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getSupportedSchoolsByYear, addSupportedSchool, updateSupportedSchool, addSchoolProducts, type AddSchoolRequest, type UpdateSchoolRequest, type School, type SchoolProduct } from "@/api/schoolApi";
-
-// 현재 월에 따라 조회할 연도 결정 (12월이면 내년)
-const getTargetYear = () => {
-  const now = new Date();
-  const currentMonth = now.getMonth() + 1; // 0-based이므로 +1
-  const currentYear = now.getFullYear();
-  return currentMonth === 12 ? currentYear + 1 : currentYear;
-};
+import { getTargetYear } from "@/utils/schoolUtils";
 
 export default function AddSchoolPage() {
   const [schools, setSchools] = useState<School[]>([]);
