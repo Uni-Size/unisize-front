@@ -411,7 +411,7 @@ const StudentInfo = ({
         </p>
         <p>
           <span className="text-gray-600">학생이름</span> {studentData.name} (
-          {studentData.gender === "male" ? "남" : "여"})
+          {studentData.gender === "M" ? "남" : "여"})
           <span className="text-gray-600 ml-4">연락처</span>{" "}
           {studentData.student_phone} | {studentData.guardian_phone}
         </p>
