@@ -1,7 +1,12 @@
 import { useStudentFormStore } from "@/stores/useStudentFormStore";
 import { useState, useEffect } from "react";
 import { GRADE_OPTIONS } from "@/mocks/signupData";
-import { getSupportedSchools, type School } from "@/api/schoolApi";
+import {
+  getSupportedSchools,
+  getSupportedSchoolsByYear,
+  type School,
+} from "@/api/schoolApi";
+import { getTargetYear, getDefaultBirthDate } from "@/utils/schoolUtils";
 import Button from "@/components/ui/Button";
 import Image from "next/image";
 
@@ -19,7 +24,7 @@ export default function StepOne({ next }: { next: () => void }) {
     const fetchSchools = async () => {
       setIsLoadingSchools(true);
       try {
-        const schoolList = await getSupportedSchools();
+        const schoolList = await getSupportedSchoolsByYear(getTargetYear());
         setSchools(schoolList);
       } catch (error) {
         console.error("학교 리스트 조회 실패:", error);
@@ -144,7 +149,19 @@ export default function StepOne({ next }: { next: () => void }) {
           <select
             id="admissionSchool"
             value={formData.admissionSchool}
-            onChange={(e) => setFormData("admissionSchool", e.target.value)}
+            onChange={(e) => {
+              const selectedSchool = e.target.value;
+              setFormData("admissionSchool", selectedSchool);
+
+              // 학교 선택 시 생년월일 기본값 설정
+              if (selectedSchool && formData.admissionYear) {
+                const defaultBirthDate = getDefaultBirthDate(
+                  selectedSchool,
+                  formData.admissionYear
+                );
+                setFormData("birthDate", defaultBirthDate);
+              }
+            }}
             disabled={isLoadingSchools}
             className="w-full"
           >

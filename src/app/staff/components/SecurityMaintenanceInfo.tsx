@@ -156,6 +156,15 @@ export function SecurityMaintenanceInfoCompact() {
               <span className="text-sm text-gray-600">담당자 : </span>{" "}
               {staff.employee_name}
             </button>
+            {staff.role === "admin" && (
+              <button
+                className="px-3 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+                type="button"
+                onClick={() => router.push("/admin")}
+              >
+                관리자 페이지
+              </button>
+            )}
           </div>
         )}
       </div>

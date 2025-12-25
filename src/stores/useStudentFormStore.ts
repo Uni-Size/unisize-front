@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { getTargetYear } from "@/utils/schoolUtils";
 
 interface BodyMeasurements {
   height: number;
@@ -35,7 +36,7 @@ interface FormStore {
 
 const initialFormData: FormData = {
   previousSchool: "",
-  admissionYear: new Date().getFullYear(),
+  admissionYear: getTargetYear(),
   admissionGrade: 1,
   admissionSchool: "",
   name: "",
