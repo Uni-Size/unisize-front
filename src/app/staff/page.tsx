@@ -11,6 +11,9 @@ import ConfirmModal from "./components/ConfirmModal";
 import StudentTable from "./components/StudentTable";
 import { useStudents } from "./hooks/useStudents";
 import { useInfiniteScroll } from "./hooks/useInfiniteScroll";
+import Toast from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
+import { AxiosError } from "axios";
 
 export default function Page() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -19,6 +22,7 @@ export default function Page() {
     useState<RegisterStudent | null>(null);
   const [measurementData, setMeasurementData] =
     useState<StartMeasurementResponse | null>(null);
+  const { toast, showToast, hideToast } = useToast();
 
   const {
     students,
@@ -54,6 +58,13 @@ export default function Page() {
       refresh();
     } catch (error) {
       console.error("Failed to start measurement:", error);
+
+      // 409 에러 처리: 다른 사람이 이미 측정을 시작함
+      if (error instanceof AxiosError && error.response?.status === 409) {
+        setIsModalOpen(false);
+        showToast("다른 직원이 이미 측정을 시작했습니다.");
+        refresh();
+      }
     }
   };
 
@@ -103,6 +114,8 @@ export default function Page() {
           onDetailClick={handleDetailClick}
         />
       </section>
+
+      {toast && <Toast message={toast} onClose={hideToast} />}
     </main>
   );
 }

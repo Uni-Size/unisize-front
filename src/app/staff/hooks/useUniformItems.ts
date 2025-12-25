@@ -12,11 +12,13 @@ interface UniformProductItem {
   selectableWith?: string[];
   gender: "male" | "female" | "unisex";
   isCustomizationRequired?: boolean;
+  customization?: string;
 }
 
 interface InitialData {
-  동복: UniformProductItem[];
-  하복: UniformProductItem[];
+  winter: UniformProductItem[];
+  summer: UniformProductItem[];
+  all: UniformProductItem[];
 }
 
 export const useUniformItems = (initialData: InitialData) => {
@@ -31,20 +33,28 @@ export const useUniformItems = (initialData: InitialData) => {
       const initialItems: UniformSizeItem[] = [];
 
       // recommended_uniforms 데이터 사용
-      ["동복", "하복"].forEach((s) => {
-        const seasonItems = initialData[s as "동복" | "하복"];
+      (["winter", "summer", "all"] as const).forEach((s) => {
+        const seasonItems = initialData[s];
         seasonItems.forEach((item) => {
           // 구입 개수 = 총 개수(quantity) - 지원 개수(provided)
           const initialPurchaseCount = Math.max(0, item.quantity - item.provided);
+
+          // recommendedSize를 디폴트 값으로 사용
+          // availableSizes가 비어있으면 0으로 설정하여 에러 케이스로 인지
+          const defaultSize = item.recommendedSize
+            ? Number(item.recommendedSize)
+            : item.availableSizes.length > 0
+            ? item.availableSizes[0]
+            : 0;
 
           initialItems.push({
             id: `${item.id}-${Date.now()}-${Math.random()}`,
             itemId: item.id,
             productId: Number(item.id) || undefined,
             name: item.name,
-            season: s as "동복" | "하복",
-            selectedSize: Number(item.recommendedSize) || item.availableSizes[0] || 95,
-            customization: "",
+            season: s,
+            selectedSize: defaultSize,
+            customization: item.customization || "",
             purchaseCount: initialPurchaseCount,
             freeQuantity: item.provided,
             price: item.price,
@@ -60,10 +70,18 @@ export const useUniformItems = (initialData: InitialData) => {
 
   // 교복 아이템 추가
   const addItem = useCallback(
-    (itemId: string, season: "동복" | "하복") => {
+    (itemId: string, season: "winter" | "summer" | "all") => {
       const uniformItem = initialData[season].find((i) => i.id === itemId);
 
       if (!uniformItem) return;
+
+      // recommendedSize를 디폴트 값으로 사용
+      // availableSizes가 비어있으면 0으로 설정하여 에러 케이스로 인지
+      const defaultSize = uniformItem.recommendedSize
+        ? Number(uniformItem.recommendedSize)
+        : uniformItem.availableSizes.length > 0
+        ? uniformItem.availableSizes[0]
+        : 0;
 
       const newItem: UniformSizeItem = {
         id: `${itemId}-${Date.now()}-${Math.random()}`,
@@ -71,10 +89,7 @@ export const useUniformItems = (initialData: InitialData) => {
         productId: Number(itemId) || undefined,
         name: uniformItem.name,
         season,
-        selectedSize:
-          Number(uniformItem.recommendedSize) ||
-          uniformItem.availableSizes[0] ||
-          95,
+        selectedSize: defaultSize,
         customization: "",
         purchaseCount: 1,
         freeQuantity: uniformItem.provided,

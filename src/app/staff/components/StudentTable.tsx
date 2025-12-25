@@ -117,7 +117,6 @@ export default function StudentTable({
       {!isLoading && !error && students.length === 0 && (
         <div className="flex justify-center items-center py-12">
           {" "}
-          in November
           <div className="text-gray-500">대기 중인 학생이 없습니다.</div>
         </div>
       )}

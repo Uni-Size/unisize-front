@@ -68,6 +68,13 @@ export async function updateSupportedSchool(id: number, data: UpdateSchoolReques
   );
 }
 
+// 지원 학교 삭제
+export async function deleteSupportedSchool(id: number): Promise<void> {
+  await apiClient.delete<ApiResponse<void>>(
+    `/api/v1/schools/supported/${id}`
+  );
+}
+
 // 학교 제품 타입
 export interface SchoolProduct {
   product_id?: number;
