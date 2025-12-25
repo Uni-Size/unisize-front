@@ -19,7 +19,7 @@ export type UniformSizeItem = {
   itemId: string;
   productId?: number;
   name: string;
-  season: "동복" | "하복";
+  season: "winter" | "summer" | "all";
   selectedSize: number;
   customization: string;
   purchaseCount: number;

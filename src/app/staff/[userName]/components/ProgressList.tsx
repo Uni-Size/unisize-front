@@ -117,7 +117,7 @@ export default function ProgressList() {
                   {student.name}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-900">
-                  {student.gender === "male" ? "남" : "여"}
+                  {student.gender === "M" ? "남" : "여"}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-900">
                   {student.previous_school} → {student.school_name}

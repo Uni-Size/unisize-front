@@ -29,7 +29,7 @@ export default function MeasurementSheet({
   mode?: MeasurementMode;
   onSuccess?: () => void;
 }) {
-  const [season, setSeason] = useState<"동복" | "하복">("동복");
+  const [season, setSeason] = useState<"winter" | "summer" | "all">("winter");
   const [showCustomizationModal, setShowCustomizationModal] = useState(false);
   const [missingCustomizationItems, setMissingCustomizationItems] = useState<
     string[]
@@ -38,46 +38,85 @@ export default function MeasurementSheet({
 
   // recommended_uniforms 데이터를 표시 형식으로 변환
   const uniformProductsByCategory = {
-    동복:
+    winter:
       measurementData?.recommended_uniforms?.winter?.map((item) => {
+        // available_sizes가 있으면 그것을 사용, 없으면 recommended_size만 사용
+        const availableSizes =
+          item.available_sizes.length > 0
+            ? item.available_sizes.map((s) => {
+                // 숫자형 사이즈는 그대로, 문자형은 숫자로 변환
+                return Number(s.size) || 95;
+              })
+            : item.recommended_size
+            ? [Number(item.recommended_size) || 95]
+            : [];
+
         return {
           id: item.product,
           name: item.product,
           recommendedSize: item.recommended_size,
-          availableSizes:
-            item.available_sizes.length > 0
-              ? item.available_sizes.map((s) => {
-                  // 숫자형 사이즈는 그대로, 문자형은 숫자로 변환
-                  return Number(s.size) || 95;
-                })
-              : [95, 100, 105, 110],
+          availableSizes,
           price: item.price,
           provided: item.supported_quantity,
           quantity: item.quantity,
           selectableWith: item.selectable_with,
           gender: item.gender,
           isCustomizationRequired: item.is_customization_required,
+          customization: item.customization,
         };
       }) || [],
-    하복:
+    summer:
       measurementData?.recommended_uniforms?.summer?.map((item) => {
+        // available_sizes가 있으면 그것을 사용, 없으면 recommended_size만 사용
+        const availableSizes =
+          item.available_sizes.length > 0
+            ? item.available_sizes.map((s) => {
+                // 숫자형 사이즈는 그대로, 문자형은 숫자로 변환
+                return Number(s.size) || 95;
+              })
+            : item.recommended_size
+            ? [Number(item.recommended_size) || 95]
+            : [];
+
         return {
           id: item.product,
           name: item.product,
           recommendedSize: item.recommended_size,
-          availableSizes:
-            item.available_sizes.length > 0
-              ? item.available_sizes.map((s) => {
-                  // 숫자형 사이즈는 그대로, 문자형은 숫자로 변환
-                  return Number(s.size) || 95;
-                })
-              : [95, 100, 105, 110],
+          availableSizes,
           price: item.price,
           provided: item.supported_quantity,
           quantity: item.quantity,
           selectableWith: item.selectable_with,
           gender: item.gender,
           isCustomizationRequired: item.is_customization_required,
+          customization: item.customization,
+        };
+      }) || [],
+    all:
+      measurementData?.recommended_uniforms?.all?.map((item) => {
+        // available_sizes가 있으면 그것을 사용, 없으면 recommended_size만 사용
+        const availableSizes =
+          item.available_sizes.length > 0
+            ? item.available_sizes.map((s) => {
+                // 숫자형 사이즈는 그대로, 문자형은 숫자로 변환
+                return Number(s.size) || 95;
+              })
+            : item.recommended_size
+            ? [Number(item.recommended_size) || 95]
+            : [];
+
+        return {
+          id: item.product,
+          name: item.product,
+          recommendedSize: item.recommended_size,
+          availableSizes,
+          price: item.price,
+          provided: item.supported_quantity,
+          quantity: item.quantity,
+          selectableWith: item.selectable_with,
+          gender: item.gender,
+          isCustomizationRequired: item.is_customization_required,
+          customization: item.customization,
         };
       }) || [],
   };
@@ -461,17 +500,19 @@ interface UniformProductItem {
   selectableWith?: string[];
   gender: "male" | "female" | "unisex";
   isCustomizationRequired?: boolean;
+  customization?: string;
 }
 
 interface SizeSectionProps {
-  season: "동복" | "하복";
-  setSeason: (s: "동복" | "하복") => void;
+  season: "winter" | "summer" | "all";
+  setSeason: (s: "winter" | "summer" | "all") => void;
   uniformSizeItems: UniformSizeItem[];
   uniformProductsByCategory: {
-    동복: UniformProductItem[];
-    하복: UniformProductItem[];
+    winter: UniformProductItem[];
+    summer: UniformProductItem[];
+    all: UniformProductItem[];
   };
-  onAddItem: (itemId: string, season: "동복" | "하복") => void;
+  onAddItem: (itemId: string, season: "winter" | "summer" | "all") => void;
   onRemoveItem: (id: string) => void;
   onUpdateSize: (id: string, size: number) => void;
   onUpdateCustomization: (id: string, customization: string) => void;
@@ -515,19 +556,28 @@ const SizeSection = ({
 
       {/* 탭 */}
       <div className="flex border-b mb-4">
-        {(["동복", "하복"] as const).map((tab) => (
-          <button
-            key={tab}
-            className={`flex-1 pb-2 text-center font-medium transition-colors ${
-              season === tab
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-gray-400 hover:text-gray-600"
-            }`}
-            onClick={() => setSeason(tab)}
-          >
-            {tab}
-          </button>
-        ))}
+        {(["winter", "summer", "all"] as const).map((tab) => {
+          // all 탭은 데이터가 있을 때만 표시
+          if (tab === "all" && (!uniformProductsByCategory.all || uniformProductsByCategory.all.length === 0)) {
+            return null;
+          }
+
+          const tabLabel = tab === "winter" ? "동복" : tab === "summer" ? "하복" : "사계절";
+
+          return (
+            <button
+              key={tab}
+              className={`flex-1 pb-2 text-center font-medium transition-colors ${
+                season === tab
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+              onClick={() => setSeason(tab)}
+            >
+              {tabLabel}
+            </button>
+          );
+        })}
       </div>
 
       {/* 헤더 (7열로 변경: 품목, 가격, 사이즈, 맞춤, 지원개수, 구입개수, 총개수) */}
@@ -1117,7 +1167,7 @@ const ConfirmedDataView = ({
       acc[item.season].push(item);
       return acc;
     },
-    {} as Record<"동복" | "하복", UniformSizeItem[]>
+    {} as Record<"winter" | "summer" | "all", UniformSizeItem[]>
   );
 
   return (
@@ -1125,9 +1175,11 @@ const ConfirmedDataView = ({
       <p className="text-xs text-gray-600 pb-3.5">확정 내용</p>
 
       {/* 교복 확정 내용 */}
-      {(["동복", "하복"] as const).map((season) => {
+      {(["winter", "summer", "all"] as const).map((season) => {
         const items = groupedBySeason[season] || [];
         if (items.length === 0) return null;
+
+        const seasonLabel = season === "winter" ? "동복" : season === "summer" ? "하복" : "사계절";
 
         // 시즌별 총 금액 계산
         const totalAmount = items.reduce((sum, item) => {
@@ -1139,9 +1191,9 @@ const ConfirmedDataView = ({
         return (
           <div key={season} className="mb-6">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-sm font-semibold">교복 ({season})</h3>
+              <h3 className="text-sm font-semibold">교복 ({seasonLabel})</h3>
               <p className="text-sm font-semibold text-blue-600">
-                {season} 총 금액: {totalAmount.toLocaleString()}원
+                {seasonLabel} 총 금액: {totalAmount.toLocaleString()}원
               </p>
             </div>
             <div className="border rounded-lg overflow-hidden">
