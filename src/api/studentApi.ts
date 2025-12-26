@@ -1,5 +1,11 @@
 import { apiClient } from "@/lib/apiClient";
 
+interface UploadPDFResponse {
+  shareUrl: string;
+  fileName: string;
+  uploadedAt: string;
+}
+
 interface BodyMeasurements {
   height: number;
   weight: number;
@@ -563,4 +569,35 @@ export async function orderMeasurement(
   orderData: CompleteMeasurementRequest
 ): Promise<void> {
   await apiClient.post(`/api/v1/students/order/${studentId}`, orderData);
+}
+
+// PDF 파일 업로드 및 공유 링크 생성
+export async function uploadMeasurementPDF(
+  studentId: number,
+  pdfFile: File
+): Promise<UploadPDFResponse> {
+  const formData = new FormData();
+  formData.append("file", pdfFile);
+  formData.append("studentId", studentId.toString());
+
+  const response = await apiClient.post<ApiResponse<UploadPDFResponse>>(
+    `/api/v1/measurements/upload-pdf`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
+
+  // API 응답이 { success: true, data: {...} } 형태일 경우를 대비
+  if (
+    response.data &&
+    typeof response.data === "object" &&
+    "data" in response.data
+  ) {
+    return (response.data as ApiResponse<UploadPDFResponse>).data;
+  }
+
+  return response.data as UploadPDFResponse;
 }

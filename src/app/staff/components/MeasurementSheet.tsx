@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   type StudentMeasurementData,
   type StartMeasurementResponse,
   type RegisterStudent,
   submitMeasurementOrder,
+  uploadMeasurementPDF,
 } from "@/api/studentApi";
 import { MeasurementMode, UniformSizeItem, SupplyItem } from "./types";
 import { useUniformItems } from "../hooks/useUniformItems";
@@ -13,6 +14,8 @@ import { useSupplyItems } from "../hooks/useSupplyItems";
 import { useMeasurementData } from "../hooks/useMeasurementData";
 import thermalPrinter, { type PrintData } from "@/lib/printer/thermalPrinter";
 import PrintConfirmModal from "./PrintConfirmModal";
+import PDFShareModal from "./PDFShareModal";
+import { PDFGenerationService } from "@/services/pdfService";
 
 export default function MeasurementSheet({
   setIsMeasurementSheetOpen,
@@ -35,6 +38,9 @@ export default function MeasurementSheet({
     string[]
   >([]);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [showPDFModal, setShowPDFModal] = useState(false);
+  const [pdfShareUrl, setPdfShareUrl] = useState<string | null>(null);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // recommended_uniforms 데이터를 표시 형식으로 변환
   const uniformProductsByCategory = {
@@ -166,14 +172,20 @@ export default function MeasurementSheet({
       }))
       .filter((item) => item.purchase_count > 0);
 
-    // submitMeasurementOrder 호출
-    await submitMeasurementOrder(studentId, {
-      uniform_items,
-      supply_items,
-    });
+    try {
+      // submitMeasurementOrder 호출
+      await submitMeasurementOrder(studentId, {
+        uniform_items,
+        supply_items,
+      });
 
-    // 성공 시 측정 완료 상태로 변경
-    setIsMeasurementComplete(true);
+      // 성공 시 측정 완료 상태로 변경
+      setIsMeasurementComplete(true);
+    } catch (error: any) {
+      // 에러 응답에서 message 추출
+      const errorMessage = error?.response?.data?.error?.message || "측정 주문 제출에 실패했습니다.";
+      throw new Error(errorMessage);
+    }
   };
 
   const onCompleteMeasurement = async () => {
@@ -201,9 +213,10 @@ export default function MeasurementSheet({
 
       // 맞춤 정보가 모두 있으면 바로 제출
       await submitMeasurementData();
-    } catch (error) {
+    } catch (error: any) {
       console.error("측정 주문 제출 실패:", error);
-      alert("측정 주문 제출에 실패했습니다. 다시 시도해주세요.");
+      const errorMessage = error?.message || "측정 주문 제출에 실패했습니다. 다시 시도해주세요.";
+      alert(errorMessage);
     }
   };
 
@@ -211,9 +224,10 @@ export default function MeasurementSheet({
     try {
       setShowCustomizationModal(false);
       await submitMeasurementData();
-    } catch (error) {
+    } catch (error: any) {
       console.error("측정 주문 제출 실패:", error);
-      alert("측정 주문 제출에 실패했습니다. 다시 시도해주세요.");
+      const errorMessage = error?.message || "측정 주문 제출에 실패했습니다. 다시 시도해주세요.";
+      alert(errorMessage);
     }
   };
 
@@ -284,6 +298,253 @@ export default function MeasurementSheet({
       setIsMeasurementSheetOpen(false);
       onSuccess?.();
     }
+  };
+
+  const createPDFTemplate = () => {
+    if (!studentData) return null;
+
+    // Create temporary container
+    const container = document.createElement("div");
+    container.style.position = "absolute";
+    container.style.left = "-9999px";
+    container.style.top = "0";
+    document.body.appendChild(container);
+
+    // Create PDF template HTML
+    const templateHTML = `
+      <div style="width: 210mm; min-height: 297mm; padding: 20mm; background-color: #ffffff; font-family: Arial, sans-serif; color: #000000;">
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="font-size: 24px; margin: 0 0 10px 0;">교복 측정 결과서</h1>
+          <p style="font-size: 12px; color: #666; margin: 0;">
+            측정일: ${new Date(studentData.measurement_end_at || new Date()).toLocaleDateString("ko-KR")}
+          </p>
+        </div>
+
+        <!-- Student Info -->
+        <section style="margin-bottom: 25px;">
+          <h2 style="font-size: 16px; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 15px;">학생 정보</h2>
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <tbody>
+              <tr>
+                <td style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; width: 25%; font-weight: bold;">학교</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${studentData.school_name}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; width: 25%; font-weight: bold;">입학년도</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${studentData.admission_year}년 ${studentData.admission_grade}학년</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; font-weight: bold;">이름</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${studentData.name}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; font-weight: bold;">성별</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${studentData.gender === "M" ? "남" : "여"}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; font-weight: bold;">생년월일</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${studentData.birth_date}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; font-weight: bold;">학생 연락처</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${studentData.student_phone}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; font-weight: bold;">보호자 연락처</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${studentData.guardian_phone}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; font-weight: bold;">배송 여부</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${studentData.delivery ? "배송" : "매장 수령"}</td>
+              </tr>
+              ${studentData.delivery ? `<tr>
+                <td style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; font-weight: bold;">배송 주소</td>
+                <td colspan="3" style="padding: 8px; border: 1px solid #ddd;">${studentData.address}</td>
+              </tr>` : ""}
+            </tbody>
+          </table>
+        </section>
+
+        <!-- Body Measurements -->
+        <section style="margin-bottom: 25px;">
+          <h2 style="font-size: 16px; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 15px;">신체 측정 정보</h2>
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <thead>
+              <tr style="background-color: #f5f5f5;">
+                <th style="padding: 8px; border: 1px solid #ddd;">키</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">몸무게</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">어깨</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">허리</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${studentData.body.height} cm</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${studentData.body.weight} kg</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${studentData.body.shoulder} cm</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${studentData.body.waist} cm</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- Uniform Items -->
+        ${uniformItems.uniformSizeItems.length > 0 ? `
+        <section style="margin-bottom: 25px;">
+          <h2 style="font-size: 16px; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 15px;">교복 선택 내역</h2>
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <thead>
+              <tr style="background-color: #f5f5f5;">
+                <th style="padding: 8px; border: 1px solid #ddd;">품목</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">계절</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">사이즈</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">수선 내용</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">수량</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${uniformItems.uniformSizeItems.map((item) => `
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #ddd;">${item.name}</td>
+                  <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${
+                    item.season === "winter" ? "동복" : item.season === "summer" ? "하복" : "사계절"
+                  }</td>
+                  <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.selectedSize}</td>
+                  <td style="padding: 8px; border: 1px solid #ddd;">${item.customization || "-"}</td>
+                  <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.purchaseCount}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </section>
+        ` : ""}
+
+        <!-- Supply Items -->
+        ${supplyItems.supplyItems.filter((item) => supplyItems.itemCounts[item.id] > 0).length > 0 ? `
+        <section style="margin-bottom: 25px;">
+          <h2 style="font-size: 16px; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 15px;">용품 선택 내역</h2>
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <thead>
+              <tr style="background-color: #f5f5f5;">
+                <th style="padding: 8px; border: 1px solid #ddd;">품목</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">분류</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">사이즈</th>
+                <th style="padding: 8px; border: 1px solid #ddd;">수량</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${supplyItems.supplyItems
+                .filter((item) => supplyItems.itemCounts[item.id] > 0)
+                .map((item) => `
+                  <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;">${item.name}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.category}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.size}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${supplyItems.itemCounts[item.id]}</td>
+                  </tr>
+                `).join("")}
+            </tbody>
+          </table>
+        </section>
+        ` : ""}
+
+        <!-- Footer -->
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 10px; color: #666; text-align: center;">
+          <p style="margin: 5px 0;">이 문서는 UniSize 시스템에서 자동 생성되었습니다.</p>
+          <p style="margin: 5px 0;">문의사항이 있으시면 담당자에게 연락해 주세요.</p>
+        </div>
+      </div>
+    `;
+
+    container.innerHTML = templateHTML;
+    return container;
+  };
+
+  const handleGeneratePDF = async () => {
+    if (!studentData) return;
+
+    setIsGeneratingPDF(true);
+    setShowPDFModal(true);
+
+    let container: HTMLDivElement | null = null;
+
+    try {
+      // Create temporary PDF template
+      container = createPDFTemplate();
+      if (!container) throw new Error("PDF 템플릿 생성 실패");
+
+      const templateElement = container.firstElementChild as HTMLElement;
+
+      // Generate filename
+      const filename = PDFGenerationService.generateFilename(
+        studentData.name,
+        studentData.school_name
+      );
+
+      // Generate PDF blob
+      const pdfBlob = await PDFGenerationService.generatePDFFromElement(
+        templateElement,
+        filename
+      );
+
+      // Convert blob to File
+      const pdfFile = new File([pdfBlob], filename, { type: "application/pdf" });
+
+      // TODO: 백엔드 개발 후 아래 코드로 교체
+      // Upload to cloud and get share URL
+      // const response = await uploadMeasurementPDF(studentId, pdfFile);
+      // setPdfShareUrl(response.shareUrl);
+
+      // 임시: 로컬에 PDF 자동 다운로드
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      // 성공 메시지 표시를 위해 가짜 URL 설정
+      setPdfShareUrl("local-download-success");
+    } catch (error) {
+      console.error("PDF 생성 실패:", error);
+      alert("PDF 생성에 실패했습니다. 다시 시도해주세요.");
+      setPdfShareUrl(null);
+    } finally {
+      // Cleanup: remove temporary container
+      if (container && container.parentNode) {
+        container.parentNode.removeChild(container);
+      }
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!studentData) return;
+
+    let container: HTMLDivElement | null = null;
+
+    try {
+      // Create temporary PDF template
+      container = createPDFTemplate();
+      if (!container) throw new Error("PDF 템플릿 생성 실패");
+
+      const templateElement = container.firstElementChild as HTMLElement;
+
+      const filename = PDFGenerationService.generateFilename(
+        studentData.name,
+        studentData.school_name
+      );
+
+      await PDFGenerationService.downloadPDF(templateElement, filename);
+    } catch (error) {
+      console.error("PDF 다운로드 실패:", error);
+      alert("PDF 다운로드에 실패했습니다.");
+    } finally {
+      // Cleanup: remove temporary container
+      if (container && container.parentNode) {
+        container.parentNode.removeChild(container);
+      }
+    }
+  };
+
+  const handleSkipPrintAndGeneratePDF = async () => {
+    setShowPrintModal(false);
+    await handleGeneratePDF();
   };
 
   if (isLoading) {
@@ -424,6 +685,21 @@ export default function MeasurementSheet({
         schoolName={studentData?.school_name || ""}
         studentName={studentData?.name || ""}
         onConfirm={handlePrintAndClose}
+        onSkip={handleSkipPrintAndGeneratePDF}
+      />
+
+      {/* PDF 공유 모달 */}
+      <PDFShareModal
+        show={showPDFModal}
+        shareUrl={pdfShareUrl}
+        onDownload={handleDownloadPDF}
+        onClose={() => {
+          setShowPDFModal(false);
+          // PDF 모달 닫을 때 시트도 닫고 리스트 재조회
+          setIsMeasurementSheetOpen(false);
+          onSuccess?.();
+        }}
+        isGenerating={isGeneratingPDF}
       />
     </>
   );

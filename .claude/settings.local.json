@@ -11,7 +11,9 @@
       "Bash(xargs kill:*)",
       "Bash(git checkout:*)",
       "Bash(npm i:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(npm install:*)",
+      "Bash(ps:*)"
     ],
     "deny": [],
     "ask": []

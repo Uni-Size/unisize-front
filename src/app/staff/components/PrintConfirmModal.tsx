@@ -7,6 +7,7 @@ interface PrintConfirmModalProps {
   schoolName: string;
   studentName: string;
   onConfirm: () => Promise<void>;
+  onSkip?: () => Promise<void>;
 }
 
 export default function PrintConfirmModal({
@@ -14,8 +15,10 @@ export default function PrintConfirmModal({
   schoolName,
   studentName,
   onConfirm,
+  onSkip,
 }: PrintConfirmModalProps) {
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
 
   if (!isOpen) return null;
 
@@ -25,6 +28,16 @@ export default function PrintConfirmModal({
       await onConfirm();
     } finally {
       setIsPrinting(false);
+    }
+  };
+
+  const handleSkip = async () => {
+    if (!onSkip) return;
+    setIsSkipping(true);
+    try {
+      await onSkip();
+    } finally {
+      setIsSkipping(false);
     }
   };
 
@@ -58,13 +71,25 @@ export default function PrintConfirmModal({
           </p>
         </div>
 
-        <button
-          onClick={handleConfirm}
-          disabled={isPrinting}
-          className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-        >
-          {isPrinting ? "프린트 중..." : "확인 및 프린트"}
-        </button>
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={handleConfirm}
+            disabled={isPrinting || isSkipping}
+            className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {isPrinting ? "프린트 중..." : "확인 및 프린트"}
+          </button>
+
+          {onSkip && (
+            <button
+              onClick={handleSkip}
+              disabled={isPrinting || isSkipping}
+              className="w-full py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
+            >
+              {isSkipping ? "PDF 생성 중..." : "프린트 건너뛰고 PDF 생성"}
+            </button>
+          )}
+        </div>
       </div>
     </>
   );
