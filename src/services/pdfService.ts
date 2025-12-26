@@ -41,8 +41,7 @@ export class PDFGenerationService {
    * Generate PDF from HTML element
    */
   static async generatePDFFromElement(
-    element: HTMLElement,
-    filename: string = "measurement.pdf"
+    element: HTMLElement
   ): Promise<Blob> {
     try {
       // Capture the HTML element as canvas
@@ -81,7 +80,7 @@ export class PDFGenerationService {
    */
   static async downloadPDF(element: HTMLElement, filename: string): Promise<void> {
     try {
-      const pdfBlob = await this.generatePDFFromElement(element, filename);
+      const pdfBlob = await this.generatePDFFromElement(element);
 
       // Create download link
       const url = URL.createObjectURL(pdfBlob);
@@ -156,7 +155,7 @@ export class PDFGenerationService {
       const filename = this.generateFilename(studentName, schoolName);
 
       // Generate PDF blob
-      const pdfBlob = await this.generatePDFFromElement(element, filename);
+      const pdfBlob = await this.generatePDFFromElement(element);
 
       // Upload to cloud and get shareable link
       const shareUrl = await this.uploadToCloud(pdfBlob, studentId, filename);
