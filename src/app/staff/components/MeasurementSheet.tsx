@@ -181,9 +181,9 @@ export default function MeasurementSheet({
 
       // 성공 시 측정 완료 상태로 변경
       setIsMeasurementComplete(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // 에러 응답에서 message 추출
-      const errorMessage = error?.response?.data?.error?.message || "측정 주문 제출에 실패했습니다.";
+      const errorMessage = (error as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "측정 주문 제출에 실패했습니다.";
       throw new Error(errorMessage);
     }
   };
@@ -213,9 +213,9 @@ export default function MeasurementSheet({
 
       // 맞춤 정보가 모두 있으면 바로 제출
       await submitMeasurementData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("측정 주문 제출 실패:", error);
-      const errorMessage = error?.message || "측정 주문 제출에 실패했습니다. 다시 시도해주세요.";
+      const errorMessage = (error as { message?: string })?.message || "측정 주문 제출에 실패했습니다. 다시 시도해주세요.";
       alert(errorMessage);
     }
   };
@@ -224,9 +224,9 @@ export default function MeasurementSheet({
     try {
       setShowCustomizationModal(false);
       await submitMeasurementData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("측정 주문 제출 실패:", error);
-      const errorMessage = error?.message || "측정 주문 제출에 실패했습니다. 다시 시도해주세요.";
+      const errorMessage = (error as { message?: string })?.message || "측정 주문 제출에 실패했습니다. 다시 시도해주세요.";
       alert(errorMessage);
     }
   };
@@ -476,12 +476,8 @@ export default function MeasurementSheet({
 
       // Generate PDF blob
       const pdfBlob = await PDFGenerationService.generatePDFFromElement(
-        templateElement,
-        filename
+        templateElement
       );
-
-      // Convert blob to File
-      const pdfFile = new File([pdfBlob], filename, { type: "application/pdf" });
 
       // TODO: 백엔드 개발 후 아래 코드로 교체
       // Upload to cloud and get share URL
