@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateStaffOrder } from "@/api/studentApi";
+import { updateStaffOrder } from "@/api/staff";
 import { useUniformItems } from "../hooks/useUniformItems";
 import { useSupplyItems } from "../hooks/useSupplyItems";
 import { useMeasurementData } from "../hooks/useMeasurementData";

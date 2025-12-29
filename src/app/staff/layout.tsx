@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { SecurityMaintenanceInfoCompact } from "./components/SecurityMaintenanceInfo";
-import { getCurrentStaff } from "@/api/authApi";
+import { getCurrentStaff } from "@/api/auth";
 
 export default function StaffLayout({
   children,

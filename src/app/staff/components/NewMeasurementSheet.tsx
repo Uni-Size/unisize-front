@@ -3,8 +3,7 @@
 import { useState } from "react";
 import {
   submitMeasurementOrder,
-  type StartMeasurementResponse,
-} from "@/api/studentApi";
+} from "@/api/student";
 import { useUniformItems } from "../hooks/useUniformItems";
 import { useSupplyItems } from "../hooks/useSupplyItems";
 import { useMeasurementData } from "../hooks/useMeasurementData";
@@ -12,7 +11,7 @@ import thermalPrinter, { type PrintData } from "@/lib/printer/thermalPrinter";
 import PrintConfirmModal from "./PrintConfirmModal";
 import PDFShareModal from "./PDFShareModal";
 import { PDFGenerationService } from "@/services/pdfService";
-import type { NewMeasurementSheetProps, UniformProductItem } from "./MeasurementSheetTypes";
+import type { NewMeasurementSheetProps } from "./MeasurementSheetTypes";
 import {
   StudentInfo,
   MeasurementInfo,

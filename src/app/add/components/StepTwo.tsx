@@ -1,7 +1,15 @@
 import { useStudentFormStore } from "@/stores/useStudentFormStore";
 import { useState } from "react";
-import { PRIVACY_POLICY } from "@/mocks/signupData";
 import Button from "@/components/ui/Button";
+
+const PRIVACY_POLICY = {
+  title: "개인정보 수집·이용에 동의합니다. (필수)",
+  items: [
+    "수집항목: 학생 이름, 생년월일, 성별, 연락처, 보호자 연락처",
+    "이용목적: 무상교복 지원 사업 신청 및 교복 수선 서비스 제공",
+    "보유기간: 업무 처리 완료 후 3년",
+  ],
+};
 
 export default function StepTwo({
   next,

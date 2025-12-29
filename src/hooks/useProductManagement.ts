@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getProducts, GetProductsParams, addSingleProduct, AddProductRequest } from "@/api/productApi";
+import { getProducts, GetProductsParams, addSingleProduct, AddProductRequest } from "@/api/product";
 
 // 상품 목록 조회
 export function useProducts(params?: GetProductsParams) {

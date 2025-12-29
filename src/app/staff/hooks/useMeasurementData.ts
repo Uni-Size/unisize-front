@@ -6,7 +6,7 @@ import {
   type RegisterStudent,
   completeMeasurement,
   type CompleteMeasurementRequest,
-} from "@/api/studentApi";
+} from "@/api/student";
 import { MeasurementMode } from "../components/types";
 
 export const useMeasurementData = (

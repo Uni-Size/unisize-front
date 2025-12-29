@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSupportedSchoolsByYear, addSupportedSchool, updateSupportedSchool, addSchoolProducts, type AddSchoolRequest, type UpdateSchoolRequest, type School, type SchoolProduct } from "@/api/schoolApi";
+import { getSupportedSchoolsByYear, addSupportedSchool, updateSupportedSchool, addSchoolProducts, type AddSchoolRequest, type UpdateSchoolRequest, type School, type SchoolProduct } from "@/api/school";
 import { getTargetYear } from "@/utils/schoolUtils";
 
 export default function AddSchoolPage() {

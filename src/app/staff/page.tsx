@@ -5,7 +5,7 @@ import {
   RegisterStudent,
   startMeasurement,
   StartMeasurementResponse,
-} from "@/api/studentApi";
+} from "@/api/student";
 import MeasurementSheet from "./components/MeasurementSheet";
 import ConfirmModal from "./components/ConfirmModal";
 import StudentTable from "./components/StudentTable";

@@ -1,4 +1,4 @@
-import type { StudentMeasurementData, StartMeasurementResponse, RegisterStudent } from "@/api/studentApi";
+import type { StartMeasurementResponse, RegisterStudent } from "@/api/student";
 
 export interface UniformProductItem {
   id: string;

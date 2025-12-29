@@ -3,8 +3,7 @@
 import { useState } from "react";
 import ProgressList from "./components/ProgressList";
 import PaymentList from "./components/PaymentList";
-import Button from "@/components/ui/Button";
-import { logout } from "@/api/authApi";
+import { logout } from "@/api/auth";
 import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "next/navigation";
 

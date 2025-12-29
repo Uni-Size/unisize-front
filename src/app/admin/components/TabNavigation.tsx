@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
-import { logout } from '@/api/authApi';
+import { logout } from '@/api/auth';
 
 export interface Tab {
   id: string;

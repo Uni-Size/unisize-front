@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getMeasuringStudents, RegisterStudent } from "@/api/studentApi";
+import { getMeasuringStudents, RegisterStudent } from "@/api/student";
 
 export function useMeasuringStudents() {
   const [students, setStudents] = useState<RegisterStudent[]>([]);

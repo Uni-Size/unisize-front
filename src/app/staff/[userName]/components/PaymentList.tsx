@@ -11,11 +11,9 @@ import {
 } from "@tanstack/react-table";
 import MeasurementSheet from "../../components/MeasurementSheet";
 import { usePaymentPending } from "@/hooks/usePaymentPending";
-import type { PaymentPendingStudent } from "@/api/paymentApi";
-import {
-  getStaffOrderDetail,
-  type StartMeasurementResponse,
-} from "@/api/studentApi";
+import type { PaymentPendingStudent } from "@/api/staff";
+import { getStaffOrderDetail } from "@/api/staff";
+import type { StartMeasurementResponse } from "@/api/student";
 
 const columnHelper = createColumnHelper<PaymentPendingStudent>();
 

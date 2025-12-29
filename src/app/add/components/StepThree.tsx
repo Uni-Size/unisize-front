@@ -1,8 +1,14 @@
 import { useState } from "react";
 import { useStudentFormStore } from "@/stores/useStudentFormStore";
-import { VALIDATION_RANGES } from "@/mocks/signupData";
 import Button from "@/components/ui/Button";
 import Image from "next/image";
+
+const VALIDATION_RANGES = {
+  height: { min: 130, max: 200 },
+  weight: { min: 30, max: 150 },
+  shoulder: { min: 30, max: 60 },
+  waist: { min: 20, max: 40 },
+};
 
 export default function StepThree({
   submit,

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useProducts, useAddProduct } from "@/hooks/useProductManagement";
-import type { GetProductsParams } from "@/api/productApi";
+import type { GetProductsParams } from "@/api/product";
 import AddProductModal, {
   type AddProductFormData,
 } from "@/app/admin/components/AddProductModal";

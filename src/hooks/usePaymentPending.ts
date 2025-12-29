@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getPaymentPendingList, PaymentPendingStudent } from "@/api/paymentApi";
+import { getPaymentPendingList, PaymentPendingStudent } from "@/api/staff";
 
 export function usePaymentPending() {
   const [students, setStudents] = useState<PaymentPendingStudent[]>([]);
