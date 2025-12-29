@@ -156,7 +156,7 @@ export default function PaymentList() {
 
   return (
     <div className="relative">
-      {isMeasurementSheetOpen && selectedStudent && (
+      {isMeasurementSheetOpen && selectedStudent && measurementData && (
         <section className="fixed inset-0 z-50">
           <div
             className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm"
@@ -165,8 +165,10 @@ export default function PaymentList() {
           <MeasurementSheet
             setIsMeasurementSheetOpen={handleSheetClose}
             studentId={selectedStudent.student_id}
-            measurementData={measurementData || undefined}
-            mode="readonly"
+            measurementData={measurementData}
+            mode="edit"
+            orderId={selectedStudent.order_id}
+            onSuccess={handleSheetClose}
           />
         </section>
       )}

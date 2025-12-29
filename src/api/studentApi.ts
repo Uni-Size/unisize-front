@@ -397,7 +397,7 @@ export async function getStaffOrderDetail(
           product: item.product_name,
           recommended_size: item.size,
           supported_quantity: item.supported_quantity,
-          quantity: item.quantity,
+          quantity: item.quantity + item.supported_quantity, // 전체 수량 = 구매 수량 + 지원 수량
           price: item.unit_price,
           available_sizes: [
             {
@@ -416,7 +416,7 @@ export async function getStaffOrderDetail(
           product: item.product_name,
           recommended_size: item.size,
           supported_quantity: item.supported_quantity,
-          quantity: item.quantity,
+          quantity: item.quantity + item.supported_quantity, // 전체 수량 = 구매 수량 + 지원 수량
           price: item.unit_price,
           available_sizes: [
             {
@@ -600,4 +600,31 @@ export async function uploadMeasurementPDF(
   }
 
   return response.data as UploadPDFResponse;
+}
+
+// Staff 주문 수정 요청 타입
+export interface UpdateStaffOrderRequest {
+  notes?: string;
+  uniform_items: Array<{
+    item_id: number;
+    name: string;
+    season: string;
+    selected_size: number;
+    customization: string;
+    purchase_count: number;
+  }>;
+  supply_items: Array<{
+    item_id: number;
+    name: string;
+    selected_size: string;
+    purchase_count: number;
+  }>;
+}
+
+// Staff 주문 수정 (결제 전)
+export async function updateStaffOrder(
+  orderId: number,
+  orderData: UpdateStaffOrderRequest
+): Promise<void> {
+  await apiClient.put(`/api/v1/staff/orders/${orderId}`, orderData);
 }
