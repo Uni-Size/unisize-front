@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { AddStudentResponse } from "@/api/studentApi";
+import { AddStudentResponse } from "@/api/student";
 
 interface StudentResponseStore {
   studentData: AddStudentResponse | null;

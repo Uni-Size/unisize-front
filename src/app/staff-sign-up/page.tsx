@@ -2,30 +2,38 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { registerStaff } from "@/api/authApi";
+import { registerStaff } from "@/api/auth";
 import Button from "@/components/ui/Button";
-import Image from "next/image";
+
+interface FormData {
+  employee_id: string;
+  employee_name: string;
+  gender: "M" | "F" | "";
+  password: string;
+  passwordConfirm: string;
+}
 
 export default function StaffSignUpPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     employee_id: "",
     employee_name: "",
     gender: "",
     password: "",
     passwordConfirm: "",
   });
-  const [errors, setErrors] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+  const [errors, setErrors] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] =
+    useState<boolean>(false);
 
-  const handleChange = (field, value) => {
+  const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setErrors("");
   };
 
-  const validatePhoneNumber = (phone) => {
+  const validatePhoneNumber = (phone: string): boolean => {
     const phoneRegex = /^010\d{8}$/;
     return phoneRegex.test(phone);
   };
@@ -81,17 +89,22 @@ export default function StaffSignUpPage() {
       await registerStaff({
         employee_id: formData.employee_id,
         employee_name: formData.employee_name,
-        gender: formData.gender,
+        gender: formData.gender as "M" | "F",
         password: formData.password,
       });
 
       alert("회원가입이 완료되었습니다.");
       router.push("/staff/signup");
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("스태프 등록 실패:", error);
       const errorMessage =
-        error?.response?.data?.error?.message ||
-        error?.message ||
+        (
+          error as {
+            response?: { data?: { error?: { message?: string } } };
+            message?: string;
+          }
+        )?.response?.data?.error?.message ||
+        (error as { message?: string })?.message ||
         "스태프 등록에 실패했습니다.";
       setErrors(errorMessage);
       alert(errorMessage);
@@ -290,7 +303,9 @@ export default function StaffSignUpPage() {
                 id="passwordConfirm"
                 type={showPasswordConfirm ? "text" : "password"}
                 value={formData.passwordConfirm}
-                onChange={(e) => handleChange("passwordConfirm", e.target.value)}
+                onChange={(e) =>
+                  handleChange("passwordConfirm", e.target.value)
+                }
                 className={`w-full pr-10 ${
                   isPasswordMismatch
                     ? "border-red-500 focus:ring-red-500 focus:border-red-500"

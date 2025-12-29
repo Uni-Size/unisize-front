@@ -1,14 +1,18 @@
 import { useStudentFormStore } from "@/stores/useStudentFormStore";
 import { useState, useEffect } from "react";
-import { GRADE_OPTIONS } from "@/mocks/signupData";
 import {
-  getSupportedSchools,
   getSupportedSchoolsByYear,
   type School,
-} from "@/api/schoolApi";
+} from "@/api/school";
 import { getTargetYear, getDefaultBirthDate } from "@/utils/schoolUtils";
 import Button from "@/components/ui/Button";
 import Image from "next/image";
+
+const GRADE_OPTIONS = [
+  { value: 1, label: "1학년" },
+  { value: 2, label: "2학년" },
+  { value: 3, label: "3학년" },
+];
 
 export default function StepOne({ next }: { next: () => void }) {
   // Zustand 스토어에서 직접 가져오기

@@ -1,4 +1,4 @@
-import { RegisterStudent } from "@/api/studentApi";
+import { RegisterStudent } from "@/api/student";
 import {
   useReactTable,
   getCoreRowModel,

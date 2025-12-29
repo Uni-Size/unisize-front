@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import type { StudentMeasurementData } from "@/api/studentApi";
+import type { StudentMeasurementData } from "@/api/student";
 import { UniformSizeItem, SupplyItem } from "./types";
 import type { UniformProductItem } from "./MeasurementSheetTypes";
 

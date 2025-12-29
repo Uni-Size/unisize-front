@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getPendingStaff, approveStaff, bulkApproveStaff, getStaffList, resetStaffPassword } from "@/api/staffApi";
+import { getPendingStaff, approveStaff, bulkApproveStaff, getStaffList, resetStaffPassword } from "@/api/admin";
 
 // 스태프 대기 목록 조회
 export function usePendingStaff(page: number, limit: number = 10) {

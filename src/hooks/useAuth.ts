@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
-import { logout as apiLogout } from '@/api/authApi';
+import { logout as apiLogout } from '@/api/auth';
 
 /**
  * 인증 상태를 확인하고 관리하는 훅

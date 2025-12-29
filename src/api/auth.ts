@@ -1,25 +1,24 @@
 import { apiClient } from "@/lib/apiClient";
 import type { StaffInfo } from "@/stores/authStore";
 
-// 쿠키에 토큰 저장하는 헬퍼 함수
+// ============================================================================
+// 쿠키 관리 헬퍼 함수
+// ============================================================================
+
 function setCookie(name: string, value: string, days: number = 7) {
   const expires = new Date();
   expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
   document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
 }
 
-// 쿠키에서 토큰 삭제하는 헬퍼 함수
 function deleteCookie(name: string) {
   document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
 }
 
-// 로그인 요청 타입
-export interface LoginRequest {
-  employee_id: string;
-  password: string;
-}
+// ============================================================================
+// 타입 정의
+// ============================================================================
 
-// API 응답 래퍼 타입 (재사용 가능하도록 export)
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
@@ -36,7 +35,11 @@ export interface ApiResponse<T> {
   };
 }
 
-// 로그인 응답 데이터 타입
+export interface LoginRequest {
+  employee_id: string;
+  password: string;
+}
+
 export interface LoginResponseData {
   access_token: string;
   refresh_token: string;
@@ -44,7 +47,21 @@ export interface LoginResponseData {
   user: StaffInfo;
 }
 
-// 로그인
+export interface RegisterStaffRequest {
+  employee_id: string;
+  employee_name: string;
+  gender: "M" | "F";
+  password: string;
+}
+
+// ============================================================================
+// 인증 API
+// ============================================================================
+
+/**
+ * 로그인
+ * POST /api/v1/auth/login
+ */
 export async function login(credentials: LoginRequest): Promise<LoginResponseData> {
   const response = await apiClient.post<ApiResponse<LoginResponseData>>(
     "/api/v1/auth/login",
@@ -72,26 +89,27 @@ export async function login(credentials: LoginRequest): Promise<LoginResponseDat
   return loginData;
 }
 
-// 현재 로그인한 스태프 정보 가져오기
+/**
+ * 현재 로그인한 스태프 정보 가져오기
+ * GET /api/v1/auth/profile
+ */
 export async function getCurrentStaff(): Promise<StaffInfo> {
   const response = await apiClient.get<ApiResponse<StaffInfo>>("/api/v1/auth/profile");
   return response.data.data;
 }
 
-// 스태프 회원가입 요청 타입
-export interface RegisterStaffRequest {
-  employee_id: string;
-  employee_name: string;
-  gender: "M" | "F";
-  password: string;
-}
-
-// 스태프 회원가입
+/**
+ * 스태프 회원가입
+ * POST /api/v1/auth/register
+ */
 export async function registerStaff(data: RegisterStaffRequest): Promise<void> {
   await apiClient.post<ApiResponse<void>>("/api/v1/auth/register", data);
 }
 
-// 로그아웃
+/**
+ * 로그아웃
+ * POST /api/v1/auth/logout
+ */
 export async function logout(): Promise<void> {
   try {
     await apiClient.post("/api/v1/auth/logout");

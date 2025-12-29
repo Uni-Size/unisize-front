@@ -1,18 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
 import FormStepper from "./components/FormStepper";
-import { checkHealth } from "@/api/healthApi";
-import { addStudent } from "@/api/studentApi";
+import { addStudent } from "@/api/student";
 import { useStudentFormStore } from "@/stores/useStudentFormStore";
 import { useStudentResponseStore } from "@/stores/useStudentResponseStore";
 import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
-  useEffect(() => {
-    checkHealth();
-    console.log(formData);
-  }, []);
   const router = useRouter();
 
   const { formData, resetFormData } = useStudentFormStore();

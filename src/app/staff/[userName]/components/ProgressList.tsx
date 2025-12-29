@@ -7,7 +7,7 @@ import {
   RegisterStudent,
   getMeasurementPageInfo,
   StartMeasurementResponse,
-} from "@/api/studentApi";
+} from "@/api/student";
 
 export default function ProgressList() {
   const { students, isLoading, error, refresh } = useMeasuringStudents();

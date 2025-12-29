@@ -4,17 +4,45 @@ import {
   UseQueryOptions,
   UseMutationOptions,
 } from "@tanstack/react-query";
-import {
-  getSupportedSchools,
-  registerStudent,
-  type School,
-  type StudentRegistrationRequest,
-  type StudentRegistrationResponse,
-  type SchoolSupportResponse,
-} from "@/api/signupApi";
+import { getSupportedSchools, type School } from "@/api/school";
+import { addStudent } from "@/api/student";
 
-// Re-export types
-export type { StudentRegistrationRequest, StudentRegistrationResponse, SchoolSupportResponse, School };
+// 타입 정의
+export interface StudentRegistrationRequest {
+  previousSchool: string;
+  admissionYear: number;
+  admissionGrade: number;
+  admissionSchool: string;
+  name: string;
+  studentPhone: string;
+  guardianPhone: string;
+  birthDate: string;
+  gender: string;
+  privacyConsent: boolean;
+  body: {
+    height: number;
+    weight: number;
+    shoulder: number;
+    waist: number;
+  };
+  address: string;
+  delivery: boolean;
+}
+
+export interface StudentRegistrationResponse {
+  success: boolean;
+  message: string;
+  studentId?: string;
+}
+
+export interface SchoolSupportResponse {
+  supported: boolean;
+  schoolName: string;
+  message?: string;
+}
+
+// Re-export School type
+export type { School };
 
 // Query Keys
 export const signupKeys = {
@@ -87,7 +115,13 @@ export function useRegisterStudent(
   >
 ) {
   return useMutation({
-    mutationFn: registerStudent,
+    mutationFn: async (data: StudentRegistrationRequest) => {
+      await addStudent(data);
+      return {
+        success: true,
+        message: "학생이 성공적으로 등록되었습니다.",
+      };
+    },
     ...options,
   });
 }
