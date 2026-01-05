@@ -1,0 +1,271 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model inventories {
+  id              BigInt    @id @default(autoincrement())
+  product_id      BigInt
+  quantity        BigInt    @default(0)
+  min_stock_level BigInt?   @default(5)
+  location        String?   @db.VarChar(100)
+  created_at      DateTime? @db.Timestamptz(6)
+  updated_at      DateTime? @db.Timestamptz(6)
+  deleted_at      DateTime? @db.Timestamptz(6)
+  size            String    @db.VarChar(10)
+
+  @@index([deleted_at], map: "idx_inventories_deleted_at")
+  @@index([product_id], map: "idx_inventories_product_id")
+  @@index([product_id, size], map: "idx_inventories_product_size")
+  @@index([size], map: "idx_inventories_size")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model measurements {
+  id               BigInt    @id @default(autoincrement())
+  student_id       BigInt
+  product_id       BigInt?
+  waist            Decimal?  @db.Decimal(5, 2)
+  height           Decimal?  @db.Decimal(5, 2)
+  weight           Decimal?  @db.Decimal(5, 2)
+  recommended_size String?   @db.VarChar(10)
+  notes            String?
+  measured_at      DateTime? @default(now()) @db.Timestamptz(6)
+  created_at       DateTime? @db.Timestamptz(6)
+  updated_at       DateTime? @db.Timestamptz(6)
+  deleted_at       DateTime? @db.Timestamptz(6)
+  status           String?   @default("pending") @db.VarChar(20)
+  staff_id         BigInt?
+  shoulder         Decimal?  @db.Decimal(5, 2)
+  started_at       DateTime? @db.Timestamp(6)
+  users            users?    @relation(fields: [staff_id], references: [id], onUpdate: NoAction, map: "fk_measurements_staff_id")
+
+  @@index([deleted_at], map: "idx_measurements_deleted_at")
+  @@index([product_id], map: "idx_measurements_product_id")
+  @@index([staff_id], map: "idx_measurements_staff_id")
+  @@index([staff_id, status], map: "idx_measurements_staff_status")
+  @@index([status], map: "idx_measurements_status")
+  @@index([student_id], map: "idx_measurements_student_id")
+  @@index([student_id, product_id], map: "idx_measurements_student_product")
+  @@index([student_id, staff_id], map: "idx_measurements_student_staff")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model order_items {
+  id                 BigInt    @id @default(autoincrement())
+  order_id           BigInt
+  product_id         BigInt
+  size               String    @db.VarChar(10)
+  quantity           BigInt
+  unit_price         Decimal   @db.Decimal(10, 2)
+  subtotal           Decimal   @db.Decimal(10, 2)
+  created_at         DateTime? @db.Timestamptz(6)
+  deleted_at         DateTime? @db.Timestamptz(6)
+  supported_quantity Int       @default(0)
+  delivery_status    String    @default("pending") @db.VarChar(20)
+  shipped_at         DateTime? @db.Timestamp(6)
+  delivered_at       DateTime? @db.Timestamp(6)
+  customization      String?
+
+  @@index([deleted_at], map: "idx_order_items_deleted_at")
+  @@index([delivery_status, shipped_at(sort: Desc)], map: "idx_order_items_delivery_shipped")
+  @@index([delivery_status], map: "idx_order_items_delivery_status")
+  @@index([order_id, delivery_status], map: "idx_order_items_order_delivery")
+  @@index([order_id], map: "idx_order_items_order_id")
+  @@index([order_id, product_id], map: "idx_order_items_order_product")
+  @@index([product_id], map: "idx_order_items_product_id")
+  @@index([product_id, size], map: "idx_order_items_product_size")
+  @@index([shipped_at], map: "idx_order_items_shipped_at")
+}
+
+model orders {
+  id             BigInt    @id @default(autoincrement())
+  order_number   String    @unique(map: "idx_orders_order_number") @db.VarChar(50)
+  student_id     BigInt
+  total_amount   Decimal   @db.Decimal(10, 2)
+  status         String    @default("pending") @db.VarChar(20)
+  order_date     DateTime? @default(now()) @db.Timestamptz(6)
+  delivery_date  DateTime? @db.Timestamptz(6)
+  notes          String?
+  created_at     DateTime? @db.Timestamptz(6)
+  updated_at     DateTime? @db.Timestamptz(6)
+  deleted_at     DateTime? @db.Timestamptz(6)
+  signature      String?
+  custom_details String?
+
+  @@index([deleted_at], map: "idx_orders_deleted_at")
+  @@index([order_date(sort: Desc)], map: "idx_orders_order_date")
+  @@index([status], map: "idx_orders_status")
+  @@index([status, order_date(sort: Desc)], map: "idx_orders_status_date")
+  @@index([student_id], map: "idx_orders_student_id")
+  @@index([student_id, status], map: "idx_orders_student_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model payments {
+  id             BigInt    @id @default(autoincrement())
+  order_id       BigInt
+  amount         Decimal   @db.Decimal(10, 2)
+  method         String    @db.VarChar(20)
+  status         String?   @default("pending") @db.VarChar(20)
+  transaction_id String?   @db.VarChar(100)
+  payer_name     String?   @db.VarChar(100)
+  payer_phone    String?   @db.VarChar(20)
+  notes          String?
+  paid_at        DateTime? @db.Timestamptz(6)
+  cancelled_at   DateTime? @db.Timestamptz(6)
+  refunded_at    DateTime? @db.Timestamptz(6)
+  created_at     DateTime? @db.Timestamptz(6)
+  updated_at     DateTime? @db.Timestamptz(6)
+  deleted_at     DateTime? @db.Timestamptz(6)
+
+  @@index([deleted_at], map: "idx_payments_deleted_at")
+  @@index([order_id], map: "idx_payments_order_id")
+  @@index([status], map: "idx_payments_status")
+}
+
+model products {
+  id          BigInt    @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  category    String    @db.VarChar(50)
+  gender      String    @db.VarChar(10)
+  season      String?   @db.VarChar(20)
+  price       Decimal   @db.Decimal(10, 2)
+  description String?
+  is_active   Boolean?  @default(true)
+  created_at  DateTime? @db.Timestamptz(6)
+  updated_at  DateTime? @db.Timestamptz(6)
+  deleted_at  DateTime? @db.Timestamptz(6)
+
+  @@index([is_active, created_at(sort: Desc)], map: "idx_products_active_created")
+  @@index([category], map: "idx_products_category")
+  @@index([category, created_at(sort: Desc)], map: "idx_products_category_created")
+  @@index([created_at(sort: Desc)], map: "idx_products_created_at")
+  @@index([deleted_at], map: "idx_products_deleted_at")
+  @@index([gender], map: "idx_products_gender")
+  @@index([gender, created_at(sort: Desc)], map: "idx_products_gender_created")
+  @@index([is_active], map: "idx_products_is_active")
+  @@index([season], map: "idx_products_season")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model school_uniforms {
+  id                        BigInt    @id @default(autoincrement())
+  school_name               String    @db.VarChar(100)
+  product_id                BigInt
+  display_name              String    @db.VarChar(100)
+  gender                    String    @db.VarChar(10)
+  season                    String?   @db.VarChar(20)
+  year                      BigInt
+  is_active                 Boolean?  @default(true)
+  display_order             BigInt?   @default(0)
+  created_at                DateTime? @db.Timestamptz(6)
+  updated_at                DateTime? @db.Timestamptz(6)
+  deleted_at                DateTime? @db.Timestamptz(6)
+  category                  String    @db.VarChar(20)
+  quantity                  Int       @default(1)
+  is_selectable             Boolean   @default(false)
+  selectable_with           Json      @default("[]")
+  is_customization_required Boolean   @default(false)
+  price                     Decimal   @db.Decimal(10, 2)
+
+  @@unique([school_name, product_id], map: "idx_school_product")
+  @@index([category], map: "idx_category")
+  @@index([deleted_at], map: "idx_school_uniforms_deleted_at")
+  @@index([school_name, gender, year, season], map: "idx_school_uniforms_lookup")
+  @@index([price], map: "idx_school_uniforms_price")
+  @@index([school_name, year, is_active, gender], map: "idx_school_uniforms_query")
+  @@index([school_name, year], map: "idx_school_uniforms_school_year")
+  @@index([school_name, year, is_active], map: "idx_school_uniforms_school_year_active")
+  @@index([year], map: "idx_school_uniforms_year")
+}
+
+model stock_histories {
+  id           BigInt    @id @default(autoincrement())
+  inventory_id BigInt
+  type         String    @db.VarChar(20)
+  quantity     BigInt
+  reason       String?   @db.VarChar(200)
+  reference    String?   @db.VarChar(100)
+  created_by   String?   @db.VarChar(100)
+  created_at   DateTime? @db.Timestamptz(6)
+
+  @@index([inventory_id], map: "idx_stock_histories_inventory_id")
+}
+
+model students {
+  id              BigInt    @id @default(autoincrement())
+  name            String    @db.VarChar(100)
+  school_name     String    @db.VarChar(100)
+  grade           BigInt
+  class_name      String?   @db.VarChar(50)
+  student_number  String?   @db.VarChar(50)
+  phone           String?   @db.VarChar(20)
+  parent_phone    String?   @db.VarChar(20)
+  address         String?
+  created_at      DateTime? @db.Timestamptz(6)
+  updated_at      DateTime? @db.Timestamptz(6)
+  deleted_at      DateTime? @db.Timestamptz(6)
+  checked_in_at   DateTime? @db.Timestamptz(6)
+  delivery        Boolean?  @default(false)
+  birth_date      DateTime? @db.Timestamptz(6)
+  gender          String?   @db.VarChar(10)
+  privacy_consent Boolean?  @default(false)
+  previous_school String?   @db.VarChar(100)
+  admission_year  BigInt?
+  admission_grade BigInt?
+
+  @@index([admission_year], map: "idx_students_admission_year")
+  @@index([admission_year, admission_grade], map: "idx_students_admission_year_grade")
+  @@index([birth_date], map: "idx_students_birth_date")
+  @@index([checked_in_at], map: "idx_students_checked_in_at")
+  @@index([deleted_at], map: "idx_students_deleted_at")
+  @@index([delivery], map: "idx_students_delivery")
+  @@index([gender], map: "idx_students_gender")
+  @@index([privacy_consent], map: "idx_students_privacy_consent")
+  @@index([school_name], map: "idx_students_school_name")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model supported_schools {
+  id                     BigInt    @id @default(autoincrement())
+  school_name            String    @db.VarChar(100)
+  year                   BigInt
+  notes                  String?
+  created_at             DateTime? @db.Timestamptz(6)
+  updated_at             DateTime? @db.Timestamptz(6)
+  deleted_at             DateTime? @db.Timestamptz(6)
+  measurement_start_date DateTime? @db.Date
+  measurement_end_date   DateTime? @db.Date
+  is_active              Boolean?  @default(true)
+  is_delivery_enabled    Boolean   @default(true)
+
+  @@unique([school_name, year], map: "idx_school_year")
+  @@index([deleted_at], map: "idx_supported_schools_deleted_at")
+  @@index([school_name, year], map: "idx_supported_schools_school_year")
+  @@index([year], map: "idx_supported_schools_year")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model users {
+  id            BigInt         @id @default(autoincrement())
+  password_hash String         @db.VarChar(255)
+  role          String         @default("staff") @db.VarChar(20)
+  is_active     Boolean?       @default(false)
+  last_login    DateTime?      @db.Timestamptz(6)
+  created_at    DateTime?      @db.Timestamptz(6)
+  updated_at    DateTime?      @db.Timestamptz(6)
+  deleted_at    DateTime?      @db.Timestamptz(6)
+  employee_id   String         @db.VarChar(50)
+  employee_name String         @db.VarChar(100)
+  gender        String?        @db.VarChar(10)
+  measurements  measurements[]
+
+  @@index([deleted_at], map: "idx_users_deleted_at")
+  @@index([employee_id], map: "idx_users_employee_id")
+  @@index([employee_name], map: "idx_users_employee_name")
+}

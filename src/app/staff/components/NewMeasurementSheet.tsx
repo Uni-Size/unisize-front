@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   submitMeasurementOrder,
 } from "@/api/student";
@@ -21,6 +21,16 @@ import {
   SignatureCanvas,
   CustomizationRequiredModal,
 } from "./MeasurementSheetCommon";
+import {
+  isAfterDeadline,
+  transformUniformProducts,
+  findMissingCustomizationItems,
+} from "../utils/measurementSheetUtils";
+import {
+  saveMeasurementSession,
+  loadMeasurementSession,
+  clearMeasurementSession,
+} from "../utils/sessionStorage";
 
 export default function NewMeasurementSheet({
   setIsMeasurementSheetOpen,
@@ -30,7 +40,12 @@ export default function NewMeasurementSheet({
   onSuccess,
   schoolDeadline,
 }: NewMeasurementSheetProps) {
-  const [season, setSeason] = useState<"winter" | "summer" | "all">("winter");
+  // 세션 데이터 로드
+  const sessionData = loadMeasurementSession(studentId);
+
+  const [season, setSeason] = useState<"winter" | "summer" | "all">(
+    sessionData?.season || "winter"
+  );
   const [showCustomizationModal, setShowCustomizationModal] = useState(false);
   const [missingCustomizationItems, setMissingCustomizationItems] = useState<
     string[]
@@ -40,114 +55,15 @@ export default function NewMeasurementSheet({
   const [pdfShareUrl, setPdfShareUrl] = useState<string | null>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-  // school_deadline 이후인지 체크
-  const isAfterDeadline = () => {
-    const deadlineString = measurementData?.school_deadline || schoolDeadline;
-
-    if (!deadlineString) return false;
-
-    // "2025년 12월 31일" 형식을 파싱
-    const deadlineMatch = deadlineString.trim().match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
-    if (!deadlineMatch) {
-      return false;
-    }
-
-    const [, year, month, day] = deadlineMatch;
-
-    // 마감일의 끝 시각 (23:59:59.999)
-    const deadline = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 23, 59, 59, 999);
-
-    // 현재 시각
-    const now = new Date();
-
-    return now > deadline;
-  };
-
   // 실제 사용되는 마감일 문자열
   const actualDeadline = measurementData?.school_deadline || schoolDeadline;
 
   // recommended_uniforms 데이터를 표시 형식으로 변환
-  const uniformProductsByCategory = {
-    winter:
-      measurementData?.recommended_uniforms?.winter?.map((item) => {
-        const availableSizes =
-          item.available_sizes.length > 0
-            ? item.available_sizes.map((s) => {
-                return Number(s.size) || 95;
-              })
-            : item.recommended_size
-            ? [Number(item.recommended_size) || 95]
-            : [];
+  const uniformProductsByCategory = transformUniformProducts(measurementData);
 
-        return {
-          id: item.product,
-          name: item.product,
-          recommendedSize: item.recommended_size,
-          availableSizes,
-          price: item.price,
-          provided: item.supported_quantity,
-          quantity: item.quantity,
-          selectableWith: item.selectable_with,
-          gender: item.gender,
-          isCustomizationRequired: item.is_customization_required,
-          customization: item.customization,
-        };
-      }) || [],
-    summer:
-      measurementData?.recommended_uniforms?.summer?.map((item) => {
-        const availableSizes =
-          item.available_sizes.length > 0
-            ? item.available_sizes.map((s) => {
-                return Number(s.size) || 95;
-              })
-            : item.recommended_size
-            ? [Number(item.recommended_size) || 95]
-            : [];
-
-        return {
-          id: item.product,
-          name: item.product,
-          recommendedSize: item.recommended_size,
-          availableSizes,
-          price: item.price,
-          provided: item.supported_quantity,
-          quantity: item.quantity,
-          selectableWith: item.selectable_with,
-          gender: item.gender,
-          isCustomizationRequired: item.is_customization_required,
-          customization: item.customization,
-        };
-      }) || [],
-    all:
-      measurementData?.recommended_uniforms?.all?.map((item) => {
-        const availableSizes =
-          item.available_sizes.length > 0
-            ? item.available_sizes.map((s) => {
-                return Number(s.size) || 95;
-              })
-            : item.recommended_size
-            ? [Number(item.recommended_size) || 95]
-            : [];
-
-        return {
-          id: item.product,
-          name: item.product,
-          recommendedSize: item.recommended_size,
-          availableSizes,
-          price: item.price,
-          provided: item.supported_quantity,
-          quantity: item.quantity,
-          selectableWith: item.selectable_with,
-          gender: item.gender,
-          isCustomizationRequired: item.is_customization_required,
-          customization: item.customization,
-        };
-      }) || [],
-  };
-
-  // 커스텀 훅으로 상태 관리 분리
-  const uniformItems = useUniformItems(uniformProductsByCategory);
-  const supplyItems = useSupplyItems(measurementData?.supply_items);
+  // 커스텀 훅으로 상태 관리 분리 (세션 데이터 전달)
+  const uniformItems = useUniformItems(uniformProductsByCategory, sessionData);
+  const supplyItems = useSupplyItems(measurementData?.supply_items, sessionData);
   const measurementHook = useMeasurementData(
     studentId,
     "new",
@@ -164,6 +80,42 @@ export default function NewMeasurementSheet({
     setSignature,
     handleFinalConfirmation,
   } = measurementHook;
+
+  // 세션 자동 저장: 측정 완료 전에만 저장
+  useEffect(() => {
+    if (!isMeasurementComplete && uniformItems.uniformSizeItems.length > 0) {
+      saveMeasurementSession(studentId, {
+        mode: "new",
+        uniformItems: uniformItems.uniformSizeItems.map((item) => ({
+          itemId: item.itemId,
+          productId: item.productId,
+          name: item.name,
+          season: item.season,
+          selectedSize: item.selectedSize,
+          customization: item.customization,
+          purchaseCount: item.purchaseCount,
+          freeQuantity: item.freeQuantity,
+          isCustomizationRequired: item.isCustomizationRequired,
+        })),
+        supplyItems: supplyItems.supplyItems.map((item) => ({
+          id: item.id,
+          product_id: item.product_id,
+          name: item.name,
+          category: item.category,
+          size: item.size,
+        })),
+        supplyItemCounts: supplyItems.itemCounts,
+        season,
+      });
+    }
+  }, [
+    studentId,
+    uniformItems.uniformSizeItems,
+    supplyItems.supplyItems,
+    supplyItems.itemCounts,
+    season,
+    isMeasurementComplete,
+  ]);
 
   const submitMeasurementData = async () => {
     // supplyItems와 itemCounts를 변환
@@ -205,18 +157,9 @@ export default function NewMeasurementSheet({
   const onCompleteMeasurement = async () => {
     try {
       // 맞춤 정보 검증
-      const itemsMissingCustomization: string[] = [];
-
-      uniformItems.uniformSizeItems.forEach((item) => {
-        if (item.isCustomizationRequired) {
-          const hasCustomization =
-            item.customization && item.customization.trim().length > 0;
-
-          if (!hasCustomization) {
-            itemsMissingCustomization.push(`${item.name} (${item.season})`);
-          }
-        }
-      });
+      const itemsMissingCustomization = findMissingCustomizationItems(
+        uniformItems.uniformSizeItems
+      );
 
       // 맞춤 정보가 없는 품목이 있으면 모달 표시
       if (itemsMissingCustomization.length > 0) {
@@ -308,6 +251,8 @@ export default function NewMeasurementSheet({
       );
     } finally {
       setShowPrintModal(false);
+      // 세션 삭제
+      clearMeasurementSession(studentId);
       // 시트 닫기 및 리스트 재조회
       setIsMeasurementSheetOpen(false);
       onSuccess?.();
@@ -614,7 +559,7 @@ export default function NewMeasurementSheet({
         <StudentInfo studentData={studentData} />
         <MeasurementInfo studentData={studentData} />
 
-        {isAfterDeadline() ? (
+        {isAfterDeadline(actualDeadline) ? (
           <div className="p-6">
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <p className="text-sm font-semibold text-yellow-800 mb-2">
@@ -716,6 +661,8 @@ export default function NewMeasurementSheet({
         onDownload={handleDownloadPDF}
         onClose={() => {
           setShowPDFModal(false);
+          // 세션 삭제
+          clearMeasurementSession(studentId);
           // PDF 모달 닫을 때 시트도 닫고 리스트 재조회
           setIsMeasurementSheetOpen(false);
           onSuccess?.();
