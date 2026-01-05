@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { SUPPLY_ITEMS_CONFIG } from "@/mocks/measurementData";
 import { SupplyItem } from "../components/types";
+import type { MeasurementSessionData } from "../utils/sessionStorage";
 
 interface ApiSupplyItem {
   product_id: number;
@@ -16,7 +17,10 @@ interface ApiSupplyItem {
   }>;
 }
 
-export const useSupplyItems = (initialSupplyItems?: ApiSupplyItem[]) => {
+export const useSupplyItems = (
+  initialSupplyItems?: ApiSupplyItem[],
+  sessionData?: MeasurementSessionData | null
+) => {
   const [supplyItems, setSupplyItems] = useState<SupplyItem[]>([]);
   const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
   const isInitialized = useRef(false);
@@ -24,43 +28,58 @@ export const useSupplyItems = (initialSupplyItems?: ApiSupplyItem[]) => {
   // 초기화: API 응답의 supply_items로 초기 상태 설정
   useEffect(() => {
     if (!isInitialized.current && initialSupplyItems && initialSupplyItems.length > 0) {
-      const initialItems: SupplyItem[] = initialSupplyItems.map((item) => {
-        // 사이즈 결정 로직:
-        // 1. 기본값: 빈 문자열 (선택 안됨)
-        // 2. quantity >= 1 && available_sizes.length === 1이면 해당 사이즈를 디폴트로 설정
-        let defaultSize = "";
+      let initialItems: SupplyItem[] = [];
+      let initialCounts: Record<string, number> = {};
 
-        if (
-          item.quantity >= 1 &&
-          item.available_sizes &&
-          item.available_sizes.length === 1
-        ) {
-          defaultSize = item.available_sizes[0].size;
-        }
-
-        return {
+      // 세션 데이터가 있으면 복원
+      if (sessionData?.supplyItems && sessionData.supplyItems.length > 0) {
+        initialItems = sessionData.supplyItems.map((item) => ({
           id: `${item.product_id}-${Date.now()}-${Math.random()}`,
           name: item.name,
-          category: item.category || "",
-          size: defaultSize,
+          category: item.category,
+          size: item.size,
           product_id: item.product_id,
-          price: item.price,
-          quantity: item.quantity,
-          season: item.season,
-          available_sizes: item.available_sizes,
-        };
-      });
+        }));
+        initialCounts = sessionData.supplyItemCounts || {};
+      } else {
+        // 세션 데이터가 없으면 API 응답 사용
+        initialItems = initialSupplyItems.map((item) => {
+          // 사이즈 결정 로직:
+          // 1. 기본값: 빈 문자열 (선택 안됨)
+          // 2. quantity >= 1 && available_sizes.length === 1이면 해당 사이즈를 디폴트로 설정
+          let defaultSize = "";
 
-      const initialCounts: Record<string, number> = {};
-      initialItems.forEach((item) => {
-        initialCounts[item.id] = item.quantity || 0;
-      });
+          if (
+            item.quantity >= 1 &&
+            item.available_sizes &&
+            item.available_sizes.length === 1
+          ) {
+            defaultSize = item.available_sizes[0].size;
+          }
+
+          return {
+            id: `${item.product_id}-${Date.now()}-${Math.random()}`,
+            name: item.name,
+            category: item.category || "",
+            size: defaultSize,
+            product_id: item.product_id,
+            price: item.price,
+            quantity: item.quantity,
+            season: item.season,
+            available_sizes: item.available_sizes,
+          };
+        });
+
+        initialItems.forEach((item) => {
+          initialCounts[item.id] = item.quantity || 0;
+        });
+      }
 
       setSupplyItems(initialItems);
       setItemCounts(initialCounts);
       isInitialized.current = true;
     }
-  }, [initialSupplyItems]);
+  }, [initialSupplyItems, sessionData]);
 
   // 같은 품목의 새 사이즈 추가 (복사 기능)
   const addSameItem = useCallback((baseItem: SupplyItem) => {

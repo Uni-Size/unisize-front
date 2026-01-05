@@ -32,8 +32,4 @@ export interface EditOrderSheetProps extends MeasurementSheetCommonProps {
   orderId: number;
 }
 
-export interface ReadonlySheetProps extends MeasurementSheetCommonProps {
-  mode: "readonly";
-}
-
-export type MeasurementSheetProps = NewMeasurementSheetProps | EditOrderSheetProps | ReadonlySheetProps;
+export type MeasurementSheetProps = NewMeasurementSheetProps | EditOrderSheetProps;

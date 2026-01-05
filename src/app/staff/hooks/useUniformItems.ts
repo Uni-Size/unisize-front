@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { UniformSizeItem } from "../components/types";
+import type { MeasurementSessionData } from "../utils/sessionStorage";
 
 interface UniformProductItem {
   id: string;
@@ -21,7 +22,10 @@ interface InitialData {
   all: UniformProductItem[];
 }
 
-export const useUniformItems = (initialData: InitialData) => {
+export const useUniformItems = (
+  initialData: InitialData,
+  sessionData?: MeasurementSessionData | null
+) => {
   const [uniformSizeItems, setUniformSizeItems] = useState<UniformSizeItem[]>(
     []
   );
@@ -30,43 +34,59 @@ export const useUniformItems = (initialData: InitialData) => {
   // 초기화: 각 교복 아이템에 대해 첫 번째 사이즈 항목을 추가
   useEffect(() => {
     if (!isInitialized.current && uniformSizeItems.length === 0) {
-      const initialItems: UniformSizeItem[] = [];
+      let initialItems: UniformSizeItem[] = [];
 
-      // recommended_uniforms 데이터 사용
-      (["winter", "summer", "all"] as const).forEach((s) => {
-        const seasonItems = initialData[s];
-        seasonItems.forEach((item) => {
-          // 구입 개수 = 총 개수(quantity) - 지원 개수(provided)
-          const initialPurchaseCount = Math.max(0, item.quantity - item.provided);
+      // 세션 데이터가 있으면 복원
+      if (sessionData?.uniformItems && sessionData.uniformItems.length > 0) {
+        initialItems = sessionData.uniformItems.map((item) => ({
+          id: `${item.itemId}-${Date.now()}-${Math.random()}`,
+          itemId: item.itemId,
+          productId: item.productId,
+          name: item.name,
+          season: item.season,
+          selectedSize: item.selectedSize,
+          customization: item.customization || "",
+          purchaseCount: item.purchaseCount,
+          freeQuantity: item.freeQuantity,
+          isCustomizationRequired: item.isCustomizationRequired,
+        }));
+      } else {
+        // 세션 데이터가 없으면 recommended_uniforms 데이터 사용
+        (["winter", "summer", "all"] as const).forEach((s) => {
+          const seasonItems = initialData[s];
+          seasonItems.forEach((item) => {
+            // 구입 개수 = 총 개수(quantity) - 지원 개수(provided)
+            const initialPurchaseCount = Math.max(0, item.quantity - item.provided);
 
-          // recommendedSize를 디폴트 값으로 사용
-          // availableSizes가 비어있으면 0으로 설정하여 에러 케이스로 인지
-          const defaultSize = item.recommendedSize
-            ? Number(item.recommendedSize)
-            : item.availableSizes.length > 0
-            ? item.availableSizes[0]
-            : 0;
+            // recommendedSize를 디폴트 값으로 사용
+            // availableSizes가 비어있으면 0으로 설정하여 에러 케이스로 인지
+            const defaultSize = item.recommendedSize
+              ? Number(item.recommendedSize)
+              : item.availableSizes.length > 0
+              ? item.availableSizes[0]
+              : 0;
 
-          initialItems.push({
-            id: `${item.id}-${Date.now()}-${Math.random()}`,
-            itemId: item.id,
-            productId: Number(item.id) || undefined,
-            name: item.name,
-            season: s,
-            selectedSize: defaultSize,
-            customization: item.customization || "",
-            purchaseCount: initialPurchaseCount,
-            freeQuantity: item.provided,
-            price: item.price,
-            isCustomizationRequired: item.isCustomizationRequired,
+            initialItems.push({
+              id: `${item.id}-${Date.now()}-${Math.random()}`,
+              itemId: item.id,
+              productId: Number(item.id) || undefined,
+              name: item.name,
+              season: s,
+              selectedSize: defaultSize,
+              customization: item.customization || "",
+              purchaseCount: initialPurchaseCount,
+              freeQuantity: item.provided,
+              price: item.price,
+              isCustomizationRequired: item.isCustomizationRequired,
+            });
           });
         });
-      });
+      }
 
       setUniformSizeItems(initialItems);
       isInitialized.current = true;
     }
-  }, [initialData]);
+  }, [initialData, sessionData]);
 
   // 교복 아이템 추가
   const addItem = useCallback(

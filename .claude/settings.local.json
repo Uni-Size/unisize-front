@@ -15,7 +15,12 @@
       "Bash(npm install:*)",
       "Bash(ps:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(npx prisma init)",
+      "Bash(npx prisma db pull:*)",
+      "Bash(npx prisma generate)",
+      "Bash(curl:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []
