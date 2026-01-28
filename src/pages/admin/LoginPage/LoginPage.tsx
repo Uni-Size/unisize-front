@@ -1,0 +1,92 @@
+import { useState } from 'react';
+import { Input } from '../../../components/atoms/Input';
+import { Button } from '../../../components/atoms/Button';
+import './LoginPage.css';
+
+export const LoginPage = () => {
+  const [id, setId] = useState('');
+  const [password, setPassword] = useState('');
+
+  const isFormValid = id.trim() !== '' && password.trim() !== '';
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isFormValid) return;
+    // TODO: 실제 로그인 API 호출
+    console.log('로그인 시도:', { id, password });
+  };
+
+  return (
+    <div className="login-page">
+      <div className="login-page__notice">
+        <div className="login-page__notice-icons">
+          <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22 4L4 12V20C4 31.1 11.88 41.38 22 44C32.12 41.38 40 31.1 40 20V12L22 4Z" stroke="#FCD34D" strokeWidth="2" fill="none"/>
+            <path d="M22 4L4 12V20C4 31.1 11.88 41.38 22 44" stroke="#FCD34D" strokeWidth="2" fill="none"/>
+            <line x1="22" y1="14" x2="22" y2="26" stroke="#FCD34D" strokeWidth="2"/>
+            <circle cx="22" cy="32" r="2" fill="#FCD34D"/>
+          </svg>
+          <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22 6L6 22L22 38L38 22L22 6Z" stroke="#FCD34D" strokeWidth="2" fill="none"/>
+            <path d="M22 12L12 22L22 32L32 22L22 12Z" stroke="#FCD34D" strokeWidth="2" fill="none"/>
+            <line x1="22" y1="16" x2="22" y2="28" stroke="#FCD34D" strokeWidth="2"/>
+          </svg>
+        </div>
+
+        <div className="login-page__notice-header">
+          <p className="login-page__notice-title">
+            본 시스템은 스마트학생복 청주점만을 위해 개발된
+            <br />
+            내부 전용 고객/재고 관리 시스템입니다.
+          </p>
+          <p className="login-page__notice-subtitle">
+            모든 스태프는 아래 사항을 반드시 준수해야 합니다.
+          </p>
+        </div>
+
+        <div className="login-page__notice-content">
+          <p>본 시스템에서 취급되는 모든 데이터는 기밀입니다.</p>
+          <p>
+            어떠한 경우에도 외부(타 지점, 협력업체, 지인, 온라인 등)로 유출하거나
+            공유할 수 없습니다.
+          </p>
+          <p>
+            본 시스템은 업무 목적에 한해서만 사용해야 하며, 개인적 용도나 무단
+            열람·복제·촬영을 금지합니다.
+          </p>
+          <p>
+            위 내용을 위반할 경우, 회사 규정 및 관련 법규에 따른 책임을 질 수
+            있음을 이해하고 동의합니다.
+          </p>
+        </div>
+      </div>
+
+      <form className="login-page__form" onSubmit={handleLogin}>
+        <div className="login-page__inputs">
+          <Input
+            placeholder="아이디"
+            value={id}
+            onChange={(e) => setId(e.target.value)}
+            fullWidth
+          />
+          <Input
+            type="password"
+            placeholder="비밀번호"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            fullWidth
+          />
+        </div>
+
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={!isFormValid}
+          className="login-page__button"
+        >
+          다음
+        </Button>
+      </form>
+    </div>
+  );
+};

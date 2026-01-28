@@ -1,0 +1,11 @@
+.staff-approval-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.staff-approval-page__content {
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px;
+}

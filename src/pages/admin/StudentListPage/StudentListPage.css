@@ -1,0 +1,117 @@
+.student-list-page {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 16px;
+}
+
+.student-list-page__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.student-list-page__title {
+  font-family: var(--font-family);
+  font-size: var(--font-size-title3);
+  font-weight: var(--font-weight-regular);
+  color: #374151;
+}
+
+/* Filters */
+.student-list-page__filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background-color: #fafafa;
+  border-radius: 8px;
+}
+
+.student-list-page__filter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.student-list-page__filter-label {
+  font-family: var(--font-family);
+  font-size: var(--font-size-subheadline);
+  font-weight: var(--font-weight-regular);
+  color: #374151;
+  min-width: 50px;
+}
+
+.student-list-page__select {
+  height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #c6c6c6;
+  border-radius: 8px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-subheadline);
+  color: #4c4c4c;
+  background-color: white;
+}
+
+.student-list-page__checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-subheadline);
+  color: #374151;
+  cursor: pointer;
+}
+
+.student-list-page__filter-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.student-list-page__filter-actions .btn {
+  width: auto;
+  padding: 8px 24px;
+}
+
+/* Content */
+.student-list-page__content {
+  flex: 1;
+}
+
+/* Actions Cell */
+.student-list-page__actions-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.student-list-page__action-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.student-list-page__action-btn {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  font-family: var(--font-family);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.student-list-page__action-btn--edit {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+.student-list-page__action-btn--delete {
+  background-color: #fecaca;
+  color: #991b1b;
+}
+
+.student-list-page__action-btn:hover {
+  opacity: 0.8;
+}

@@ -1,0 +1,136 @@
+.product-add-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 760px;
+}
+
+.product-add-modal__row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.product-add-modal__field {
+  flex: 1;
+  min-width: 0;
+}
+
+.product-add-modal__school-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.product-add-modal__school-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.product-add-modal__school-label {
+  flex: 1;
+  font-family: 'Pretendard Variable', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: #393939;
+}
+
+.product-add-modal__school-empty {
+  font-family: 'Pretendard Variable', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: #959595;
+  text-align: center;
+  padding: 10px 0;
+}
+
+.product-add-modal__school-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.product-add-modal__school-year-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.product-add-modal__school-year {
+  font-family: 'Pretendard Variable', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4c4c4c;
+}
+
+.product-add-modal__school-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.product-add-modal__school-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid #c6c6c6;
+  border-radius: 8px;
+  background-color: #ffffff;
+}
+
+.product-add-modal__school-name {
+  font-family: 'Pretendard Variable', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: #4c4c4c;
+}
+
+.product-add-modal__school-price {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border: 1px solid #c6c6c6;
+  border-radius: 8px;
+  background-color: #ffffff;
+}
+
+.product-add-modal__school-price-input {
+  width: 80px;
+  border: none;
+  background: transparent;
+  font-family: 'Pretendard Variable', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: #4c4c4c;
+  text-align: right;
+  outline: none;
+}
+
+.product-add-modal__school-price-unit {
+  font-family: 'Pretendard Variable', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: #4c4c4c;
+  margin-left: 4px;
+}
+
+.product-add-modal__school-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #959595;
+  font-size: 18px;
+}
+
+.product-add-modal__school-remove:hover {
+  color: #ef4444;
+}

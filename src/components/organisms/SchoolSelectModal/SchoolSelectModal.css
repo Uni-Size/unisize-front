@@ -1,0 +1,77 @@
+.school-select-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 540px;
+}
+
+.school-select-modal__row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.school-select-modal__field {
+  flex: 1;
+  min-width: 0;
+}
+
+.school-select-modal__field--year {
+  flex: 0 0 100px;
+}
+
+.school-select-modal__field--school {
+  flex: 2;
+}
+
+.school-select-modal__field--price {
+  flex: 1;
+}
+
+.school-select-modal__price-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.school-select-modal__price-label {
+  padding: 0 8px;
+  font-family: 'Pretendard Variable', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: #393939;
+}
+
+.school-select-modal__price-input {
+  display: flex;
+  align-items: center;
+  height: 50px;
+  padding: 16px;
+  border: 1px solid #c6c6c6;
+  border-radius: 8px;
+  background-color: #ffffff;
+}
+
+.school-select-modal__price-input input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: 'Pretendard Variable', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: #4c4c4c;
+  text-align: right;
+  outline: none;
+}
+
+.school-select-modal__price-input input::placeholder {
+  color: #959595;
+}
+
+.school-select-modal__price-unit {
+  font-family: 'Pretendard Variable', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: #4c4c4c;
+  margin-left: 4px;
+}
