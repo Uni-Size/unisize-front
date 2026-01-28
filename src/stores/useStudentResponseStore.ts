@@ -1,6 +1,6 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { AddStudentResponse } from "@/api/student";
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import type { AddStudentResponse } from '@/api/student';
 
 interface StudentResponseStore {
   studentData: AddStudentResponse | null;
@@ -18,7 +18,7 @@ export const useStudentResponseStore = create<StudentResponseStore>()(
       clearStudentData: () => set({ studentData: null }),
     }),
     {
-      name: "student-response-storage",
+      name: 'student-response-storage',
     }
   )
 );

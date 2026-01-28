@@ -11,8 +11,8 @@ export const getDefaultBirthDate = (
   schoolName: string,
   admissionYear: number
 ): string => {
-  const isMiddleSchool = schoolName.includes("중학교");
-  const isHighSchool = schoolName.includes("고등학교");
+  const isMiddleSchool = schoolName.includes('중학교');
+  const isHighSchool = schoolName.includes('고등학교');
 
   let birthYear: number;
 

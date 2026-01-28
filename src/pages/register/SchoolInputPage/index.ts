@@ -1,0 +1,1 @@
+export { SchoolInputPage } from './SchoolInputPage';

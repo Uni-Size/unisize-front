@@ -10,20 +10,53 @@ import {
   StaffListPage,
   StaffApprovalPage,
 } from '@pages/admin';
-
-// Staff pages (매장 직원용)
-import StaffLayout from '@/pages/staff/StaffLayout';
-import StaffLoginPage from '@/pages/staff/login/LoginPage';
-import StaffMainPage from '@/pages/staff/StaffMainPage';
-
-// User pages (학생/보호자용)
-import AddStudentPage from '@/pages/user/add/AddStudentPage';
-import WaitingPage from '@/pages/user/waiting/WaitingPage';
+import {
+  OnboardingPage,
+  SchoolInputPage,
+  StudentInfoPage,
+  MeasurementGuidePage,
+  MeasurementInputPage,
+  CompletePage,
+  ExistingStudentPage,
+} from '@pages/register';
 
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <LoginPage />,
+    element: <OnboardingPage />,
+  },
+  {
+    path: '/register',
+    children: [
+      {
+        index: true,
+        element: <OnboardingPage />,
+      },
+      {
+        path: 'school',
+        element: <SchoolInputPage />,
+      },
+      {
+        path: 'student-info',
+        element: <StudentInfoPage />,
+      },
+      {
+        path: 'measurement-guide',
+        element: <MeasurementGuidePage />,
+      },
+      {
+        path: 'measurement',
+        element: <MeasurementInputPage />,
+      },
+      {
+        path: 'complete',
+        element: <CompletePage />,
+      },
+      {
+        path: 'existing',
+        element: <ExistingStudentPage />,
+      },
+    ],
   },
   {
     path: '/admin',
@@ -73,37 +106,5 @@ export const router = createBrowserRouter([
         element: <StaffApprovalPage />,
       },
     ],
-  },
-  // Staff routes (매장 직원용)
-  {
-    path: '/staff',
-    children: [
-      {
-        path: 'login',
-        element: <StaffLoginPage />,
-      },
-      {
-        element: <StaffLayout />,
-        children: [
-          {
-            index: true,
-            element: <StaffMainPage />,
-          },
-          {
-            path: ':userName',
-            element: <StaffMainPage />,
-          },
-        ],
-      },
-    ],
-  },
-  // User routes (학생/보호자용)
-  {
-    path: '/add',
-    element: <AddStudentPage />,
-  },
-  {
-    path: '/waiting',
-    element: <WaitingPage />,
   },
 ]);

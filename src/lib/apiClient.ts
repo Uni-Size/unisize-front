@@ -1,4 +1,4 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 
 // API 베이스 URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://121.130.231.146:8080";

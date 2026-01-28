@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="-5 -5 141.16 180.41">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #b2bcef;
+      }
+
+      .cls-2 {
+        fill: #7d85aa;
+      }
+
+      .cls-3 {
+        fill: #97a1d6;
+      }
+
+      .cls-4 {
+        fill: #3f466c;
+      }
+    </style>
+  </defs>
+  <g id="Layer_1-2" data-name="Layer 1">
+    <g>
+      <!-- 그림자 (상하 반복으로 공룡 움직임에 맞춰 변화) -->
+      <ellipse class="cls-2" cx="67.73" cy="158.64" rx="38.78" ry="11.78" >
+        <animate attributeName="ry" values="11.78;10.5;11.78" dur="0.8s" repeatCount="indefinite"/>
+      </ellipse>
+
+      <!-- 앞 오른쪽 다리 (자연스러운 걷기 - 회전 + 이동) -->
+      <path id="frontrightleg" class="cls-3" d="M56.04,152.91c-2.51.89-1.74,4.14-3.09,4.78-4.26,2.01-16.87.66-18.24-1.59-.47-.77-.1-2,.53-2.58.83-.76,1.96-.77,3.16-1.21,1.06-.38,1.77-2.55.89-3.42,0,0,3.98-10.5,11.71-9.19s5.04,13.06,5.04,13.06">
+        <animateTransform attributeName="transform" type="rotate" values="0 50 145; -10 50 145; 0 50 145" dur="0.8s" repeatCount="indefinite"/>
+        <animateTransform attributeName="transform" type="translate" values="0,0; -2,-3; 0,0" dur="0.8s" repeatCount="indefinite" additive="sum"/>
+      </path>
+
+      <!-- 뒤 오른쪽 다리 (앞 다리와 반대로 회전) -->
+      <path id="backtrightleg" class="cls-3" d="M100.09,148.73c-.92,1.85.14,4.24-.05,5.42-.25,1.44.57,2.93-3.65,4.11-3.68,1.04-7.63,1.05-11.42.28-.8-.16-1.55-.74-1.76-1.27-.26-.65-.22-1.61.24-2.2.99-1.29,3.82-1.63,2.79-3.32,2.58-1.53-3-9.41,5.71-9.29,8.7.12,8.15,6.26,8.15,6.26">
+        <animateTransform attributeName="transform" type="rotate" values="0 94 142; 10 94 142; 0 94 142" dur="0.8s" repeatCount="indefinite"/>
+        <animateTransform attributeName="transform" type="translate" values="0,0; 2,-3; 0,0" dur="0.8s" repeatCount="indefinite" additive="sum"/>
+      </path>
+
+      <!-- 머리 (약간 상하 + 좌우 흔들림) -->
+      <path id="head" class="cls-1" d="M32.04,59.33c-5.71.18-24.58,2.21-23.79-7.47.12-1.48.97-2.57,2.52-2.98,2.57-.69,5.75.67,9.34.19,1-.13,2.41-.73,1.96-1.66-.12-.26-.48-.42-.89-.36l-5.23.67c-6.51.83-11.38-1.8-13.98-7.79C-4.35,25.41,5.48,10.78,18.09,4.04,25.81-.1,34.68-.99,43.22,1.06c6.47,1.56,11.93,5.44,15.3,11.06,2.03,3.38,3.32,7.04,4.17,10.94,1.02,4.66,1.48,9.07,1.08,13.77-2.01,23.82-31.72,22.51-31.72,22.51Z">
+        <animateTransform attributeName="transform" type="translate" values="0,0; 0,-2; 0,0" dur="0.8s" repeatCount="indefinite"/>
+        <animateTransform attributeName="transform" type="rotate" values="0 32 30; 2 32 30; 0 32 30; -2 32 30; 0 32 30" dur="0.8s" repeatCount="indefinite" additive="sum"/>
+      </path>
+
+      <!-- 목 (머리와 같이 움직임 + 짧았다 길어지는 애니메이션) -->
+      <path id="neck" class="cls-1" d="M26.01,114.67c.71-13.78,2.13-27.29,4.15-40.95l1.84-12.42s1.59-16.5,9.91-24.66c7.5-7.35,21.81-7,21.81,2.15,0,6.66,1.01,13.03,1.91,19.63.81,5.91,1.86,11.48,3.31,17.23.57,2.26,2.78,10.29,4.99,11.04-46.55,75.2-47.92,27.97-47.92,27.97Z">
+        <animateTransform attributeName="transform" type="translate" values="0,0; 0,-2; 0,0" dur="0.8s" repeatCount="indefinite"/>
+        <animateTransform attributeName="transform" type="scale" values="1 1; 1 1.08; 1 1" dur="0.8s" repeatCount="indefinite" additive="sum"/>
+      </path>
+
+      <!-- 꼬리 (좌우로 흔들림) -->
+      <path id="tail" class="cls-1" d="M106.5,124.36c.09-11.67,1.23-13.48,1.23-13.48,2.88,1.3,5.53,2.29,8.15,3.91,3.94,2.42,7.56,5.14,10.83,8.38,2.42,2.39,6.31,7.57,3.4,10.66-1.06,1.13-2.66,1.42-4.19,1.36-2.9-.12-5.62-.69-8.51-1-3.18-.35-6.16-1.29-6.8,1.8,0,0-4.22.04-4.12-11.63Z">
+        <animateTransform attributeName="transform" type="rotate" values="0 110 125; -3 110 125; 0 110 125; 3 110 125; 0 110 125" dur="0.8s" repeatCount="indefinite"/>
+      </path>
+
+      <!-- 앞 왼쪽 다리 (오른쪽 뒤 다리와 같이 회전) -->
+      <path id="frontleftleg" class="cls-1" d="M61.12,158.8c-2.51.89-1.74,4.14-3.09,4.78-4.26,2.01-16.87.66-18.24-1.59-.47-.77-.1-2,.53-2.58.83-.76,1.96-.77,3.16-1.21,1.06-.38,1.77-2.55.89-3.42,0,0,3.98-10.5,11.71-9.19s5.04,13.06,5.04,13.06">
+        <animateTransform attributeName="transform" type="rotate" values="0 55 151; 10 55 151; 0 55 151" dur="0.8s" repeatCount="indefinite"/>
+        <animateTransform attributeName="transform" type="translate" values="0,0; 2,-3; 0,0" dur="0.8s" repeatCount="indefinite" additive="sum"/>
+      </path>
+
+      <!-- 뒤 왼쪽 다리 (오른쪽 앞다리와 같이 회전) -->
+      <path id="backtleftleg" class="cls-1" d="M95.91,154.68c-.75,1.93.52,4.21.43,5.4-.12,1.46.83,2.87-3.27,4.42-3.58,1.36-7.51,1.73-11.35,1.3-.81-.09-1.61-.6-1.87-1.1-.32-.63-.36-1.58.04-2.21.87-1.37,3.66-1.97,2.48-3.55,2.43-1.76-3.82-9.1,4.86-9.76s8.68,5.51,8.68,5.51">
+        <animateTransform attributeName="transform" type="rotate" values="0 90 147; -10 90 147; 0 90 147" dur="0.8s" repeatCount="indefinite"/>
+        <animateTransform attributeName="transform" type="translate" values="0,0; -2,-3; 0,0" dur="0.8s" repeatCount="indefinite" additive="sum"/>
+      </path>
+
+      <!-- 몸통 (약간 상하로 움직임 - 자연스럽게) -->
+      <path id="body" class="cls-1" d="M109.38,107.32c-2.06-4.82-4.9-9.19-8.51-12.98-7.53-7.91-27.27-7.72-27.27-7.72,0,0-12.35-11.29-26.54-8.75s-20.15,23.52-20.15,23.52c-.09,1.82-1.76,8.09-2.35,14.95s-.01.18-.01.18c0,0,.01.01.01.02.03,2.7.15,5.36.34,8.08.24,3.26.87,6.27,1.8,9.44,1.93,6.57,5.41,12.36,10.86,16.6,1.32,1.02,2.79,1.74,3.85,2.9,1.71.77,3.68,1.22,5.07,2.6,0,0,12.04,5.11,28.32,4.15,0,0,13.25-.58,23.7-7.17,3.15-1.98,5.84-4.43,8-7.41h0s.02-.03.02-.03c.24-.33.48-.66.7-1.01l-.22.1.19-.35.14.24c2.46-3.75,4.01-7.84,4.92-12.24,0,0,3.16-14.81-2.9-25.1Z">
+        <animateTransform attributeName="transform" type="translate" values="0,0; 0,-1.5; 0,0" dur="0.8s" repeatCount="indefinite"/>
+      </path>
+
+      <!-- 눈 (머리와 함께 움직임) -->
+      <path id="eye" class="cls-4" d="M19.01,23.5c-.56.76-1.47.86-2.2.26-.63-.52-.8-1.52-.62-2.27.15-.59.52-1.45,1.47-1.52.84-.06,1.34.72,1.57,1.22.33.72.26,1.67-.22,2.31Z">
+        <animateTransform attributeName="transform" type="translate" values="0,0; 0,-2; 0,0" dur="0.8s" repeatCount="indefinite"/>
+        <animateTransform attributeName="transform" type="rotate" values="0 18 22; 2 18 22; 0 18 22; -2 18 22; 0 18 22" dur="0.8s" repeatCount="indefinite" additive="sum"/>
+      </path>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,101 @@
+.school-input-page {
+  max-width: 24rem;
+  margin: 0 auto;
+  padding: 1rem;
+  min-height: 100vh;
+}
+
+.school-input-page__header {
+  margin-bottom: 1.75rem;
+}
+
+.school-input-page__back-button {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-gray-600, #4b5563);
+  font-weight: 500;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.school-input-page__back-button:hover {
+  color: var(--color-gray-900, #111827);
+}
+
+.school-input-page__back-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.school-input-page__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 3.5rem;
+  color: var(--color-gray-900, #111827);
+}
+
+.school-input-page__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.school-input-page__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.school-input-page__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-gray-700, #374151);
+}
+
+.school-input-page__select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-gray-300, #d1d5db);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  background-color: white;
+  cursor: pointer;
+}
+
+.school-input-page__select:focus {
+  outline: none;
+  border-color: var(--color-primary-500, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.school-input-page__select:disabled {
+  background-color: var(--color-gray-100, #f3f4f6);
+  cursor: not-allowed;
+}
+
+.school-input-page__image-container {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+.school-input-page__image {
+  width: 200px;
+  height: auto;
+}
+
+.school-input-page__error {
+  color: var(--color-red-500, #ef4444);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.school-input-page__submit-button {
+  margin-top: 1.5rem;
+  width: 100%;
+}

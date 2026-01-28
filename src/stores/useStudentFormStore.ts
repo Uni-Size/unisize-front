@@ -1,5 +1,5 @@
-import { create } from "zustand";
-import { getTargetYear } from "@/utils/schoolUtils";
+import { create } from 'zustand';
+import { getTargetYear } from '@/utils/schoolUtils';
 
 interface BodyMeasurements {
   height: number;
@@ -17,7 +17,7 @@ interface FormData {
   studentPhone: string;
   guardianPhone: string;
   birthDate: string;
-  gender: "F" | "M";
+  gender: 'F' | 'M';
   privacyConsent: boolean;
   body: BodyMeasurements;
   address: string;
@@ -26,24 +26,24 @@ interface FormData {
 
 interface FormStore {
   formData: FormData;
-  setFormData: (field: string, value: string | number | boolean) => void;
-  setBodyMeasurements: (
-    field: string,
-    value: string | number | boolean
+  setFormData: <K extends keyof FormData>(field: K, value: FormData[K]) => void;
+  setBodyMeasurements: <K extends keyof BodyMeasurements>(
+    field: K,
+    value: BodyMeasurements[K]
   ) => void;
   resetFormData: () => void;
 }
 
 const initialFormData: FormData = {
-  previousSchool: "",
+  previousSchool: '',
   admissionYear: getTargetYear(),
   admissionGrade: 1,
-  admissionSchool: "",
-  name: "",
-  studentPhone: "",
-  guardianPhone: "",
-  birthDate: "",
-  gender: "F",
+  admissionSchool: '',
+  name: '',
+  studentPhone: '',
+  guardianPhone: '',
+  birthDate: '',
+  gender: 'F',
   privacyConsent: false,
   body: {
     height: 0,
@@ -51,7 +51,7 @@ const initialFormData: FormData = {
     shoulder: 0,
     waist: 0,
   },
-  address: "",
+  address: '',
   delivery: false,
 };
 

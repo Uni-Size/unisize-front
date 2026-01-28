@@ -1,0 +1,83 @@
+.measurement-input-page {
+  max-width: 24rem;
+  margin: 0 auto;
+  padding: 1rem;
+  min-height: 100vh;
+}
+
+.measurement-input-page__header {
+  margin-bottom: 1.75rem;
+}
+
+.measurement-input-page__back-button {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-gray-600, #4b5563);
+  font-weight: 500;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.measurement-input-page__back-button:hover {
+  color: var(--color-gray-900, #111827);
+}
+
+.measurement-input-page__back-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.measurement-input-page__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  color: var(--color-gray-900, #111827);
+}
+
+.measurement-input-page__subtitle {
+  font-size: 1.125rem;
+  font-weight: 500;
+  text-align: center;
+  margin-bottom: 3.5rem;
+  color: var(--color-gray-800, #1f2937);
+  line-height: 1.5;
+}
+
+.measurement-input-page__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.measurement-input-page__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.measurement-input-page__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-gray-700, #374151);
+}
+
+.measurement-input-page__error {
+  color: var(--color-red-500, #ef4444);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.measurement-input-page__buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.measurement-input-page__button {
+  flex: 1;
+}
