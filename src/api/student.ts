@@ -78,6 +78,175 @@ export interface AddStudentResponse {
 }
 
 // ============================================================================
+// 학생 리스트 관련 타입
+// ============================================================================
+
+export interface RegisterStudent {
+  id: number;
+  name: string;
+  gender: string;
+  birth_date: string;
+  student_phone: string;
+  guardian_phone: string;
+  previous_school: string;
+  admission_year: number;
+  admission_grade: number;
+  school_name: string;
+  class_name: string;
+  student_number: string;
+  address: string;
+  privacy_consent: boolean;
+  delivery: boolean;
+  grade: number;
+  checked_in_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RegisterStudentsResponse {
+  data: {
+    students: RegisterStudent[];
+    total: number;
+  };
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+  };
+  success: boolean;
+  error?: {
+    code: string;
+    message: string;
+    details: string;
+  };
+}
+
+// ============================================================================
+// 측정 관련 타입
+// ============================================================================
+
+export interface UniformProduct {
+  product_id: number;
+  product_name: string;
+  category: string;
+  gender: 'male' | 'female' | 'unisex';
+  price: number;
+  recommended_size: string;
+  available_sizes: string[];
+  alternative_product_names: string[];
+  is_custom_detail_required: boolean;
+  free_quantity: number;
+}
+
+export interface RecommendedUniformItem {
+  product: string;
+  recommended_size: string;
+  supported_quantity: number;
+  quantity: number;
+  price: number;
+  available_sizes: Array<{
+    size: string;
+    in_stock: boolean;
+    stock_count: number;
+  }>;
+  selectable_with?: string[];
+  gender: 'male' | 'female' | 'unisex';
+  is_customization_required?: boolean;
+  customization?: string;
+}
+
+export interface SupplyItemResponse {
+  product_id: number;
+  name: string;
+  category: string;
+  season: string;
+  price: number;
+  quantity: number;
+}
+
+export interface StartMeasurementResponse {
+  student_id: number;
+  student_name: string;
+  from_school: string;
+  to_school: string;
+  parent_phone: string;
+  school_deadline: string;
+  body_measurements: {
+    height: number;
+    weight: number;
+    shoulder: number;
+    waist: number;
+  };
+  uniform_products: UniformProduct[];
+  accessory_products: UniformProduct[] | null;
+  recommended_uniforms?: {
+    winter: RecommendedUniformItem[];
+    summer: RecommendedUniformItem[];
+    all?: RecommendedUniformItem[];
+  };
+  supply_items?: SupplyItemResponse[];
+  registered_at: string | null;
+  measurement_start_at: string | null;
+  measurement_end_at: string | null;
+}
+
+export interface StudentMeasurementData {
+  id: number;
+  name: string;
+  gender: string;
+  birth_date: string;
+  student_phone: string;
+  guardian_phone: string;
+  previous_school: string;
+  admission_year: number;
+  admission_grade: number;
+  school_name: string;
+  address: string;
+  delivery: boolean;
+  body: {
+    height: number;
+    weight: number;
+    shoulder: number;
+    waist: number;
+  };
+  measurement_end_at: null | string;
+  measurement_start_at: null | string;
+  registered_at: null | string;
+  deadline?: string;
+}
+
+// ============================================================================
+// 주문 관련 타입
+// ============================================================================
+
+export interface CompleteMeasurementRequest {
+  notes: string;
+  signature: string;
+}
+
+export interface MeasurementOrderItem {
+  item_id: string;
+  name: string;
+  season: 'winter' | 'summer' | 'all';
+  selected_size: number;
+  customization: string;
+  purchase_count: number;
+}
+
+export interface SupplyOrderItem {
+  item_id: number;
+  name: string;
+  selected_size: string;
+  purchase_count: number;
+}
+
+export interface MeasurementOrderRequest {
+  uniform_items: MeasurementOrderItem[];
+  supply_items: SupplyOrderItem[];
+}
+
+// ============================================================================
 // 학생 등록 API
 // ============================================================================
 
@@ -110,6 +279,79 @@ export async function addStudent(
   );
 
   return response.data.data;
+}
+
+// ============================================================================
+// 학생 리스트 조회 API
+// ============================================================================
+
+/**
+ * 대기 리스트 조회
+ * GET /api/v1/students/pending-measurements
+ */
+export async function getRegisterStudents(params?: {
+  page?: number;
+  limit?: number;
+}): Promise<RegisterStudentsResponse> {
+  const response = await apiClient.get<RegisterStudentsResponse>(
+    '/api/v1/students/pending-measurements',
+    { params }
+  );
+  return response.data;
+}
+
+// ============================================================================
+// 측정 관련 API
+// ============================================================================
+
+/**
+ * 측정 시작
+ * POST /api/v1/students/:studentId/start-measurement
+ */
+export async function startMeasurement(
+  studentId: number
+): Promise<StartMeasurementResponse> {
+  const response = await apiClient.post<ApiResponse<StartMeasurementResponse>>(
+    `/api/v1/students/${studentId}/start-measurement`
+  );
+
+  if (
+    response.data &&
+    typeof response.data === 'object' &&
+    'data' in response.data
+  ) {
+    return (response.data as ApiResponse<StartMeasurementResponse>).data;
+  }
+
+  return response.data as StartMeasurementResponse;
+}
+
+/**
+ * 측정 주문 저장
+ * POST /api/v1/students/:studentId/measurement-order
+ */
+export async function submitMeasurementOrder(
+  studentId: number,
+  orderData: MeasurementOrderRequest
+): Promise<void> {
+  await apiClient.post(
+    `/api/v1/students/${studentId}/measurement-order`,
+    orderData
+  );
+}
+
+/**
+ * 측정 완료
+ * POST /api/v1/students/:studentId/complete-measurement
+ */
+export async function completeMeasurement(
+  studentId: number,
+  orderData: CompleteMeasurementRequest
+): Promise<void> {
+  await apiClient.post(
+    `/api/v1/students/${studentId}/complete-measurement`,
+    orderData
+  );
 }
 
 // ============================================================================

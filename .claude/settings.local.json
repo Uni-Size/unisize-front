@@ -20,7 +20,8 @@
       "Bash(npm run type-check:*)",
       "Bash(npx tsc:*)",
       "Bash(wc:*)",
-      "Bash(tree -d -L 3:*)"
+      "Bash(tree -d -L 3:*)",
+      "Bash(git ls-tree:*)"
     ]
   }
 }

@@ -19,6 +19,10 @@ import {
   CompletePage,
   ExistingStudentPage,
 } from '@pages/register';
+import {
+  LoginPage as StaffLoginPage,
+  MainPage as StaffMainPage,
+} from '@pages/staff';
 
 export const router = createBrowserRouter([
   {
@@ -104,6 +108,19 @@ export const router = createBrowserRouter([
       {
         path: 'staff/approval',
         element: <StaffApprovalPage />,
+      },
+    ],
+  },
+  {
+    path: '/staff',
+    children: [
+      {
+        index: true,
+        element: <StaffMainPage />,
+      },
+      {
+        path: 'login',
+        element: <StaffLoginPage />,
       },
     ],
   },

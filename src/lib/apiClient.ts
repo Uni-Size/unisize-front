@@ -1,7 +1,8 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 
 // API 베이스 URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://121.130.231.146:8080";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "https://api.unisize.org";
 
 // axios 인스턴스 생성
 export const apiClient = axios.create({
@@ -34,7 +35,7 @@ apiClient.interceptors.request.use(
   (error: AxiosError) => {
     console.error("❌ 요청 인터셉터 에러:", error);
     return Promise.reject(error);
-  }
+  },
 );
 
 // 응답 인터셉터
@@ -71,9 +72,12 @@ apiClient.interceptors.response.use(
         localStorage.removeItem("refreshToken");
 
         // 쿠키 삭제
-        document.cookie = "accessToken=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
-        document.cookie = "refreshToken=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
-        document.cookie = "userRole=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
+        document.cookie =
+          "accessToken=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
+        document.cookie =
+          "refreshToken=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
+        document.cookie =
+          "userRole=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
 
         // authStore 초기화 (localStorage의 auth-storage도 삭제)
         localStorage.removeItem("auth-storage");
@@ -94,5 +98,5 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
