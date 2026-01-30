@@ -70,9 +70,10 @@ export const SchoolAddModal = ({
   onOpenProductModal,
   winterProducts,
   summerProducts,
-  onRemoveProduct,
+  onRemoveProduct: _onRemoveProduct,
   onProductChange,
 }: SchoolAddModalProps) => {
+  void _onRemoveProduct;
   const [schoolName, setSchoolName] = useState("");
   const [purchaseStatus, setPurchaseStatus] = useState("");
   const [purchaseYear, setPurchaseYear] = useState(String(currentYear));

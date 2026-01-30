@@ -311,7 +311,7 @@ export const SchoolDetailModal = ({
           </div>
         </div>
 
-        {purchases.map((purchase, index) => (
+        {purchases.map((purchase) => (
           <div key={purchase.id} className="school-detail-modal__purchase-group">
             <div className="school-detail-modal__row">
               <div className="school-detail-modal__field school-detail-modal__field--small">

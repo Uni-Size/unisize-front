@@ -96,7 +96,6 @@ export const ProductListPage = () => {
   const [isSchoolModalOpen, setIsSchoolModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductDetailData | null>(null);
   const [selectedSchools, setSelectedSchools] = useState<SchoolPrice[]>([]);
-  const [modalContext, setModalContext] = useState<'add' | 'detail'>('add');
 
   const handleOpenAddModal = () => {
     setSelectedSchools([]);
@@ -146,8 +145,7 @@ export const ProductListPage = () => {
     handleCloseDetailModal();
   };
 
-  const handleOpenSchoolModal = (context: 'add' | 'detail') => {
-    setModalContext(context);
+  const handleOpenSchoolModal = () => {
     setIsSchoolModalOpen(true);
   };
 
@@ -356,7 +354,7 @@ export const ProductListPage = () => {
         isOpen={isAddModalOpen}
         onClose={handleCloseAddModal}
         onSubmit={handleAddProduct}
-        onOpenSchoolModal={() => handleOpenSchoolModal('add')}
+        onOpenSchoolModal={() => handleOpenSchoolModal()}
         selectedSchools={selectedSchools}
         onRemoveSchool={handleRemoveSchool}
         onSchoolPriceChange={handleSchoolPriceChange}
@@ -367,7 +365,7 @@ export const ProductListPage = () => {
         onClose={handleCloseDetailModal}
         product={selectedProduct}
         onUpdate={handleUpdateProduct}
-        onOpenSchoolModal={() => handleOpenSchoolModal('detail')}
+        onOpenSchoolModal={() => handleOpenSchoolModal()}
         selectedSchools={selectedSchools}
         onRemoveSchool={handleRemoveSchool}
         onSchoolPriceChange={handleSchoolPriceChange}

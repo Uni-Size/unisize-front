@@ -7,7 +7,7 @@ import {
   ProductAddModal,
 } from '@components/organisms';
 import type { SchoolProductItem, SchoolAddData } from '@components/organisms/SchoolAddModal';
-import type { SchoolDetailData, PurchaseInfo } from '@components/organisms/SchoolDetailModal';
+import type { SchoolDetailData } from '@components/organisms/SchoolDetailModal';
 import type { SchoolPrice, ProductAddData } from '@components/organisms/ProductAddModal';
 import { Table } from '@components/atoms/Table';
 import { Input } from '@components/atoms/Input';
