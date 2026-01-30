@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/atoms/Button';
 import './OnboardingPage.css';
 
 export const OnboardingPage = () => {
