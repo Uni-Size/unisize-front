@@ -52,7 +52,7 @@ jobs:
           echo "📤 Uploading files..."
           rsync -avz --delete -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || '2022' }}" \
             --exclude 'node_modules' \
-            --exclude '.next' \
+            --exclude 'dist' \
             --exclude '.git' \
             ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${DEPLOY_PATH}/
 
@@ -60,7 +60,7 @@ jobs:
           echo "🐳 Building and deploying containers on server..."
           $SSH_CMD "cd ${DEPLOY_PATH} && \
             docker-compose -f docker-compose.yml down || true && \
-            docker-compose -f docker-compose.yml build --build-arg NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL }} && \
+            docker-compose -f docker-compose.yml build --build-arg VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }} && \
             docker-compose -f docker-compose.yml up -d"
 
           echo "✅ Deployment completed"
