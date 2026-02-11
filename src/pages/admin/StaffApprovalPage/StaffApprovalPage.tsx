@@ -1,44 +1,69 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import { AdminHeader } from '@components/organisms/AdminHeader';
 import { Table } from '@components/atoms/Table';
 import { Button } from '@components/atoms/Button';
 import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
+import { getPendingStaffList, approveStaff, type StaffItem } from '@/api/staff';
 import './StaffApprovalPage.css';
 
-interface PendingStaff {
-  id: string;
+interface PendingStaffRow {
+  id: number;
   no: number;
-  year: string;
+  employeeId: string;
   name: string;
   gender: '남' | '여';
   phone: string;
   registeredDate: string;
 }
 
-const mockPendingStaff: PendingStaff[] = [
-  { id: '1', no: 1, year: '2026', name: '김인철', gender: '남', phone: '010-5571-8239', registeredDate: '25/12/12' },
-  { id: '2', no: 2, year: '2026', name: '김인철', gender: '남', phone: '010-5571-8239', registeredDate: '25/12/12' },
-  { id: '3', no: 3, year: '2026', name: '김인철', gender: '남', phone: '010-5571-8239', registeredDate: '25/12/12' },
-  { id: '4', no: 4, year: '2026', name: '김인철', gender: '남', phone: '010-5571-8239', registeredDate: '25/12/12' },
-  { id: '5', no: 5, year: '2026', name: '김인철', gender: '남', phone: '010-5571-8239', registeredDate: '25/12/12' },
-  { id: '6', no: 6, year: '2026', name: '김인철', gender: '남', phone: '010-5571-8239', registeredDate: '25/12/12' },
-  { id: '7', no: 7, year: '2026', name: '김인철', gender: '남', phone: '010-5571-8239', registeredDate: '25/12/12' },
-];
+const toPendingRow = (item: StaffItem, index: number): PendingStaffRow => ({
+  id: item.id,
+  no: index + 1,
+  employeeId: item.employee_id,
+  name: item.employee_name,
+  gender: item.gender === 'M' ? '남' : '여',
+  phone: item.phone ?? '-',
+  registeredDate: item.created_at,
+});
 
 export const StaffApprovalPage = () => {
+  const [pendingList, setPendingList] = useState<PendingStaffRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const handleApprove = (staffId: string) => {
-    console.log('승인:', staffId);
+  const fetchPendingList = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getPendingStaffList();
+      setPendingList(data.map(toPendingRow));
+    } catch (error) {
+      console.error('승인 대기 목록 조회 실패:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPendingList();
+  }, [fetchPendingList]);
+
+  const handleApprove = async (staffId: number) => {
+    try {
+      await approveStaff(staffId);
+      fetchPendingList();
+    } catch (error) {
+      console.error('승인 실패:', error);
+      alert('승인에 실패했습니다.');
+    }
   };
 
-  const columns: Column<PendingStaff>[] = [
+  const columns: Column<PendingStaffRow>[] = [
     { key: 'no', header: 'No.', width: '34px', align: 'center' },
-    { key: 'year', header: '년도', width: '100px', align: 'center' },
-    { key: 'name', header: '학생이름', align: 'center' },
+    { key: 'employeeId', header: '사번', width: '100px', align: 'center' },
+    { key: 'name', header: '이름', align: 'center' },
     { key: 'gender', header: '성별', width: '28px', align: 'center' },
     { key: 'phone', header: '연락처', align: 'center' },
     { key: 'registeredDate', header: '등록일', align: 'center' },
@@ -62,8 +87,8 @@ export const StaffApprovalPage = () => {
     },
   ];
 
-  const totalPages = Math.ceil(mockPendingStaff.length / itemsPerPage);
-  const paginatedStaff = mockPendingStaff.slice(
+  const totalPages = Math.ceil(pendingList.length / itemsPerPage);
+  const paginatedStaff = pendingList.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -74,16 +99,22 @@ export const StaffApprovalPage = () => {
         <AdminHeader title="스태프 승인대기" />
 
         <div className="staff-approval-page__content">
-          <Table
-            columns={columns}
-            data={paginatedStaff}
-            onRowClick={(staff) => console.log('Staff clicked:', staff)}
-          />
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
+          {loading ? (
+            <div className="staff-approval-page__loading">불러오는 중...</div>
+          ) : (
+            <>
+              <Table
+                columns={columns}
+                data={paginatedStaff}
+                onRowClick={(staff) => console.log('Staff clicked:', staff)}
+              />
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </>
+          )}
         </div>
       </div>
     </AdminLayout>

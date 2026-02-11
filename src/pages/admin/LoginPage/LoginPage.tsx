@@ -1,19 +1,36 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Input } from '../../../components/atoms/Input';
 import { Button } from '../../../components/atoms/Button';
+import { login } from '@/api/auth';
+import { useAuthStore } from '@/stores/authStore';
 import './LoginPage.css';
 
 export const LoginPage = () => {
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   const isFormValid = id.trim() !== '' && password.trim() !== '';
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid) return;
-    // TODO: 실제 로그인 API 호출
-    console.log('로그인 시도:', { id, password });
+    if (!isFormValid || isLoading) return;
+
+    setError('');
+    setIsLoading(true);
+    try {
+      const data = await login({ employee_id: id, password });
+      setAuth(data.user, data.access_token, data.refresh_token);
+      navigate('/admin');
+    } catch {
+      setError('아이디 또는 비밀번호가 올바르지 않습니다.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -76,15 +93,16 @@ export const LoginPage = () => {
             onChange={(e) => setPassword(e.target.value)}
             fullWidth
           />
+          {error && <p className="login-page__error">{error}</p>}
         </div>
 
         <Button
           type="submit"
           variant="primary"
-          disabled={!isFormValid}
+          disabled={!isFormValid || isLoading}
           className="login-page__button"
         >
-          다음
+          {isLoading ? '로그인 중...' : '다음'}
         </Button>
       </form>
     </div>

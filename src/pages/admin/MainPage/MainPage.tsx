@@ -1,40 +1,61 @@
+import { useState, useEffect, useCallback } from 'react';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import { AdminHeader } from '@components/organisms/AdminHeader';
 import { Table } from '@components/atoms/Table';
 import type { Column } from '@components/atoms/Table';
+import { getPaymentPendingOrders, type PaymentPendingOrder } from '@/api/order';
 import './MainPage.css';
 
-interface PendingStudent {
-  id: string;
+interface PendingRow {
+  id: number;
   no: number;
   measuredAt: string;
   studentName: string;
-  gender: '남' | '여';
+  gender: string;
   school: string;
-  category: '신입' | '재학';
-  expectedAmount: string;
+  categorySummary: string;
+  remainingAmount: string;
 }
 
-const mockPendingStudents: PendingStudent[] = Array.from({ length: 13 }, (_, i) => ({
-  id: String(i + 1),
-  no: i + 1,
-  measuredAt: '25/01/12 15:00',
-  studentName: '김인철',
-  gender: '남',
-  school: '청주고등학교',
-  category: '신입',
-  expectedAmount: '112,335원',
-}));
+const toRow = (item: PaymentPendingOrder, index: number): PendingRow => ({
+  id: item.order_id,
+  no: index + 1,
+  measuredAt: item.measurement_end_time,
+  studentName: item.student_name,
+  gender: item.gender,
+  school: item.school_name,
+  categorySummary: item.category_summary,
+  remainingAmount: `${item.remaining_amount.toLocaleString()}원`,
+});
 
 export const MainPage = () => {
-  const columns: Column<PendingStudent>[] = [
+  const [orders, setOrders] = useState<PendingRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getPaymentPendingOrders();
+      setOrders(data.map(toRow));
+    } catch (error) {
+      console.error('결제 대기자 목록 조회 실패:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  const columns: Column<PendingRow>[] = [
     { key: 'no', header: 'No.', width: '34px', align: 'center' },
     { key: 'measuredAt', header: '측정완료', width: '130px', align: 'center' },
     { key: 'studentName', header: '학생이름', width: '100px', align: 'center' },
     { key: 'gender', header: '성별', width: '28px', align: 'center' },
     { key: 'school', header: '입학학교', align: 'center' },
-    { key: 'category', header: '분류', width: '28px', align: 'center' },
-    { key: 'expectedAmount', header: '결제 예정 금액', align: 'center' },
+    { key: 'categorySummary', header: '분류', width: '80px', align: 'center' },
+    { key: 'remainingAmount', header: '결제 예정 금액', align: 'center' },
     {
       key: 'detail',
       header: '상세',
@@ -65,14 +86,18 @@ export const MainPage = () => {
   return (
     <AdminLayout>
       <div className="main-page">
-<AdminHeader title="결제 대기자" />
+        <AdminHeader title="결제 대기자" />
 
         <div className="main-page__content">
-          <Table
-            columns={columns}
-            data={mockPendingStudents}
-            onRowClick={(student) => console.log('Student clicked:', student)}
-          />
+          {loading ? (
+            <div className="main-page__loading">불러오는 중...</div>
+          ) : (
+            <Table
+              columns={columns}
+              data={orders}
+              onRowClick={(order) => console.log('Order clicked:', order)}
+            />
+          )}
         </div>
       </div>
     </AdminLayout>

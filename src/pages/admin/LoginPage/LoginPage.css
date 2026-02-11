@@ -84,6 +84,14 @@
   width: 100%;
 }
 
+.login-page__error {
+  font-family: var(--font-family);
+  font-size: var(--font-size-subheadline);
+  color: #991b1b;
+  text-align: center;
+  margin: 0;
+}
+
 .login-page__button {
   width: 100%;
 }

@@ -22,6 +22,7 @@ import {
 import {
   LoginPage as StaffLoginPage,
   MainPage as StaffMainPage,
+  RegisterPage as StaffRegisterPage,
 } from '@pages/staff';
 
 export const router = createBrowserRouter([
@@ -121,6 +122,10 @@ export const router = createBrowserRouter([
       {
         path: 'login',
         element: <StaffLoginPage />,
+      },
+      {
+        path: 'register',
+        element: <StaffRegisterPage />,
       },
     ],
   },
