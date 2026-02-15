@@ -6,7 +6,6 @@ import { Badge } from '@components/atoms/Badge';
 import { Input } from '@components/atoms/Input';
 import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
-import './StudentOrderPage.css';
 
 interface StudentOrder {
   id: string;
@@ -119,13 +118,13 @@ export const StudentOrderPage = () => {
 
   return (
     <AdminLayout>
-      <div className="student-order-page">
+      <div className="flex flex-col gap-6">
         <AdminHeader
           title="학생 주문"
           buttonLabel="학생 추가"
           onButtonClick={() => console.log('학생 추가 클릭')}
         />
-        <div className="student-order-page__search">
+        <div>
           <Input
             placeholder="학생명, 연락처, 학교로 검색"
             value={searchTerm}
@@ -133,7 +132,7 @@ export const StudentOrderPage = () => {
           />
         </div>
 
-        <div className="student-order-page__content">
+        <div className="flex-1">
           <Table
             columns={columns}
             data={paginatedOrders}

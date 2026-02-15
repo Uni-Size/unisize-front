@@ -8,7 +8,6 @@ import {
   type SortingState,
 } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
-import './StudentTable.css';
 
 interface StudentTableProps {
   students: RegisterStudent[];
@@ -75,7 +74,7 @@ export default function StudentTable({
         header: '상세',
         cell: (info) => (
           <button
-            className="student-table__action-button"
+            className="text-blue-600 bg-none border-none cursor-pointer text-base px-2 py-1 transition-colors duration-150 hover:text-blue-700 hover:underline"
             onClick={() => onDetailClick(info.row.original)}
           >
             ↗
@@ -100,48 +99,48 @@ export default function StudentTable({
   });
 
   return (
-    <div className="student-table">
-      <div className="student-table__header">총 {total}명 대기중</div>
+    <div className="overflow-x-auto">
+      <div className="text-sm text-gray-600 pt-4 pb-2">총 {total}명 대기중</div>
 
       {isLoading && (
-        <div className="student-table__status">
-          <span className="student-table__status-text">로딩 중...</span>
+        <div className="flex justify-center items-center py-12">
+          <span className="text-gray-500">로딩 중...</span>
         </div>
       )}
 
       {error && (
-        <div className="student-table__status">
-          <span className="student-table__status-text student-table__status-text--error">
+        <div className="flex justify-center items-center py-12">
+          <span className="text-red-500">
             {error}
           </span>
         </div>
       )}
 
       {!isLoading && !error && students.length === 0 && (
-        <div className="student-table__status">
-          <span className="student-table__status-text">
+        <div className="flex justify-center items-center py-12">
+          <span className="text-gray-500">
             대기 중인 학생이 없습니다.
           </span>
         </div>
       )}
 
       {!isLoading && !error && students.length > 0 && (
-        <table className="student-table__table">
-          <thead className="student-table__thead">
+        <table className="w-full border-collapse">
+          <thead className="bg-gray-50 border-b-2 border-gray-200">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className={`student-table__th ${
-                      header.id === 'schools' ? 'student-table__th--wide' : ''
+                    className={`px-4 py-3 text-left text-sm font-semibold text-gray-700 ${
+                      header.id === 'schools' ? 'min-w-70' : ''
                     }`}
                   >
                     {header.isPlaceholder ? null : (
                       <div
-                        className={`student-table__th-content ${
+                        className={`flex items-center gap-1 ${
                           header.column.getCanSort()
-                            ? 'student-table__th-content--sortable'
+                            ? 'cursor-pointer hover:bg-gray-100'
                             : ''
                         }`}
                         onClick={header.column.getToggleSortingHandler()}
@@ -151,7 +150,7 @@ export default function StudentTable({
                           header.getContext()
                         )}
                         {header.column.getCanSort() && (
-                          <span className="student-table__sort-icon">
+                          <span className="text-xs text-gray-400">
                             {{
                               asc: ' ▲',
                               desc: ' ▼',
@@ -165,15 +164,15 @@ export default function StudentTable({
               </tr>
             ))}
           </thead>
-          <tbody className="student-table__tbody">
+          <tbody className="border-t border-gray-200">
             {table.getRowModel().rows.map((row, index) => (
               <tr
                 key={row.id}
                 ref={index === students.length - 1 ? lastElementRef : null}
-                className="student-table__tr"
+                className="transition-colors duration-150 hover:bg-gray-50"
               >
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="student-table__td">
+                  <td key={cell.id} className="px-4 py-3 text-sm text-gray-900 border-b border-gray-200">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -184,7 +183,7 @@ export default function StudentTable({
       )}
 
       {isFetchingMore && (
-        <div className="student-table__loading-more">
+        <div className="flex justify-center items-center py-6 text-gray-500">
           더 많은 데이터를 불러오는 중...
         </div>
       )}

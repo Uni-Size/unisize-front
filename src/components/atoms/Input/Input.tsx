@@ -1,5 +1,4 @@
 import type { InputHTMLAttributes } from 'react';
-import './Input.css';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -18,18 +17,18 @@ export const Input = ({
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
 
   return (
-    <div className={`input-wrapper ${fullWidth ? 'input-wrapper--full' : ''}`}>
+    <div className={`flex flex-col gap-2 ${fullWidth ? 'w-full' : ''}`}>
       {label && (
-        <label htmlFor={inputId} className="input-label">
+        <label htmlFor={inputId} className="text-[15px] font-normal text-gray-700">
           {label}
         </label>
       )}
       <input
         id={inputId}
-        className={`input ${error ? 'input--error' : ''} ${className}`}
+        className={`flex items-center ${fullWidth ? 'w-full' : 'w-[343px]'} h-[50px] px-4 border border-gray-200 rounded-lg text-[15px] font-normal leading-none text-gray-700 bg-transparent transition-[border-color] duration-200 ease-in-out focus:outline-none focus:border-bg-400 placeholder:text-bg-400 ${error ? 'border-error focus:border-error' : ''} ${className}`}
         {...props}
       />
-      {error && <span className="input-error">{error}</span>}
+      {error && <span className="text-xs text-error">{error}</span>}
     </div>
   );
 };

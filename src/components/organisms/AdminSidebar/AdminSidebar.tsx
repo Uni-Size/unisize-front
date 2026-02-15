@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import './AdminSidebar.css';
 
 interface SubMenuItem {
   id: string;
@@ -77,34 +76,34 @@ export const AdminSidebar = () => {
   };
 
   return (
-    <aside className="admin-sidebar">
-      <div className="admin-sidebar__header">
-        <Link to="/admin" className="admin-sidebar__title">
+    <aside className="w-[200px] min-h-[calc(100vh-16px)] my-2 ml-0 pl-5 pt-5 pb-5 bg-primary-050 border border-primary-100 rounded-r-lg shadow-[4px_0px_7px_0px_rgba(0,0,0,0.06)] flex flex-col gap-6">
+      <div className="p-0">
+        <Link to="/admin" className="text-[17px] font-medium text-[#111827] no-underline leading-none hover:text-[#111827]">
           스마트학생복 청주점
         </Link>
       </div>
-      <nav className="admin-sidebar__nav">
+      <nav className="flex flex-col">
         {menuItems.map((menu) => (
-          <div key={menu.id} className="admin-sidebar__menu-group">
+          <div key={menu.id} className="flex flex-col">
             {menu.subMenus ? (
               <>
                 <button
                   type="button"
-                  className={`admin-sidebar__menu-item admin-sidebar__menu-item--expandable ${
-                    isSubMenuActive(menu) ? 'admin-sidebar__menu-item--active' : ''
+                  className={`flex items-center w-[180px] h-[34px] pt-3.5 pr-2.5 pb-1.5 pl-2.5 text-[17px] font-medium no-underline leading-none transition-colors duration-200 bg-none border-none cursor-pointer text-left hover:text-[#111827] ${
+                    isSubMenuActive(menu) ? 'text-[#111827]' : 'text-gray-300'
                   }`}
                   onClick={() => toggleMenu(menu.id)}
                 >
                   {menu.label}
                 </button>
                 {isMenuExpanded(menu.id) && (
-                  <div className="admin-sidebar__submenu">
+                  <div className="flex flex-col">
                     {menu.subMenus.map((sub) => (
                       <Link
                         key={sub.id}
                         to={sub.path}
-                        className={`admin-sidebar__submenu-item ${
-                          isActive(sub.path) ? 'admin-sidebar__submenu-item--active' : ''
+                        className={`flex items-center w-full h-[30px] px-5 font-medium no-underline leading-none transition-colors duration-200 hover:text-[#111827] ${
+                          isActive(sub.path) ? 'text-[#111827]' : 'text-gray-300'
                         }`}
                       >
                         {sub.name}
@@ -116,8 +115,8 @@ export const AdminSidebar = () => {
             ) : (
               <Link
                 to={menu.path}
-                className={`admin-sidebar__menu-item ${
-                  isActive(menu.path) ? 'admin-sidebar__menu-item--active' : ''
+                className={`flex items-center w-[180px] h-[34px] pt-3.5 pr-2.5 pb-1.5 pl-2.5 text-[17px] font-medium no-underline leading-none transition-colors duration-200 hover:text-[#111827] ${
+                  isActive(menu.path) ? 'text-[#111827]' : 'text-gray-300'
                 }`}
               >
                 {menu.label}

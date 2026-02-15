@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/atoms/Button';
-import './MeasurementGuidePage.css';
 
 export const MeasurementGuidePage = () => {
   const navigate = useNavigate();
@@ -14,16 +13,16 @@ export const MeasurementGuidePage = () => {
   };
 
   return (
-    <section className="measurement-guide-page">
-      <div className="measurement-guide-page__header">
+    <section className="max-w-[24rem] mx-auto p-4 min-h-screen">
+      <div className="mb-7">
         <button
           type="button"
           onClick={handleBack}
-          className="measurement-guide-page__back-button"
+          className="flex items-center gap-1 bg-none border-none cursor-pointer text-[#4b5563] font-medium p-0 transition-colors duration-200 ease-in-out hover:text-[#262626]"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="measurement-guide-page__back-icon"
+            className="w-5 h-5"
             viewBox="0 0 20 20"
             fill="currentColor"
           >
@@ -37,39 +36,39 @@ export const MeasurementGuidePage = () => {
         </button>
       </div>
 
-      <h2 className="measurement-guide-page__title">
+      <h2 className="text-2xl font-bold text-center mb-4 text-[#262626]">
         학생의 신체 사이즈를 측정해주세요
       </h2>
-      <p className="measurement-guide-page__subtitle">
+      <p className="text-lg font-medium text-center mb-8 text-[#1f2937] leading-relaxed">
         정확한 교복 사이즈를 위해, <br /> 두꺼운 옷은 벗고 측정해주세요.
       </p>
 
-      <div className="measurement-guide-page__image-container">
+      <div className="flex justify-center my-8">
         <img
           src="/student/body.svg"
           alt="신체 측정 안내"
-          className="measurement-guide-page__image"
+          className="w-[200px] h-auto"
         />
       </div>
 
-      <p className="measurement-guide-page__note">
+      <p className="my-2 text-center text-[#6b7280] text-sm leading-relaxed">
         시착 시, 얇은 반팔이 필요하신 경우 <br /> 교복용 반팔을 구매하실 수
         있습니다.
       </p>
 
-      <div className="measurement-guide-page__buttons">
+      <div className="flex gap-4 mt-6">
         <Button
           type="button"
           onClick={handleBack}
           variant="secondary"
-          className="measurement-guide-page__button"
+          className="flex-1"
         >
           이전
         </Button>
         <Button
           type="button"
           onClick={handleNext}
-          className="measurement-guide-page__button"
+          className="flex-1"
         >
           다음
         </Button>

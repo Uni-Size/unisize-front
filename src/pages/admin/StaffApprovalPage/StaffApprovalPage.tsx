@@ -6,7 +6,6 @@ import { Button } from '@components/atoms/Button';
 import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
 import { getPendingStaffList, approveStaff, type StaffItem } from '@/api/staff';
-import './StaffApprovalPage.css';
 
 interface PendingStaffRow {
   id: number;
@@ -95,12 +94,12 @@ export const StaffApprovalPage = () => {
 
   return (
     <AdminLayout>
-      <div className="staff-approval-page">
+      <div className="flex flex-col gap-5">
         <AdminHeader title="스태프 승인대기" />
 
-        <div className="staff-approval-page__content">
+        <div className="bg-white rounded-lg p-2.5">
           {loading ? (
-            <div className="staff-approval-page__loading">불러오는 중...</div>
+            <div>불러오는 중...</div>
           ) : (
             <>
               <Table

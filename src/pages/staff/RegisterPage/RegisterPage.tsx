@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Input } from '../../../components/atoms/Input';
 import { Button } from '../../../components/atoms/Button';
 import { registerStaff } from '../../../api/auth';
-import './RegisterPage.css';
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
@@ -54,13 +53,13 @@ export const RegisterPage = () => {
   };
 
   return (
-    <div className="staff-register-page">
-      <h1 className="staff-register-page__title">스태프 가입 신청</h1>
+    <div className="px-4 py-12 max-w-150 mx-auto">
+      <h1 className="text-2xl font-semibold text-gray-800 text-center mb-8">스태프 가입 신청</h1>
 
-      <form className="staff-register-page__form" onSubmit={handleSubmit}>
-        {error && <div className="staff-register-page__error">{error}</div>}
+      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        {error && <div className="p-3 bg-red-50 border border-red-300 text-red-600 rounded-lg text-sm text-center">{error}</div>}
 
-        <div className="staff-register-page__inputs">
+        <div className="flex flex-col gap-3">
           <Input
             placeholder="사번"
             value={employeeId}
@@ -76,10 +75,10 @@ export const RegisterPage = () => {
             fullWidth
           />
 
-          <div className="staff-register-page__gender">
-            <span className="staff-register-page__gender-label">성별</span>
-            <div className="staff-register-page__gender-options">
-              <label className="staff-register-page__radio-label">
+          <div className="flex items-center gap-4 px-4 py-3 border border-gray-200 rounded-lg bg-white">
+            <span className="text-[15px] text-gray-500 min-w-7.5">성별</span>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-1 text-[15px] text-gray-700 cursor-pointer">
                 <input
                   type="radio"
                   name="page-gender"
@@ -90,7 +89,7 @@ export const RegisterPage = () => {
                 />
                 남
               </label>
-              <label className="staff-register-page__radio-label">
+              <label className="flex items-center gap-1 text-[15px] text-gray-700 cursor-pointer">
                 <input
                   type="radio"
                   name="page-gender"
@@ -126,14 +125,14 @@ export const RegisterPage = () => {
           type="submit"
           variant="primary"
           disabled={!isFormValid || isLoading}
-          className="staff-register-page__button"
+          className="mt-2 w-full"
         >
           {isLoading ? '신청 중...' : '가입 신청'}
         </Button>
 
-        <p className="staff-register-page__help-text">
+        <p className="text-center text-sm text-gray-400">
           이미 계정이 있으신가요?{' '}
-          <a href="/staff/login" className="staff-register-page__link">
+          <a href="/staff/login" className="text-blue-600 no-underline hover:underline">
             로그인
           </a>
         </p>

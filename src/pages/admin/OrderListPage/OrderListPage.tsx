@@ -5,7 +5,6 @@ import { AdminHeader } from '@components/organisms';
 import { Table } from '@components/atoms/Table';
 import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
-import './OrderListPage.css';
 
 type SchoolType = 'middle' | 'high';
 
@@ -133,7 +132,7 @@ export const OrderListPage = ({ schoolType }: OrderListPageProps) => {
       width: '42px',
       align: 'center',
       render: () => (
-        <button className="detail-button" aria-label="상세 보기">
+        <button className="flex items-center justify-center bg-none border-none cursor-pointer p-1 hover:opacity-70" aria-label="상세 보기">
           <svg
             width="24"
             height="24"
@@ -156,9 +155,9 @@ export const OrderListPage = ({ schoolType }: OrderListPageProps) => {
 
   return (
     <AdminLayout>
-      <div className="order-list-page">
+      <div className="flex flex-col gap-5 p-5">
         <AdminHeader title={getTitle()} />
-        <div className="order-list-page__content">
+        <div className="flex flex-col">
           <Table
             columns={columns}
             data={paginatedData}

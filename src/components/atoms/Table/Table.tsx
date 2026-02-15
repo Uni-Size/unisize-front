@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import './Table.css';
 
 export interface Column<T> {
   key: keyof T | string;
@@ -23,14 +22,14 @@ export const Table = <T extends object>({
   emptyMessage = '데이터가 없습니다.',
 }: TableProps<T>) => {
   return (
-    <div className="table-container">
-      <table className="table">
-        <thead className="table__head">
+    <div className="w-full overflow-x-auto bg-white rounded-xl border border-gray-200">
+      <table className="w-full border-collapse">
+        <thead className="bg-gray-100">
           <tr>
             {columns.map((column) => (
               <th
                 key={String(column.key)}
-                className="table__th"
+                className="p-4 text-left text-sm font-semibold text-gray-700 border-b border-gray-200 whitespace-nowrap"
                 style={{ width: column.width }}
               >
                 {column.header}
@@ -38,10 +37,10 @@ export const Table = <T extends object>({
             ))}
           </tr>
         </thead>
-        <tbody className="table__body">
+        <tbody className="bg-white">
           {data.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="table__empty">
+              <td colSpan={columns.length} className="p-12 text-center text-sm text-[#767676]">
                 {emptyMessage}
               </td>
             </tr>
@@ -49,11 +48,11 @@ export const Table = <T extends object>({
             data.map((item, index) => (
               <tr
                 key={index}
-                className={`table__row ${onRowClick ? 'table__row--clickable' : ''}`}
+                className={`transition-colors duration-200 ease-in-out hover:bg-gray-100 [&:last-child_td]:border-b-0 ${onRowClick ? 'cursor-pointer' : ''}`}
                 onClick={() => onRowClick?.(item)}
               >
                 {columns.map((column) => (
-                  <td key={String(column.key)} className="table__td">
+                  <td key={String(column.key)} className="p-4 text-sm text-gray-900 border-b border-gray-200">
                     {column.render
                       ? column.render(item, index)
                       : String(item[column.key as keyof T] ?? '')}

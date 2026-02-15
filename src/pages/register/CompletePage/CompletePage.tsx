@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useStudentResponseStore } from '@/stores/useStudentResponseStore';
-import './CompletePage.css';
 
 const itemData = {
   동복: [
@@ -47,8 +46,8 @@ export const CompletePage = () => {
 
   if (!studentData) {
     return (
-      <section className="complete-page">
-        <div className="complete-page__loading">
+      <section className="max-w-[24rem] mx-auto p-4 min-h-screen">
+        <div className="flex justify-center items-center min-h-[50vh] text-[#4b5563]">
           <p>데이터를 불러오는 중...</p>
         </div>
       </section>
@@ -81,21 +80,21 @@ export const CompletePage = () => {
     season: string;
     tableData: UniformData[];
   }) => (
-    <div className="complete-page__table">
-      <h3 className="complete-page__table-title">{season}</h3>
+    <div className="w-full bg-[#f5f6fd] p-4 rounded-lg font-semibold">
+      <h3 className="text-sm mb-6 text-[#1f2937]">{season}</h3>
 
-      <div className="complete-page__table-header">
+      <div className="grid grid-cols-3 pb-2 text-center text-[#4b5563] border-b border-[#a3a3a3] text-sm">
         <div>품목</div>
         <div>추천사이즈</div>
         <div>지원개수</div>
       </div>
 
       {tableData.map((row, idx) => (
-        <div key={idx} className="complete-page__table-row">
+        <div key={idx} className="grid grid-cols-3 py-2 text-center text-sm">
           <div>
             <div>{row.item}</div>
             {row.selectableWith && row.selectableWith.length > 0 && (
-              <div className="complete-page__selectable">
+              <div className="text-xs text-[#525a8d] mt-1">
                 {row.selectableWith.join(', ')}로 변경 가능
               </div>
             )}
@@ -103,7 +102,7 @@ export const CompletePage = () => {
           <div>{row.size}</div>
           <div>
             {row.count === 0 ? (
-              <span className="complete-page__excluded">지원제외품목</span>
+              <span className="text-xs text-[#525a8d]">지원제외품목</span>
             ) : (
               row.count
             )}
@@ -114,24 +113,26 @@ export const CompletePage = () => {
   );
 
   return (
-    <section className="complete-page">
-      <div className="complete-page__header">
-        <p className="complete-page__subtitle">잠시만 기다려주세요.</p>
-        <h2 className="complete-page__title">
+    <section className="max-w-[24rem] mx-auto p-4 min-h-screen">
+      <div className="text-center my-6">
+        <p className="text-base font-semibold text-[#4c4c4c]">잠시만 기다려주세요.</p>
+        <h2 className="text-2xl font-bold my-2 text-[#262626]">
           {studentData.school_name} {studentData.name}
         </h2>
-        <p className="complete-page__description">
+        <p className="text-lg font-medium text-[#4c4c4c]">
           교복 시착을 준비해드리겠습니다.
         </p>
       </div>
 
-      <div className="complete-page__tabs">
+      <div className="flex bg-[#e1e1e1] rounded-lg p-1 mb-6">
         {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`complete-page__tab ${
-              activeTab === tab ? 'complete-page__tab--active' : ''
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium bg-none border-none cursor-pointer transition-all duration-200 ease-in-out ${
+              activeTab === tab
+                ? 'bg-white text-[#525a8d] shadow-sm'
+                : 'text-[#4b5563] hover:text-[#1f2937]'
             }`}
           >
             {tab}
@@ -139,40 +140,40 @@ export const CompletePage = () => {
         ))}
       </div>
 
-      <div className="complete-page__content">
+      <div className="relative overflow-hidden w-full">
         <div
-          className="complete-page__slider"
+          className="flex transition-transform duration-300 ease-out"
           style={{
             transform: `translateX(-${tabs.indexOf(activeTab) * 100}%)`,
           }}
         >
           {tabs.map((season) => (
-            <div key={season} className="complete-page__slide">
+            <div key={season} className="w-full shrink-0">
               <TableView season={season} tableData={data[season]} />
             </div>
           ))}
         </div>
       </div>
 
-      <article className="complete-page__recommendations">
-        <h3 className="complete-page__recommendations-title">
+      <article className="mt-8">
+        <h3 className="text-base font-semibold text-[#1f2937] mb-4">
           {activeTab}과 함께 입을만한 상품
         </h3>
-        <div className="complete-page__products">
+        <div className="grid grid-cols-3 gap-4">
           {itemData[activeTab].map((product, idx) => (
             <a
               key={idx}
               href={product.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="complete-page__product"
+              className="block no-underline transition-shadow duration-200 ease-in-out rounded-lg hover:shadow-md"
             >
               <img
                 src={product.thumbnail}
                 alt={product.item}
-                className="complete-page__product-image"
+                className="w-full h-auto rounded-md"
               />
-              <p className="complete-page__product-name">{product.item}</p>
+              <p className="text-sm mt-2 text-[#1f2937]">{product.item}</p>
             </a>
           ))}
         </div>

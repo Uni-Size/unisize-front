@@ -4,7 +4,6 @@ import { AdminHeader } from '@components/organisms/AdminHeader';
 import { Table } from '@components/atoms/Table';
 import type { Column } from '@components/atoms/Table';
 import { getPaymentPendingOrders, type PaymentPendingOrder } from '@/api/order';
-import './MainPage.css';
 
 interface PendingRow {
   id: number;
@@ -62,7 +61,7 @@ export const MainPage = () => {
       width: '42px',
       align: 'center',
       render: () => (
-        <button className="detail-button" aria-label="상세 보기">
+        <button className="flex items-center justify-center w-10.5 h-6 bg-transparent border-none cursor-pointer p-0 hover:opacity-70" aria-label="상세 보기">
           <svg
             width="24"
             height="24"
@@ -85,12 +84,12 @@ export const MainPage = () => {
 
   return (
     <AdminLayout>
-      <div className="main-page">
+      <div className="flex flex-col p-5">
         <AdminHeader title="결제 대기자" />
 
-        <div className="main-page__content">
+        <div className="flex-1">
           {loading ? (
-            <div className="main-page__loading">불러오는 중...</div>
+            <div>불러오는 중...</div>
           ) : (
             <Table
               columns={columns}

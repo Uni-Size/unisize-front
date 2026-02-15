@@ -1,5 +1,4 @@
 import { useEffect, type ReactNode } from 'react';
-import './Modal.css';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -49,17 +48,17 @@ export const Modal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[1000]" onClick={onClose}>
       <div
-        className="modal"
+        className="bg-white border border-primary-900 rounded-[20px] px-5 py-4 flex flex-col gap-2.5 max-h-[90vh] overflow-hidden"
         style={{ width: `${width}px` }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="modal__header">
-          <h2 className="modal__title">{title}</h2>
+        <div className="flex items-center w-full">
+          <h2 className="text-xl font-normal text-[#111827] m-0">{title}</h2>
         </div>
-        <div className="modal__content">{children}</div>
-        {actions && <div className="modal__actions">{actions}</div>}
+        <div className="flex-1 overflow-y-auto">{children}</div>
+        {actions && <div className="flex gap-2 items-center justify-center w-full pt-1.5">{actions}</div>}
       </div>
     </div>
   );

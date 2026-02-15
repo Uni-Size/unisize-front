@@ -355,6 +355,90 @@ export async function completeMeasurement(
 }
 
 // ============================================================================
+// 학생 목록 조회 (관리자) API
+// ============================================================================
+
+export interface AdminStudent {
+  id: number;
+  name: string;
+  gender: string;
+  birth_date: string;
+  student_phone: string;
+  guardian_phone: string;
+  previous_school: string;
+  admission_year: number;
+  admission_grade: number;
+  school_name: string;
+  class_name: string;
+  student_number: string;
+  address: string;
+  privacy_consent: boolean;
+  delivery: boolean;
+  grade: number;
+  checked_in_at: string;
+  government_purchase: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GetStudentsParams {
+  page?: number;
+  limit?: number;
+  school?: string;
+  grade?: number;
+  search?: string;
+}
+
+export interface GetStudentsResponse {
+  data: AdminStudent[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+  };
+  success: boolean;
+  error?: {
+    code: string;
+    message: string;
+    details: string;
+  };
+}
+
+/**
+ * 학생 목록 조회
+ * GET /api/v1/admin/students
+ */
+export async function getStudents(params?: GetStudentsParams): Promise<GetStudentsResponse> {
+  const response = await apiClient.get<GetStudentsResponse>(
+    '/api/v1/admin/students',
+    { params }
+  );
+  return response.data;
+}
+
+/**
+ * 학생 상세 조회
+ * GET /api/v1/admin/students/:id
+ */
+export async function getStudentDetail(id: number): Promise<AdminStudent> {
+  const response = await apiClient.get<ApiResponse<AdminStudent>>(
+    `/api/v1/admin/students/${id}`
+  );
+  return response.data.data;
+}
+
+/**
+ * 학생 삭제
+ * DELETE /api/v1/admin/students/:id
+ */
+export async function deleteStudent(id: number): Promise<void> {
+  await apiClient.delete<ApiResponse<void>>(
+    `/api/v1/admin/students/${id}`
+  );
+}
+
+// ============================================================================
 // 유효성 검증 헬퍼 함수
 // ============================================================================
 

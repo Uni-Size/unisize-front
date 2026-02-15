@@ -1,5 +1,3 @@
-import './Pagination.css';
-
 export interface PaginationProps {
   currentPage: number;
   totalPages: number;
@@ -49,10 +47,10 @@ export const Pagination = ({
   if (totalPages <= 1) return null;
 
   return (
-    <nav className="pagination">
+    <nav className="flex items-center justify-center gap-1 mt-6">
       <button
         type="button"
-        className="pagination__btn pagination__btn--prev"
+        className="min-w-8 h-8 px-2 border border-[#e5e7eb] rounded-md bg-white text-[#374151] text-sm cursor-pointer transition-all duration-200 hover:not-disabled:bg-[#f3f4f6] hover:not-disabled:border-[#d1d5db] disabled:opacity-50 disabled:cursor-not-allowed"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         aria-label="이전 페이지"
@@ -60,28 +58,30 @@ export const Pagination = ({
         &lt;
       </button>
 
-      <div className="pagination__pages">
+      <div className="flex items-center gap-1">
         {getPageNumbers().map((page, index) => (
           typeof page === 'number' ? (
             <button
               key={index}
               type="button"
-              className={`pagination__btn pagination__btn--page ${
-                currentPage === page ? 'pagination__btn--active' : ''
+              className={`min-w-8 h-8 px-2 border rounded-md text-sm cursor-pointer transition-all duration-200 ${
+                currentPage === page
+                  ? 'bg-[#2563eb] border-[#2563eb] text-white hover:not-disabled:bg-[#1d4ed8] hover:not-disabled:border-[#1d4ed8]'
+                  : 'border-[#e5e7eb] bg-white text-[#374151] hover:not-disabled:bg-[#f3f4f6] hover:not-disabled:border-[#d1d5db]'
               }`}
               onClick={() => onPageChange(page)}
             >
               {page}
             </button>
           ) : (
-            <span key={index} className="pagination__ellipsis">{page}</span>
+            <span key={index} className="min-w-8 h-8 flex items-center justify-center text-[#6b7280] text-sm">{page}</span>
           )
         ))}
       </div>
 
       <button
         type="button"
-        className="pagination__btn pagination__btn--next"
+        className="min-w-8 h-8 px-2 border border-[#e5e7eb] rounded-md bg-white text-[#374151] text-sm cursor-pointer transition-all duration-200 hover:not-disabled:bg-[#f3f4f6] hover:not-disabled:border-[#d1d5db] disabled:opacity-50 disabled:cursor-not-allowed"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         aria-label="다음 페이지"

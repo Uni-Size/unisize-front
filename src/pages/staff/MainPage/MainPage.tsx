@@ -9,7 +9,6 @@ import { useStudents, useInfiniteScroll } from './hooks';
 import Toast from '../../../components/ui/Toast';
 import { useToast } from '../../../hooks/useToast';
 import { AxiosError } from 'axios';
-import './MainPage.css';
 
 export const MainPage = () => {
   const navigate = useNavigate();
@@ -104,15 +103,15 @@ export const MainPage = () => {
   }
 
   return (
-    <div className="staff-main-page">
-      <header className="staff-main-page__header">
-        <h1 className="staff-main-page__title">교복 측정</h1>
-        <div className="staff-main-page__user-info">
-          <span className="staff-main-page__user-name">
+    <div className="min-h-screen bg-gray-50">
+      <header className="flex justify-between items-center px-5 py-4 bg-white border-b border-gray-200 sticky top-0 z-10">
+        <h1 className="text-xl font-bold text-gray-800 m-0">교복 측정</h1>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-600">
             {staff?.employee_name || '스태프'}
           </span>
           <button
-            className="staff-main-page__logout-button"
+            className="px-4 py-2 text-sm text-gray-500 bg-transparent border border-gray-300 rounded-md transition-all duration-150 hover:bg-gray-100 hover:text-gray-700"
             onClick={handleLogout}
           >
             로그아웃
@@ -128,7 +127,7 @@ export const MainPage = () => {
         />
       )}
 
-      <main className="staff-main-page__content">
+      <main className="px-5 pb-5">
         <StudentTable
           students={students}
           total={total}

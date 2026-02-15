@@ -6,7 +6,6 @@ import { login } from '../../../api/auth';
 import { useAuthStore } from '../../../stores/authStore';
 import { AxiosError } from 'axios';
 import type { ApiResponse } from '../../../api/auth';
-import './LoginPage.css';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -67,12 +66,11 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="staff-login-page">
-      <div className="staff-login-page__notice">
-        <div className="staff-login-page__notice-icons">
+    <div className="px-4 py-12 max-w-150 mx-auto">
+      <div className="bg-orange-50 p-6 rounded-xl border border-orange-600">
+        <div className="flex gap-2.5 justify-center mb-4">
           <svg
-            width="44"
-            height="44"
+            className="size-8 md:size-11"
             viewBox="0 0 44 44"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -83,8 +81,7 @@ export const LoginPage = () => {
             />
           </svg>
           <svg
-            width="44"
-            height="44"
+            className="size-8 md:size-11"
             viewBox="0 0 44 44"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -96,32 +93,32 @@ export const LoginPage = () => {
           </svg>
         </div>
 
-        <div className="staff-login-page__notice-header">
-          <p className="staff-login-page__notice-title">
+        <div className="text-center mb-5">
+          <p className="text-sm md:text-base font-semibold leading-relaxed text-gray-800">
             본 시스템은 스마트학생복 청주점만을 위해 개발된
             <br />
             내부 전용 고객/재고 관리 시스템입니다.
           </p>
-          <p className="staff-login-page__notice-subtitle">
+          <p className="mt-2 text-sm text-gray-600">
             모든 스태프는 아래 사항을 반드시 준수해야 합니다.
           </p>
         </div>
 
-        <div className="staff-login-page__notice-content">
+        <div className="text-[13px] md:text-sm text-gray-500 text-center leading-[1.8]">
           <p>모든 데이터는 기밀이며, 외부로의 유출/공유를 금지합니다.</p>
           <p>업무 외 무단 열람/복제 및 개인적 사용을 금지합니다.</p>
           <p>이를 위반할 경우 관련 법규에 따른 책임을 질 수 있습니다.</p>
         </div>
       </div>
 
-      <form className="staff-login-page__form" onSubmit={handleSubmit}>
+      <form className="mt-10 flex flex-col gap-4" onSubmit={handleSubmit}>
         {error && (
-          <div className="staff-login-page__error">
+          <div className="p-3 bg-red-50 border border-red-300 text-red-600 rounded-lg text-sm text-center">
             {error}
           </div>
         )}
 
-        <div className="staff-login-page__inputs">
+        <div className="flex flex-col gap-3">
           <Input
             placeholder="아이디"
             value={employeeId}
@@ -143,12 +140,12 @@ export const LoginPage = () => {
           type="submit"
           variant="primary"
           disabled={!isFormValid || isLoading}
-          className="staff-login-page__button"
+          className="mt-2 w-full"
         >
           {isLoading ? '로그인 중...' : '로그인'}
         </Button>
 
-        <p className="staff-login-page__help-text">
+        <p className="text-center text-sm text-gray-400">
           staff 합류는 관리자에게 문의하세요.
         </p>
       </form>

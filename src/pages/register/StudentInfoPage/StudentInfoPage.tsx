@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useStudentFormStore } from '@/stores/useStudentFormStore';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
-import './StudentInfoPage.css';
 
 const PRIVACY_POLICY = {
   title: '개인정보 수집·이용에 동의합니다. (필수)',
@@ -58,16 +57,16 @@ export const StudentInfoPage = () => {
   };
 
   return (
-    <section className="student-info-page">
-      <div className="student-info-page__header">
+    <section className="max-w-[24rem] mx-auto p-4 min-h-screen">
+      <div className="mb-7">
         <button
           type="button"
           onClick={handleBack}
-          className="student-info-page__back-button"
+          className="flex items-center gap-1 bg-none border-none cursor-pointer text-[#4b5563] font-medium p-0 transition-colors duration-200 ease-in-out hover:text-[#262626]"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="student-info-page__back-icon"
+            className="w-5 h-5"
             viewBox="0 0 20 20"
             fill="currentColor"
           >
@@ -81,15 +80,15 @@ export const StudentInfoPage = () => {
         </button>
       </div>
 
-      <h2 className="student-info-page__title">
+      <h2 className="text-2xl font-bold text-center mb-14 text-[#262626] leading-[1.4]">
         {formData.admissionSchool}에
         {formData.admissionGrade === 1 ? ' 입학하는' : ' 전학오는'} <br />
         학생의 정보를 알려주세요
       </h2>
 
-      <div className="student-info-page__form">
-        <div className="student-info-page__field">
-          <label htmlFor="birthDate" className="student-info-page__label">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="birthDate" className="text-sm font-medium text-[#4c4c4c]">
             학생 생년월일
           </label>
           <input
@@ -97,12 +96,12 @@ export const StudentInfoPage = () => {
             type="date"
             value={formData.birthDate}
             onChange={(e) => setFormData('birthDate', e.target.value)}
-            className="student-info-page__date-input"
+            className="w-full py-3 px-4 border border-[#a3a3a3] rounded-lg text-base bg-white focus:outline-none focus:border-[#6a73a7] focus:ring-2 focus:ring-[#6a73a7]/20"
           />
         </div>
 
-        <div className="student-info-page__field">
-          <label htmlFor="name" className="student-info-page__label">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="name" className="text-sm font-medium text-[#4c4c4c]">
             학생이름
           </label>
           <Input
@@ -115,36 +114,36 @@ export const StudentInfoPage = () => {
           />
         </div>
 
-        <div className="student-info-page__field">
-          <label className="student-info-page__label">성별</label>
-          <div className="student-info-page__radio-group">
-            <label className="student-info-page__radio-label">
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-[#4c4c4c]">성별</label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-[#4c4c4c]">
               <input
                 type="radio"
                 name="gender"
                 value="M"
                 checked={formData.gender === 'M'}
                 onChange={(e) => setFormData('gender', e.target.value as 'M' | 'F')}
-                className="student-info-page__radio"
+                className="w-4 h-4 accent-[#525a8d]"
               />
               <span>남자</span>
             </label>
-            <label className="student-info-page__radio-label">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-[#4c4c4c]">
               <input
                 type="radio"
                 name="gender"
                 value="F"
                 checked={formData.gender === 'F'}
                 onChange={(e) => setFormData('gender', e.target.value as 'M' | 'F')}
-                className="student-info-page__radio"
+                className="w-4 h-4 accent-[#525a8d]"
               />
               <span>여자</span>
             </label>
           </div>
         </div>
 
-        <div className="student-info-page__field">
-          <label htmlFor="studentPhone" className="student-info-page__label">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="studentPhone" className="text-sm font-medium text-[#4c4c4c]">
             학생 연락처
           </label>
           <Input
@@ -161,8 +160,8 @@ export const StudentInfoPage = () => {
           />
         </div>
 
-        <div className="student-info-page__field">
-          <label htmlFor="guardianPhone" className="student-info-page__label">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="guardianPhone" className="text-sm font-medium text-[#4c4c4c]">
             보호자 연락처
           </label>
           <Input
@@ -179,19 +178,19 @@ export const StudentInfoPage = () => {
           />
         </div>
 
-        <div className="student-info-page__privacy">
-          <label className="student-info-page__privacy-label">
+        <div className="mt-6 p-4 bg-[#f9fafb] rounded-lg">
+          <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
               checked={formData.privacyConsent || false}
               onChange={(e) => setFormData('privacyConsent', e.target.checked)}
-              className="student-info-page__checkbox"
+              className="w-4 h-4 mt-1 accent-[#525a8d] shrink-0"
             />
-            <div className="student-info-page__privacy-content">
-              <span className="student-info-page__privacy-title">
+            <div className="text-sm">
+              <span className="font-medium text-[#262626]">
                 {PRIVACY_POLICY.title}
               </span>
-              <div className="student-info-page__privacy-items">
+              <div className="mt-2 text-xs text-[#4b5563] leading-relaxed">
                 {PRIVACY_POLICY.items.map((item, index) => (
                   <div key={index}>• {item}</div>
                 ))}
@@ -200,14 +199,14 @@ export const StudentInfoPage = () => {
           </label>
         </div>
 
-        {error && <p className="student-info-page__error">{error}</p>}
+        {error && <p className="text-[#ef4444] text-sm text-center">{error}</p>}
 
-        <div className="student-info-page__buttons">
+        <div className="flex gap-4 mt-6">
           <Button
             type="button"
             onClick={handleBack}
             variant="secondary"
-            className="student-info-page__button"
+            className="flex-1"
           >
             이전
           </Button>
@@ -215,7 +214,7 @@ export const StudentInfoPage = () => {
             type="button"
             onClick={handleNext}
             disabled={!isFormValid}
-            className="student-info-page__button"
+            className="flex-1"
           >
             다음
           </Button>

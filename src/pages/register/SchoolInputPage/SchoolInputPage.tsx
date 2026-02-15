@@ -5,7 +5,6 @@ import { getSupportedSchoolsByYear, type School } from '@/api/school';
 import { getTargetYear, getDefaultBirthDate } from '@/utils/schoolUtils';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
-import './SchoolInputPage.css';
 
 const GRADE_OPTIONS = [
   { value: 1, label: '1학년' },
@@ -62,16 +61,16 @@ export const SchoolInputPage = () => {
   };
 
   return (
-    <section className="school-input-page">
-      <div className="school-input-page__header">
+    <section className="max-w-[24rem] mx-auto p-4 min-h-screen">
+      <div className="mb-7">
         <button
           type="button"
           onClick={handleBack}
-          className="school-input-page__back-button"
+          className="flex items-center gap-1 bg-none border-none cursor-pointer text-[#4b5563] font-medium p-0 transition-colors duration-200 ease-in-out hover:text-[#262626]"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="school-input-page__back-icon"
+            className="w-5 h-5"
             viewBox="0 0 20 20"
             fill="currentColor"
           >
@@ -85,13 +84,13 @@ export const SchoolInputPage = () => {
         </button>
       </div>
 
-      <h2 className="school-input-page__title">
+      <h2 className="text-2xl font-bold text-center mb-14 text-[#262626]">
         출신학교와 입학학교를 알려주세요
       </h2>
 
-      <div className="school-input-page__form">
-        <div className="school-input-page__field">
-          <label htmlFor="previousSchool" className="school-input-page__label">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="previousSchool" className="text-sm font-medium text-[#4c4c4c]">
             출신학교
           </label>
           <Input
@@ -104,15 +103,15 @@ export const SchoolInputPage = () => {
           />
         </div>
 
-        <div className="school-input-page__field">
-          <label htmlFor="admissionYear" className="school-input-page__label">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="admissionYear" className="text-sm font-medium text-[#4c4c4c]">
             입학년도
           </label>
           <select
             id="admissionYear"
             value={formData.admissionYear}
             onChange={(e) => setFormData('admissionYear', parseInt(e.target.value))}
-            className="school-input-page__select"
+            className="w-full py-3 px-4 border border-[#a3a3a3] rounded-lg text-base bg-white cursor-pointer focus:outline-none focus:border-[#6a73a7] focus:ring-2 focus:ring-[#6a73a7]/20 disabled:bg-[#e1e1e1] disabled:cursor-not-allowed"
           >
             {generateYearOptions().map((year) => (
               <option key={year} value={year}>
@@ -122,15 +121,15 @@ export const SchoolInputPage = () => {
           </select>
         </div>
 
-        <div className="school-input-page__field">
-          <label htmlFor="admissionGrade" className="school-input-page__label">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="admissionGrade" className="text-sm font-medium text-[#4c4c4c]">
             입학학년
           </label>
           <select
             id="admissionGrade"
             value={formData.admissionGrade}
             onChange={(e) => setFormData('admissionGrade', parseInt(e.target.value))}
-            className="school-input-page__select"
+            className="w-full py-3 px-4 border border-[#a3a3a3] rounded-lg text-base bg-white cursor-pointer focus:outline-none focus:border-[#6a73a7] focus:ring-2 focus:ring-[#6a73a7]/20 disabled:bg-[#e1e1e1] disabled:cursor-not-allowed"
           >
             {GRADE_OPTIONS.map((grade) => (
               <option key={grade.value} value={grade.value}>
@@ -140,8 +139,8 @@ export const SchoolInputPage = () => {
           </select>
         </div>
 
-        <div className="school-input-page__field">
-          <label htmlFor="admissionSchool" className="school-input-page__label">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="admissionSchool" className="text-sm font-medium text-[#4c4c4c]">
             입학학교
           </label>
           <select
@@ -160,7 +159,7 @@ export const SchoolInputPage = () => {
               }
             }}
             disabled={isLoadingSchools}
-            className="school-input-page__select"
+            className="w-full py-3 px-4 border border-[#a3a3a3] rounded-lg text-base bg-white cursor-pointer focus:outline-none focus:border-[#6a73a7] focus:ring-2 focus:ring-[#6a73a7]/20 disabled:bg-[#e1e1e1] disabled:cursor-not-allowed"
           >
             <option value="">
               {isLoadingSchools
@@ -175,21 +174,21 @@ export const SchoolInputPage = () => {
           </select>
         </div>
 
-        <div className="school-input-page__image-container">
+        <div className="flex justify-center my-4">
           <img
             src="/student/congrats.svg"
             alt="축하 이미지"
-            className="school-input-page__image"
+            className="w-[200px] h-auto"
           />
         </div>
 
-        {error && <p className="school-input-page__error">{error}</p>}
+        {error && <p className="text-[#ef4444] text-sm text-center">{error}</p>}
 
         <Button
           type="button"
           onClick={handleNext}
           disabled={!isFormValid}
-          className="school-input-page__submit-button"
+          className="mt-6 w-full"
         >
           다음
         </Button>

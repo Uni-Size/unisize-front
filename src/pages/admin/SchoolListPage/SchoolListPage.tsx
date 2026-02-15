@@ -1,23 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import { AdminHeader } from '@components/organisms/AdminHeader';
 import {
   SchoolAddModal,
   SchoolDetailModal,
-  ProductAddModal,
 } from '@components/organisms';
-import type { SchoolProductItem, SchoolAddData } from '@components/organisms/SchoolAddModal';
+
+
 import type { SchoolDetailData } from '@components/organisms/SchoolDetailModal';
-import type { SchoolPrice, ProductAddData } from '@components/organisms/ProductAddModal';
 import { Table } from '@components/atoms/Table';
 import { Input } from '@components/atoms/Input';
 import { Button } from '@components/atoms/Button';
 import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
-import './SchoolListPage.css';
+import { getSupportedSchoolsByYear, deleteSupportedSchool, type School as ApiSchool } from '@/api/school';
+import { getTargetYear } from '@/utils/schoolUtils';
 
-interface School {
-  id: string;
+interface SchoolRow {
+  id: number;
   no: number;
   type: '초등학교' | '중학교' | '고등학교';
   supportYear: string;
@@ -28,22 +28,39 @@ interface School {
   modifiedDate: string;
 }
 
-const mockSchools: School[] = [
-  { id: '1', no: 1, type: '중학교', supportYear: '2026', schoolName: '가경중학교', isActive: 'O', measurementPeriod: '25/12/12 ~ 25/12/16', registeredDate: '25/12/16', modifiedDate: '25/12/16' },
-  { id: '2', no: 2, type: '중학교', supportYear: '2026', schoolName: '경덕중학교', isActive: 'O', measurementPeriod: '25/12/12 ~ 25/12/16', registeredDate: '25/12/16', modifiedDate: '25/12/16' },
-  { id: '3', no: 3, type: '중학교', supportYear: '2026', schoolName: '복대중학교', isActive: 'O', measurementPeriod: '25/12/12 ~ 25/12/16', registeredDate: '25/12/16', modifiedDate: '25/12/16' },
-  { id: '4', no: 4, type: '중학교', supportYear: '2026', schoolName: '산남중학교', isActive: 'O', measurementPeriod: '25/12/12 ~ 25/12/16', registeredDate: '25/12/16', modifiedDate: '25/12/16' },
-  { id: '5', no: 5, type: '중학교', supportYear: '2026', schoolName: '생명중학교', isActive: 'O', measurementPeriod: '25/12/12 ~ 25/12/16', registeredDate: '25/12/16', modifiedDate: '25/12/16' },
-  { id: '6', no: 6, type: '중학교', supportYear: '2026', schoolName: '세광중학교', isActive: 'O', measurementPeriod: '25/12/12 ~ 25/12/16', registeredDate: '25/12/16', modifiedDate: '25/12/16' },
-  { id: '7', no: 7, type: '중학교', supportYear: '2026', schoolName: '용성중학교', isActive: 'O', measurementPeriod: '25/12/12 ~ 25/12/16', registeredDate: '25/12/16', modifiedDate: '25/12/16' },
-  { id: '8', no: 8, type: '중학교', supportYear: '2026', schoolName: '율량중학교', isActive: 'O', measurementPeriod: '25/12/12 ~ 25/12/16', registeredDate: '25/12/16', modifiedDate: '25/12/16' },
-  { id: '9', no: 9, type: '중학교', supportYear: '2026', schoolName: '중앙여자중학교', isActive: 'O', measurementPeriod: '25/12/12 ~ 25/12/16', registeredDate: '25/12/16', modifiedDate: '25/12/16' },
-  { id: '10', no: 10, type: '고등학교', supportYear: '2026', schoolName: '세광고등학교', isActive: 'O', measurementPeriod: '25/12/12 ~ 25/12/16', registeredDate: '25/12/16', modifiedDate: '25/12/16' },
-  { id: '11', no: 11, type: '고등학교', supportYear: '2026', schoolName: '오창고등학교', isActive: 'O', measurementPeriod: '25/12/12 ~ 25/12/16', registeredDate: '25/12/16', modifiedDate: '25/12/16' },
-  { id: '12', no: 12, type: '고등학교', supportYear: '2026', schoolName: '청주고등학교', isActive: 'O', measurementPeriod: '25/12/12 ~ 25/12/16', registeredDate: '25/12/16', modifiedDate: '25/12/16' },
-];
+const getSchoolType = (name: string): '초등학교' | '중학교' | '고등학교' => {
+  if (name.includes('초등학교')) return '초등학교';
+  if (name.includes('고등학교')) return '고등학교';
+  return '중학교';
+};
+
+const formatDate = (dateStr: string): string => {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  const yy = String(d.getFullYear()).slice(2);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yy}/${mm}/${dd}`;
+};
+
+const toSchoolRow = (item: ApiSchool, index: number): SchoolRow => ({
+  id: item.id,
+  no: index + 1,
+  type: getSchoolType(item.name),
+  supportYear: String(item.year),
+  schoolName: item.name,
+  isActive: 'O',
+  measurementPeriod:
+    item.measurement_start_date && item.measurement_end_date
+      ? `${formatDate(item.measurement_start_date)} ~ ${formatDate(item.measurement_end_date)}`
+      : '-',
+  registeredDate: formatDate(item.created_at),
+  modifiedDate: formatDate(item.updated_at),
+});
 
 export const SchoolListPage = () => {
+  const [schools, setSchools] = useState<SchoolRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('통합검색');
   const [typeFilters, setTypeFilters] = useState({ all: true, elementary: false, middle: false, high: false });
@@ -55,136 +72,56 @@ export const SchoolListPage = () => {
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [selectedSchool, setSelectedSchool] = useState<SchoolDetailData | null>(null);
-  const [winterProducts, setWinterProducts] = useState<SchoolProductItem[]>([]);
-  const [summerProducts, setSummerProducts] = useState<SchoolProductItem[]>([]);
-  const [currentSeason, setCurrentSeason] = useState<'winter' | 'summer'>('winter');
-  const [productModalSelectedSchools, setProductModalSelectedSchools] = useState<SchoolPrice[]>([]);
 
-  const handleOpenAddModal = () => {
-    setWinterProducts([]);
-    setSummerProducts([]);
-    setIsAddModalOpen(true);
-  };
+  const fetchSchools = useCallback(async () => {
+    setLoading(true);
+    try {
+      const year = getTargetYear();
+      const data = await getSupportedSchoolsByYear(year);
+      setSchools(data.map(toSchoolRow));
+    } catch (error) {
+      console.error('학교 목록 조회 실패:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleCloseAddModal = () => {
+  useEffect(() => {
+    fetchSchools();
+  }, [fetchSchools]);
+
+  const handleAddSchool = () => {
     setIsAddModalOpen(false);
-    setWinterProducts([]);
-    setSummerProducts([]);
+    fetchSchools();
   };
 
-  const handleAddSchool = (data: SchoolAddData) => {
-    console.log('Add school:', data);
-    handleCloseAddModal();
-  };
-
-  const handleOpenDetailModal = (school: School) => {
+  const handleOpenDetailModal = (school: SchoolRow) => {
     const detailData: SchoolDetailData = {
-      id: school.id,
+      id: String(school.id),
       schoolName: school.schoolName,
-      registeredDate: '2026.01.09 15:23',
-      lastModifiedDate: '2026.01.10 15:23',
-      purchases: [
-        {
-          id: 'purchase-1',
-          purchaseStatus: 'in-progress',
-          purchaseYear: '2026',
-          expectedStudents: 183,
-          measurementStartDate: '2022.01.03',
-          measurementEndDate: '2022.01.11',
-        },
-        {
-          id: 'purchase-2',
-          purchaseStatus: 'completed',
-          purchaseYear: '2022',
-          expectedStudents: 135,
-          measurementStartDate: '2026.01.09',
-          measurementEndDate: '2026.01.15',
-        },
-      ],
-      winterProducts: [
-        { id: 'wp-1', category: 'hood', gender: 'unisex', displayName: '용성중 후드집업', contractPrice: 78000, freeQuantity: 1 },
-        { id: 'wp-2', category: 'top', gender: 'unisex', displayName: '용성중 셔츠', contractPrice: 46000, freeQuantity: 1 },
-        { id: 'wp-3', category: 'bottom', gender: 'unisex', displayName: '용성중 온고무줌 바지', contractPrice: 76000, freeQuantity: 1 },
-      ],
-      summerProducts: [
-        { id: 'sp-1', category: 'top', gender: 'unisex', displayName: '용성중 카라반팔티', contractPrice: 54000, freeQuantity: 1 },
-        { id: 'sp-2', category: 'bottom', gender: 'unisex', displayName: '용성중 반바지', contractPrice: 44000, freeQuantity: 1 },
-      ],
+      registeredDate: school.registeredDate,
+      lastModifiedDate: school.modifiedDate,
+      purchases: [],
+      winterProducts: [],
+      summerProducts: [],
     };
     setSelectedSchool(detailData);
-    setWinterProducts(detailData.winterProducts);
-    setSummerProducts(detailData.summerProducts);
     setIsDetailModalOpen(true);
   };
 
   const handleCloseDetailModal = () => {
     setIsDetailModalOpen(false);
     setSelectedSchool(null);
-    setWinterProducts([]);
-    setSummerProducts([]);
   };
 
   const handleUpdateSchool = (data: SchoolDetailData) => {
     console.log('Update school:', data);
     handleCloseDetailModal();
+    fetchSchools();
   };
 
-  const handleOpenProductModal = (season: 'winter' | 'summer') => {
-    setCurrentSeason(season);
-    setProductModalSelectedSchools([]);
-    setIsProductModalOpen(true);
-  };
-
-  const handleCloseProductModal = () => {
-    setIsProductModalOpen(false);
-    setProductModalSelectedSchools([]);
-  };
-
-  const handleAddProduct = (data: ProductAddData) => {
-    const newProduct: SchoolProductItem = {
-      id: `product-${Date.now()}`,
-      category: data.category,
-      gender: data.gender,
-      displayName: data.displayName,
-      contractPrice: data.originalPrice,
-      freeQuantity: 1,
-    };
-
-    if (currentSeason === 'winter') {
-      setWinterProducts((prev) => [...prev, newProduct]);
-    } else {
-      setSummerProducts((prev) => [...prev, newProduct]);
-    }
-    handleCloseProductModal();
-  };
-
-  const handleRemoveProduct = (season: 'winter' | 'summer', productId: string) => {
-    if (season === 'winter') {
-      setWinterProducts((prev) => prev.filter((p) => p.id !== productId));
-    } else {
-      setSummerProducts((prev) => prev.filter((p) => p.id !== productId));
-    }
-  };
-
-  const handleProductChange = (
-    season: 'winter' | 'summer',
-    productId: string,
-    field: keyof SchoolProductItem,
-    value: string | number
-  ) => {
-    const updateFn = (prev: SchoolProductItem[]) =>
-      prev.map((p) => (p.id === productId ? { ...p, [field]: value } : p));
-
-    if (season === 'winter') {
-      setWinterProducts(updateFn);
-    } else {
-      setSummerProducts(updateFn);
-    }
-  };
-
-  const columns: Column<School>[] = [
+  const columns: Column<SchoolRow>[] = [
     { key: 'no', header: 'No.', width: '40px', align: 'center' },
     { key: 'type', header: '구분', width: '80px', align: 'center' },
     { key: 'supportYear', header: '지원년도', width: '80px', align: 'center' },
@@ -199,9 +136,9 @@ export const SchoolListPage = () => {
       width: '80px',
       align: 'center',
       render: (school) => (
-        <div className="school-list-page__action-buttons">
+        <div className="flex gap-1">
           <button
-            className="school-list-page__action-btn school-list-page__action-btn--edit"
+            className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-[#e5e7eb] text-[#374151]"
             onClick={(e) => {
               e.stopPropagation();
               handleOpenDetailModal(school);
@@ -210,10 +147,16 @@ export const SchoolListPage = () => {
             수정
           </button>
           <button
-            className="school-list-page__action-btn school-list-page__action-btn--delete"
-            onClick={(e) => {
+            className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-[#fecaca] text-[#991b1b]"
+            onClick={async (e) => {
               e.stopPropagation();
-              console.log('Delete school:', school.id);
+              if (!confirm('정말 삭제하시겠습니까?')) return;
+              try {
+                await deleteSupportedSchool(school.id);
+                fetchSchools();
+              } catch (error) {
+                console.error('학교 삭제 실패:', error);
+              }
             }}
           >
             삭제
@@ -223,7 +166,7 @@ export const SchoolListPage = () => {
     },
   ];
 
-  const filteredSchools = mockSchools.filter(
+  const filteredSchools = schools.filter(
     (school) =>
       school.schoolName.includes(searchTerm) || school.type.includes(searchTerm)
   );
@@ -236,18 +179,18 @@ export const SchoolListPage = () => {
 
   return (
     <AdminLayout>
-      <div className="school-list-page">
+      <div className="flex flex-col p-5 gap-4">
         <AdminHeader
           title="학교"
           buttonLabel="학교추가"
-          onButtonClick={handleOpenAddModal}
+          onButtonClick={() => setIsAddModalOpen(true)}
         />
 
-        <div className="school-list-page__filters">
-          <div className="school-list-page__filter-row">
-            <span className="school-list-page__filter-label">검색어</span>
+        <div className="flex flex-col gap-3 p-4 bg-[#fafafa] rounded-lg">
+          <div className="flex items-center gap-3">
+            <span className="text-[15px] font-normal text-[#374151] min-w-12.5">검색어</span>
             <select
-              className="school-list-page__select"
+              className="h-10 px-3 py-2 border border-gray-200 rounded-lg text-[15px] text-gray-700 bg-white"
               value={searchType}
               onChange={(e) => setSearchType(e.target.value)}
             >
@@ -261,97 +204,98 @@ export const SchoolListPage = () => {
             />
           </div>
 
-          <div className="school-list-page__filter-row">
-            <span className="school-list-page__filter-label">구분</span>
-            <label className="school-list-page__checkbox-label">
+          <div className="flex items-center gap-3">
+            <span className="text-[15px] font-normal text-[#374151] min-w-12.5">구분</span>
+            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
               <input type="checkbox" checked={typeFilters.all} onChange={() => setTypeFilters({...typeFilters, all: !typeFilters.all})} />
               전체
             </label>
-            <label className="school-list-page__checkbox-label">
+            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
               <input type="checkbox" checked={typeFilters.elementary} onChange={() => setTypeFilters({...typeFilters, elementary: !typeFilters.elementary})} />
               초등학교
             </label>
-            <label className="school-list-page__checkbox-label">
+            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
               <input type="checkbox" checked={typeFilters.middle} onChange={() => setTypeFilters({...typeFilters, middle: !typeFilters.middle})} />
               중학교
             </label>
-            <label className="school-list-page__checkbox-label">
+            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
               <input type="checkbox" checked={typeFilters.high} onChange={() => setTypeFilters({...typeFilters, high: !typeFilters.high})} />
               고등학교
             </label>
 
-            <span className="school-list-page__filter-label">활성</span>
-            <label className="school-list-page__checkbox-label">
+            <span className="text-[15px] font-normal text-[#374151] min-w-12.5">활성</span>
+            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
               <input type="checkbox" checked={activeFilters.all} onChange={() => setActiveFilters({...activeFilters, all: !activeFilters.all})} />
               전체
             </label>
-            <label className="school-list-page__checkbox-label">
+            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
               <input type="checkbox" checked={activeFilters.active} onChange={() => setActiveFilters({...activeFilters, active: !activeFilters.active})} />
               활성
             </label>
-            <label className="school-list-page__checkbox-label">
+            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
               <input type="checkbox" checked={activeFilters.inactive} onChange={() => setActiveFilters({...activeFilters, inactive: !activeFilters.inactive})} />
               비활성
             </label>
           </div>
 
-          <div className="school-list-page__filter-row">
-            <span className="school-list-page__filter-label">지원년도</span>
-            <label className="school-list-page__checkbox-label">
+          <div className="flex items-center gap-3">
+            <span className="text-[15px] font-normal text-[#374151] min-w-12.5">지원년도</span>
+            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
               <input type="checkbox" checked={yearFilters.all} onChange={() => setYearFilters({...yearFilters, all: !yearFilters.all})} />
               전체
             </label>
-            <label className="school-list-page__checkbox-label">
+            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
               <input type="checkbox" checked={yearFilters.noSupport} onChange={() => setYearFilters({...yearFilters, noSupport: !yearFilters.noSupport})} />
               미지원
             </label>
-            <label className="school-list-page__checkbox-label">
+            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
               <input type="checkbox" checked={yearFilters.y23} onChange={() => setYearFilters({...yearFilters, y23: !yearFilters.y23})} />
               23년
             </label>
-            <label className="school-list-page__checkbox-label">
+            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
               <input type="checkbox" checked={yearFilters.y24} onChange={() => setYearFilters({...yearFilters, y24: !yearFilters.y24})} />
               24년
             </label>
-            <label className="school-list-page__checkbox-label">
+            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
               <input type="checkbox" checked={yearFilters.y25} onChange={() => setYearFilters({...yearFilters, y25: !yearFilters.y25})} />
               25년
             </label>
-            <label className="school-list-page__checkbox-label">
+            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
               <input type="checkbox" checked={yearFilters.y26} onChange={() => setYearFilters({...yearFilters, y26: !yearFilters.y26})} />
               26년
             </label>
           </div>
 
-          <div className="school-list-page__filter-actions">
-            <Button variant="primary">검색</Button>
-            <Button variant="outline">초기화</Button>
+          <div className="flex justify-center gap-3 mt-2">
+            <Button variant="primary" className="w-auto px-6 py-2">검색</Button>
+            <Button variant="outline" className="w-auto px-6 py-2">초기화</Button>
           </div>
         </div>
 
-        <div className="school-list-page__content">
-          <Table
-            columns={columns}
-            data={paginatedSchools}
-            onRowClick={(school) => handleOpenDetailModal(school)}
-          />
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
+        <div className="flex-1">
+          {loading ? (
+            <div>불러오는 중...</div>
+          ) : (
+            <>
+              <Table
+                columns={columns}
+                data={paginatedSchools}
+                onRowClick={(school) => handleOpenDetailModal(school)}
+              />
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </>
+          )}
         </div>
       </div>
 
       <SchoolAddModal
         isOpen={isAddModalOpen}
-        onClose={handleCloseAddModal}
+        onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleAddSchool}
-        onOpenProductModal={handleOpenProductModal}
-        winterProducts={winterProducts}
-        summerProducts={summerProducts}
-        onRemoveProduct={handleRemoveProduct}
-        onProductChange={handleProductChange}
       />
 
       <SchoolDetailModal
@@ -359,21 +303,6 @@ export const SchoolListPage = () => {
         onClose={handleCloseDetailModal}
         school={selectedSchool}
         onUpdate={handleUpdateSchool}
-        onOpenProductModal={handleOpenProductModal}
-        winterProducts={winterProducts}
-        summerProducts={summerProducts}
-        onRemoveProduct={handleRemoveProduct}
-        onProductChange={handleProductChange}
-      />
-
-      <ProductAddModal
-        isOpen={isProductModalOpen}
-        onClose={handleCloseProductModal}
-        onSubmit={handleAddProduct}
-        onOpenSchoolModal={() => {}}
-        selectedSchools={productModalSelectedSchools}
-        onRemoveSchool={() => {}}
-        onSchoolPriceChange={() => {}}
       />
     </AdminLayout>
   );

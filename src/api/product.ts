@@ -12,9 +12,8 @@ export interface Product {
   gender: string;
   season?: string;
   price: number;
-  description?: string;
-  image_url?: string;
-  is_active: boolean;
+  is_repair: boolean;
+  is_repair_required: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -22,9 +21,6 @@ export interface Product {
 export interface ProductsData {
   products: Product[];
   total: number;
-  page: number;
-  limit: number;
-  total_pages: number;
 }
 
 export interface GetProductsParams {
@@ -36,29 +32,14 @@ export interface GetProductsParams {
   active_only?: boolean;
 }
 
-export interface AddProductRequest {
-  school_name: string;
-  year: number;
-  name: string;
+export interface CreateProductRequest {
   category: string;
   gender: string;
-  season: string;
+  is_repair: boolean;
+  is_repair_required: boolean;
+  name: string;
   price: number;
-  display_name: string;
-  quantity: number;
-  is_selectable: boolean;
-  selectable_with?: string[];
-  description?: string;
-}
-
-export interface AddProductResponse {
-  school_name: string;
-  year: number;
-  product_id: number;
-  product_name: string;
-  display_name: string;
-  is_new_product: boolean;
-  message: string;
+  season: string;
 }
 
 // ============================================================================
@@ -87,17 +68,37 @@ export async function getProducts(params?: GetProductsParams): Promise<ProductsD
 }
 
 // ============================================================================
-// 상품 관리 API (Staff/Admin)
+// 상품 관리 API
 // ============================================================================
 
 /**
- * 제품 단일 추가
- * POST /api/v1/schools/supported/uniforms/single
+ * 상품 추가
+ * POST /api/v1/products
  */
-export async function addSingleProduct(data: AddProductRequest): Promise<AddProductResponse> {
-  const response = await apiClient.post<ApiResponse<AddProductResponse>>(
-    "/api/v1/schools/supported/uniforms/single",
+export async function createProduct(data: CreateProductRequest): Promise<Product> {
+  const response = await apiClient.post<ApiResponse<Product>>(
+    "/api/v1/products",
     data
   );
   return response.data.data;
+}
+
+/**
+ * 상품 수정
+ * PUT /api/v1/products/:id
+ */
+export async function updateProduct(id: number, data: CreateProductRequest): Promise<Product> {
+  const response = await apiClient.put<ApiResponse<Product>>(
+    `/api/v1/products/${id}`,
+    data
+  );
+  return response.data.data;
+}
+
+/**
+ * 상품 삭제
+ * DELETE /api/v1/products/:id
+ */
+export async function deleteProduct(id: number): Promise<void> {
+  await apiClient.delete(`/api/v1/products/${id}`);
 }

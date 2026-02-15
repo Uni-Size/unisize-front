@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Modal, Select, Input } from '@components/atoms';
-import './ProductAddModal.css';
 
 export interface SchoolPrice {
   schoolId: string;
@@ -89,6 +88,17 @@ export const ProductAddModal = ({
   const [sizeUnit, setSizeUnit] = useState('');
 
   const handleSubmit = () => {
+    const missing: string[] = [];
+    if (!displayName.trim() || displayName.trim().length < 2) missing.push('표시명(2글자 이상)');
+    if (!category) missing.push('카테고리');
+    if (!gender) missing.push('성별');
+    if (!originalPrice || Number(originalPrice) <= 0) missing.push('가격');
+
+    if (missing.length > 0) {
+      alert(`다음 항목을 입력해주세요: ${missing.join(', ')}`);
+      return;
+    }
+
     onSubmit({
       season,
       category,
@@ -100,7 +110,6 @@ export const ProductAddModal = ({
       sizeUnit,
       schools: selectedSchools,
     });
-    handleClose();
   };
 
   const handleClose = () => {
@@ -123,18 +132,18 @@ export const ProductAddModal = ({
       width={800}
       actions={
         <>
-          <button className="modal__btn modal__btn--cancel" onClick={handleClose}>
+          <button className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90" onClick={handleClose}>
             취소
           </button>
-          <button className="modal__btn modal__btn--primary" onClick={handleSubmit}>
+          <button className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90" onClick={handleSubmit}>
             추가
           </button>
         </>
       }
     >
-      <div className="product-add-modal__form">
-        <div className="product-add-modal__row">
-          <div className="product-add-modal__field">
+      <div className="flex flex-col gap-4 w-[760px]">
+        <div className="flex gap-2 items-start">
+          <div className="flex-1 min-w-0">
             <Select
               label="시즌"
               placeholder="시즌"
@@ -144,9 +153,9 @@ export const ProductAddModal = ({
               fullWidth
             />
           </div>
-          <div className="product-add-modal__field">
+          <div className="flex-1 min-w-0">
             <Select
-              label="카테고리"
+              label="카테고리 *"
               placeholder="카테고리"
               options={categoryOptions}
               value={category}
@@ -154,9 +163,9 @@ export const ProductAddModal = ({
               fullWidth
             />
           </div>
-          <div className="product-add-modal__field">
+          <div className="flex-1 min-w-0">
             <Select
-              label="성별"
+              label="성별 *"
               placeholder="성별"
               options={genderOptions}
               value={gender}
@@ -166,19 +175,19 @@ export const ProductAddModal = ({
           </div>
         </div>
 
-        <div className="product-add-modal__row">
-          <div className="product-add-modal__field">
+        <div className="flex gap-2 items-start">
+          <div className="flex-1 min-w-0">
             <Input
-              label="표시명"
-              placeholder="흰색 오각"
+              label="표시명 *"
+              placeholder="흰색 오각 (2글자 이상)"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               fullWidth
             />
           </div>
-          <div className="product-add-modal__field">
+          <div className="flex-1 min-w-0">
             <Input
-              label="가격"
+              label="가격 *"
               placeholder="가격"
               type="number"
               value={originalPrice}
@@ -188,8 +197,8 @@ export const ProductAddModal = ({
           </div>
         </div>
 
-        <div className="product-add-modal__row">
-          <div className="product-add-modal__field">
+        <div className="flex gap-2 items-start">
+          <div className="flex-1 min-w-0">
             <Select
               label="수선 가능여부"
               placeholder="불가능"
@@ -199,7 +208,7 @@ export const ProductAddModal = ({
               fullWidth
             />
           </div>
-          <div className="product-add-modal__field">
+          <div className="flex-1 min-w-0">
             <Select
               label="수선 필수 여부"
               placeholder="선택사항"
@@ -211,8 +220,8 @@ export const ProductAddModal = ({
           </div>
         </div>
 
-        <div className="product-add-modal__row">
-          <div className="product-add-modal__field">
+        <div className="flex gap-2 items-start">
+          <div className="flex-1 min-w-0">
             <Select
               label="사이즈"
               placeholder="5단위"
@@ -222,23 +231,23 @@ export const ProductAddModal = ({
               fullWidth
             />
           </div>
-          <div className="product-add-modal__field" />
+          <div className="flex-1 min-w-0" />
         </div>
 
-        <div className="product-add-modal__school-section">
-          <div className="product-add-modal__school-header">
-            <span className="product-add-modal__school-label">사용 학교</span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between gap-2.5">
+            <span className="flex-1 text-base font-normal text-[#393939]">사용 학교</span>
             <button
-              className="modal__btn modal__btn--primary modal__btn--small"
+              className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90 h-[30px] w-[100px] !rounded-[5px]"
               onClick={onOpenSchoolModal}
             >
               학교 추가
             </button>
           </div>
           {selectedSchools.length === 0 ? (
-            <p className="product-add-modal__school-empty">사용하는 학교가 없습니다</p>
+            <p className="text-[15px] font-normal text-[#959595] text-center py-2.5">사용하는 학교가 없습니다</p>
           ) : (
-            <div className="product-add-modal__school-groups">
+            <div className="flex flex-col gap-3 mt-2">
               {Object.entries(
                 selectedSchools.reduce<Record<string, SchoolPrice[]>>((acc, school) => {
                   const year = school.year;
@@ -251,25 +260,25 @@ export const ProductAddModal = ({
               )
                 .sort(([a], [b]) => b.localeCompare(a))
                 .map(([year, schools]) => (
-                  <div key={year} className="product-add-modal__school-year-group">
-                    <span className="product-add-modal__school-year">{year}</span>
-                    <div className="product-add-modal__school-list">
+                  <div key={year} className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-[#4c4c4c]">{year}</span>
+                    <div className="flex flex-wrap gap-2">
                       {schools.map((school) => (
-                        <div key={`${school.year}-${school.schoolId}`} className="product-add-modal__school-item">
-                          <span className="product-add-modal__school-name">{school.schoolName}</span>
-                          <div className="product-add-modal__school-price">
+                        <div key={`${school.year}-${school.schoolId}`} className="flex items-center gap-2 px-4 py-2 border border-[#c6c6c6] rounded-lg bg-white">
+                          <span className="text-[15px] font-normal text-[#4c4c4c]">{school.schoolName}</span>
+                          <div className="flex items-center px-4 py-2 border border-[#c6c6c6] rounded-lg bg-white">
                             <input
                               type="number"
-                              className="product-add-modal__school-price-input"
+                              className="w-20 border-none bg-transparent text-[15px] font-normal text-[#4c4c4c] text-right outline-none"
                               value={school.price}
                               onChange={(e) =>
                                 onSchoolPriceChange(school.schoolId, Number(e.target.value))
                               }
                             />
-                            <span className="product-add-modal__school-price-unit">원</span>
+                            <span className="text-[15px] font-normal text-[#4c4c4c] ml-1">원</span>
                           </div>
                           <button
-                            className="product-add-modal__school-remove"
+                            className="flex items-center justify-center w-5 h-5 border-none bg-none cursor-pointer text-[#959595] text-lg hover:text-red-500"
                             onClick={() => onRemoveSchool(school.schoolId)}
                           >
                             ×

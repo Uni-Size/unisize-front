@@ -5,7 +5,6 @@ import { useStudentResponseStore } from '@/stores/useStudentResponseStore';
 import { addStudent } from '@/api/student';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
-import './MeasurementInputPage.css';
 
 const VALIDATION_RANGES = {
   height: { min: 130, max: 200 },
@@ -65,16 +64,16 @@ export const MeasurementInputPage = () => {
   };
 
   return (
-    <section className="measurement-input-page">
-      <div className="measurement-input-page__header">
+    <section className="max-w-[24rem] mx-auto p-4 min-h-screen">
+      <div className="mb-7">
         <button
           type="button"
           onClick={handleBack}
-          className="measurement-input-page__back-button"
+          className="flex items-center gap-1 bg-none border-none cursor-pointer text-[#4b5563] font-medium p-0 transition-colors duration-200 ease-in-out hover:text-[#262626]"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="measurement-input-page__back-icon"
+            className="w-5 h-5"
             viewBox="0 0 20 20"
             fill="currentColor"
           >
@@ -88,19 +87,19 @@ export const MeasurementInputPage = () => {
         </button>
       </div>
 
-      <h2 className="measurement-input-page__title">
+      <h2 className="text-2xl font-bold text-center mb-2 text-[#262626]">
         학생의 신체 사이즈를 측정해주세요
       </h2>
-      <p className="measurement-input-page__subtitle">
+      <p className="text-lg font-medium text-center mb-14 text-[#1f2937] leading-relaxed">
         두꺼운 옷을 입으신 경우,
         <br />
         교복 반팔을 매장에서 구매 후 착용하시면 <br /> 더 편리하게 측정할 수
         있습니다.
       </p>
 
-      <div className="measurement-input-page__form">
-        <div className="measurement-input-page__field">
-          <label htmlFor="height" className="measurement-input-page__label">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="height" className="text-sm font-medium text-[#4c4c4c]">
             키 (cm)
           </label>
           <Input
@@ -115,8 +114,8 @@ export const MeasurementInputPage = () => {
           />
         </div>
 
-        <div className="measurement-input-page__field">
-          <label htmlFor="weight" className="measurement-input-page__label">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="weight" className="text-sm font-medium text-[#4c4c4c]">
             몸무게 (kg)
           </label>
           <Input
@@ -131,8 +130,8 @@ export const MeasurementInputPage = () => {
           />
         </div>
 
-        <div className="measurement-input-page__field">
-          <label htmlFor="shoulder" className="measurement-input-page__label">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="shoulder" className="text-sm font-medium text-[#4c4c4c]">
             어깨넓이 (cm)
           </label>
           <Input
@@ -147,8 +146,8 @@ export const MeasurementInputPage = () => {
           />
         </div>
 
-        <div className="measurement-input-page__field">
-          <label htmlFor="waist" className="measurement-input-page__label">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="waist" className="text-sm font-medium text-[#4c4c4c]">
             허리둘레 (cm)
           </label>
           <Input
@@ -163,14 +162,14 @@ export const MeasurementInputPage = () => {
           />
         </div>
 
-        {error && <p className="measurement-input-page__error">{error}</p>}
+        {error && <p className="text-[#ef4444] text-sm text-center">{error}</p>}
 
-        <div className="measurement-input-page__buttons">
+        <div className="flex gap-4 mt-6">
           <Button
             type="button"
             onClick={handleBack}
             variant="secondary"
-            className="measurement-input-page__button"
+            className="flex-1"
           >
             이전
           </Button>
@@ -178,7 +177,7 @@ export const MeasurementInputPage = () => {
             type="button"
             onClick={handleSubmit}
             disabled={!isFormValid || isSubmitting}
-            className="measurement-input-page__button"
+            className="flex-1"
           >
             {isSubmitting ? '제출 중...' : '제출하기'}
           </Button>

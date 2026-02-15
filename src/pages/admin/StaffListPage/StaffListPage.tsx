@@ -8,7 +8,6 @@ import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
 import type { StaffEditData } from '@components/organisms/StaffEditModal';
 import { getStaffList, type StaffItem } from '@/api/staff';
-import './StaffListPage.css';
 
 interface StaffRow {
   id: number;
@@ -93,9 +92,9 @@ export const StaffListPage = () => {
       width: '80px',
       align: 'center',
       render: (item) => (
-        <div className="staff-list-page__action-buttons">
+        <div className="flex gap-1">
           <button
-            className="staff-list-page__action-btn staff-list-page__action-btn--edit"
+            className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-[#e5e7eb] text-[#374151]"
             onClick={(e) => {
               e.stopPropagation();
               handleEditClick(item);
@@ -103,7 +102,7 @@ export const StaffListPage = () => {
           >
             수정
           </button>
-          <button className="staff-list-page__action-btn staff-list-page__action-btn--delete">삭제</button>
+          <button className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-[#fecaca] text-[#991b1b]">삭제</button>
         </div>
       ),
     },
@@ -117,16 +116,16 @@ export const StaffListPage = () => {
 
   return (
     <AdminLayout>
-      <div className="staff-list-page">
+      <div className="flex flex-col p-5 gap-4">
         <AdminHeader
           title="스태프 관리"
           buttonLabel="스태프 추가"
           onButtonClick={() => setIsRegisterModalOpen(true)}
         />
 
-        <div className="staff-list-page__content">
+        <div className="flex-1">
           {loading ? (
-            <div className="staff-list-page__loading">불러오는 중...</div>
+            <div>불러오는 중...</div>
           ) : (
             <>
               <Table

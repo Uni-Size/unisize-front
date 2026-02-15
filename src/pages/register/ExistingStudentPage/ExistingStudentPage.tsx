@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useStudentResponseStore } from '@/stores/useStudentResponseStore';
 import { Button } from '@/components/atoms/Button';
-import './ExistingStudentPage.css';
 
 export const ExistingStudentPage = () => {
   const navigate = useNavigate();
@@ -18,8 +17,8 @@ export const ExistingStudentPage = () => {
 
   if (!studentData) {
     return (
-      <section className="existing-student-page">
-        <div className="existing-student-page__loading">
+      <section className="max-w-[24rem] mx-auto p-4 min-h-screen flex items-center justify-center">
+        <div className="flex justify-center items-center text-[#4b5563]">
           <p>데이터를 불러오는 중...</p>
         </div>
       </section>
@@ -27,14 +26,14 @@ export const ExistingStudentPage = () => {
   }
 
   return (
-    <section className="existing-student-page">
-      <div className="existing-student-page__content">
-        <div className="existing-student-page__icon">
+    <section className="max-w-[24rem] mx-auto p-4 min-h-screen flex items-center justify-center">
+      <div className="w-full text-center">
+        <div className="flex justify-center mb-6">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
             fill="currentColor"
-            className="existing-student-page__icon-svg"
+            className="w-16 h-16 text-[#6a73a7]"
           >
             <path
               fillRule="evenodd"
@@ -44,55 +43,55 @@ export const ExistingStudentPage = () => {
           </svg>
         </div>
 
-        <h2 className="existing-student-page__title">
+        <h2 className="text-2xl font-bold text-[#262626] mb-6">
           이미 등록된 학생입니다
         </h2>
 
-        <div className="existing-student-page__info">
-          <div className="existing-student-page__info-row">
-            <span className="existing-student-page__info-label">이름</span>
-            <span className="existing-student-page__info-value">
+        <div className="bg-[#f9fafb] rounded-lg p-4 mb-6">
+          <div className="flex justify-between py-2 border-b border-[#c6c6c6]">
+            <span className="text-sm text-[#4b5563]">이름</span>
+            <span className="text-sm font-medium text-[#262626]">
               {studentData.name}
             </span>
           </div>
-          <div className="existing-student-page__info-row">
-            <span className="existing-student-page__info-label">학교</span>
-            <span className="existing-student-page__info-value">
+          <div className="flex justify-between py-2 border-b border-[#c6c6c6]">
+            <span className="text-sm text-[#4b5563]">학교</span>
+            <span className="text-sm font-medium text-[#262626]">
               {studentData.school_name}
             </span>
           </div>
-          <div className="existing-student-page__info-row">
-            <span className="existing-student-page__info-label">생년월일</span>
-            <span className="existing-student-page__info-value">
+          <div className="flex justify-between py-2 border-b border-[#c6c6c6]">
+            <span className="text-sm text-[#4b5563]">생년월일</span>
+            <span className="text-sm font-medium text-[#262626]">
               {studentData.birth_date}
             </span>
           </div>
-          <div className="existing-student-page__info-row">
-            <span className="existing-student-page__info-label">등록일</span>
-            <span className="existing-student-page__info-value">
+          <div className="flex justify-between py-2">
+            <span className="text-sm text-[#4b5563]">등록일</span>
+            <span className="text-sm font-medium text-[#262626]">
               {new Date(studentData.created_at).toLocaleDateString('ko-KR')}
             </span>
           </div>
         </div>
 
-        <p className="existing-student-page__description">
+        <p className="text-sm text-[#4b5563] leading-relaxed mb-6">
           이미 등록된 정보가 있습니다. <br />
           새로 등록하시겠습니까?
         </p>
 
-        <div className="existing-student-page__buttons">
+        <div className="flex flex-col gap-3">
           <Button
             type="button"
             onClick={handleViewComplete}
             variant="secondary"
-            className="existing-student-page__button"
+            className="w-full"
           >
             등록 정보 보기
           </Button>
           <Button
             type="button"
             onClick={handleNewRegistration}
-            className="existing-student-page__button"
+            className="w-full"
           >
             새로 등록하기
           </Button>

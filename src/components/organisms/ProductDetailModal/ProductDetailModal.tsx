@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal, Select, Input } from '@components/atoms';
 import type { SchoolPrice } from '../ProductAddModal';
-import './ProductDetailModal.css';
 
 export interface ProductDetailData {
   id: string;
@@ -152,28 +151,40 @@ export const ProductDetailModal = ({
       actions={
         isEditMode ? (
           <>
-            <button className="modal__btn modal__btn--cancel" onClick={() => setIsEditMode(false)}>
+            <button
+              className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              onClick={() => setIsEditMode(false)}
+            >
               취소
             </button>
-            <button className="modal__btn modal__btn--primary" onClick={handleSave}>
+            <button
+              className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              onClick={handleSave}
+            >
               저장
             </button>
           </>
         ) : (
           <>
-            <button className="modal__btn modal__btn--edit" onClick={handleEdit}>
+            <button
+              className="px-6 py-2.5 bg-[#7a3c00] text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              onClick={handleEdit}
+            >
               수정
             </button>
-            <button className="modal__btn modal__btn--close" onClick={handleClose}>
+            <button
+              className="px-6 py-2.5 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100/50"
+              onClick={handleClose}
+            >
               닫기
             </button>
           </>
         )
       }
     >
-      <div className="product-detail-modal__form">
-        <div className="product-detail-modal__row">
-          <div className="product-detail-modal__field">
+      <div className="flex flex-col gap-4 w-190">
+        <div className="flex gap-2 items-start">
+          <div className="flex-1 min-w-0">
             {isEditMode ? (
               <Select
                 label="시즌"
@@ -184,15 +195,15 @@ export const ProductDetailModal = ({
                 fullWidth
               />
             ) : (
-              <div className="product-detail-modal__readonly">
-                <span className="product-detail-modal__readonly-label">시즌</span>
-                <div className="product-detail-modal__readonly-value">
+              <div className="flex flex-col gap-1">
+                <span className="px-2 text-base text-bg-800">시즌</span>
+                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
                   {getSeasonLabel(product.season)}
                 </div>
               </div>
             )}
           </div>
-          <div className="product-detail-modal__field">
+          <div className="flex-1 min-w-0">
             {isEditMode ? (
               <Select
                 label="카테고리"
@@ -203,15 +214,15 @@ export const ProductDetailModal = ({
                 fullWidth
               />
             ) : (
-              <div className="product-detail-modal__readonly">
-                <span className="product-detail-modal__readonly-label">카테고리</span>
-                <div className="product-detail-modal__readonly-value">
+              <div className="flex flex-col gap-1">
+                <span className="px-2 text-base text-bg-800">카테고리</span>
+                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
                   {getCategoryLabel(product.category)}
                 </div>
               </div>
             )}
           </div>
-          <div className="product-detail-modal__field">
+          <div className="flex-1 min-w-0">
             {isEditMode ? (
               <Select
                 label="성별"
@@ -222,9 +233,9 @@ export const ProductDetailModal = ({
                 fullWidth
               />
             ) : (
-              <div className="product-detail-modal__readonly">
-                <span className="product-detail-modal__readonly-label">성별</span>
-                <div className="product-detail-modal__readonly-value">
+              <div className="flex flex-col gap-1">
+                <span className="px-2 text-base text-bg-800">성별</span>
+                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
                   {getGenderLabel(product.gender)}
                 </div>
               </div>
@@ -232,8 +243,8 @@ export const ProductDetailModal = ({
           </div>
         </div>
 
-        <div className="product-detail-modal__row">
-          <div className="product-detail-modal__field">
+        <div className="flex gap-2 items-start">
+          <div className="flex-1 min-w-0">
             {isEditMode ? (
               <Input
                 label="표시명"
@@ -243,13 +254,13 @@ export const ProductDetailModal = ({
                 fullWidth
               />
             ) : (
-              <div className="product-detail-modal__readonly">
-                <span className="product-detail-modal__readonly-label">표시명</span>
-                <div className="product-detail-modal__readonly-value">{product.displayName}</div>
+              <div className="flex flex-col gap-1">
+                <span className="px-2 text-base text-bg-800">표시명</span>
+                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">{product.displayName}</div>
               </div>
             )}
           </div>
-          <div className="product-detail-modal__field">
+          <div className="flex-1 min-w-0">
             {isEditMode ? (
               <Input
                 label="가격"
@@ -260,9 +271,9 @@ export const ProductDetailModal = ({
                 fullWidth
               />
             ) : (
-              <div className="product-detail-modal__readonly">
-                <span className="product-detail-modal__readonly-label">가격</span>
-                <div className="product-detail-modal__readonly-value">
+              <div className="flex flex-col gap-1">
+                <span className="px-2 text-base text-bg-800">가격</span>
+                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
                   {product.originalPrice.toLocaleString()}원
                 </div>
               </div>
@@ -270,8 +281,8 @@ export const ProductDetailModal = ({
           </div>
         </div>
 
-        <div className="product-detail-modal__row">
-          <div className="product-detail-modal__field">
+        <div className="flex gap-2 items-start">
+          <div className="flex-1 min-w-0">
             {isEditMode ? (
               <Select
                 label="수선 가능여부"
@@ -282,15 +293,15 @@ export const ProductDetailModal = ({
                 fullWidth
               />
             ) : (
-              <div className="product-detail-modal__readonly">
-                <span className="product-detail-modal__readonly-label">수선 가능여부</span>
-                <div className="product-detail-modal__readonly-value">
+              <div className="flex flex-col gap-1">
+                <span className="px-2 text-base text-bg-800">수선 가능여부</span>
+                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
                   {getRepairableLabel(product.isRepairable)}
                 </div>
               </div>
             )}
           </div>
-          <div className="product-detail-modal__field">
+          <div className="flex-1 min-w-0">
             {isEditMode ? (
               <Select
                 label="수선 필수 여부"
@@ -301,9 +312,9 @@ export const ProductDetailModal = ({
                 fullWidth
               />
             ) : (
-              <div className="product-detail-modal__readonly">
-                <span className="product-detail-modal__readonly-label">수선 필수 여부</span>
-                <div className="product-detail-modal__readonly-value">
+              <div className="flex flex-col gap-1">
+                <span className="px-2 text-base text-bg-800">수선 필수 여부</span>
+                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
                   {getRepairRequiredLabel(product.isRepairRequired)}
                 </div>
               </div>
@@ -311,8 +322,8 @@ export const ProductDetailModal = ({
           </div>
         </div>
 
-        <div className="product-detail-modal__row">
-          <div className="product-detail-modal__field">
+        <div className="flex gap-2 items-start">
+          <div className="flex-1 min-w-0">
             {isEditMode ? (
               <Select
                 label="사이즈"
@@ -323,23 +334,23 @@ export const ProductDetailModal = ({
                 fullWidth
               />
             ) : (
-              <div className="product-detail-modal__readonly">
-                <span className="product-detail-modal__readonly-label">사이즈</span>
-                <div className="product-detail-modal__readonly-value">
+              <div className="flex flex-col gap-1">
+                <span className="px-2 text-base text-bg-800">사이즈</span>
+                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
                   {getSizeUnitLabel(product.sizeUnit)}
                 </div>
               </div>
             )}
           </div>
-          <div className="product-detail-modal__field" />
+          <div className="flex-1 min-w-0" />
         </div>
 
-        <div className="product-detail-modal__school-section">
-          <div className="product-detail-modal__school-header">
-            <span className="product-detail-modal__school-label">사용 학교</span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2.5">
+            <span className="text-base text-bg-800">사용 학교</span>
             {isEditMode && onOpenSchoolModal && (
               <button
-                className="modal__btn modal__btn--primary modal__btn--small"
+                className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
                 onClick={onOpenSchoolModal}
               >
                 학교 추가
@@ -347,7 +358,7 @@ export const ProductDetailModal = ({
             )}
           </div>
           {schools.length > 0 && (
-            <div className="product-detail-modal__school-groups">
+            <div className="flex flex-col gap-3 mt-2">
               {Object.entries(
                 schools.reduce<Record<string, typeof schools>>((acc, school) => {
                   const year = school.year;
@@ -360,24 +371,24 @@ export const ProductDetailModal = ({
               )
                 .sort(([a], [b]) => b.localeCompare(a))
                 .map(([year, yearSchools]) => (
-                  <div key={year} className="product-detail-modal__school-year-group">
-                    <span className="product-detail-modal__school-year">{year}</span>
-                    <div className="product-detail-modal__school-list">
+                  <div key={year} className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-[#4c4c4c]">{year}</span>
+                    <div className="flex flex-wrap gap-2">
                       {yearSchools.map((school) => (
-                        <div key={`${school.year}-${school.schoolId}`} className="product-detail-modal__school-item">
-                          <span className="product-detail-modal__school-name">{school.schoolName}</span>
-                          <div className="product-detail-modal__school-price">
+                        <div key={`${school.year}-${school.schoolId}`} className="flex items-center gap-2">
+                          <span className="flex items-center px-4 py-2 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">{school.schoolName}</span>
+                          <div className="flex items-center px-4 py-2 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
                             {isEditMode && onSchoolPriceChange ? (
                               <>
                                 <input
                                   type="number"
-                                  className="product-detail-modal__school-price-input"
+                                  className="w-20 border-none bg-transparent text-[15px] text-[#4c4c4c] text-right outline-none"
                                   value={school.price}
                                   onChange={(e) =>
                                     onSchoolPriceChange(school.schoolId, Number(e.target.value))
                                   }
                                 />
-                                <span className="product-detail-modal__school-price-unit">원</span>
+                                <span className="ml-1">원</span>
                               </>
                             ) : (
                               <>{school.price.toLocaleString()}원</>
@@ -385,7 +396,7 @@ export const ProductDetailModal = ({
                           </div>
                           {isEditMode && onRemoveSchool && (
                             <button
-                              className="product-detail-modal__school-remove"
+                              className="flex items-center justify-center w-5 h-5 border-none bg-transparent cursor-pointer text-bg-400 text-lg hover:text-error"
                               onClick={() => onRemoveSchool(school.schoolId)}
                             >
                               ×

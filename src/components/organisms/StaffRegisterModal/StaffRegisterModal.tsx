@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Modal, Input } from '@components/atoms';
 import { registerStaff } from '@/api/auth';
-import './StaffRegisterModal.css';
 
 export interface StaffRegisterModalProps {
   isOpen: boolean;
@@ -78,11 +77,14 @@ export const StaffRegisterModal = ({
       width={500}
       actions={
         <>
-          <button className="modal__btn modal__btn--cancel" onClick={handleClose}>
+          <button
+            className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+            onClick={handleClose}
+          >
             취소
           </button>
           <button
-            className="modal__btn modal__btn--primary"
+            className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
             onClick={handleSubmit}
             disabled={isLoading}
           >
@@ -91,9 +93,9 @@ export const StaffRegisterModal = ({
         </>
       }
     >
-      <div className="staff-register-modal__form">
-        <div className="staff-register-modal__row">
-          <div className="staff-register-modal__field">
+      <div className="flex flex-col gap-4 w-full">
+        <div className="flex gap-2 items-end">
+          <div className="flex-1 min-w-0">
             <Input
               label="사번"
               placeholder="사번을 입력하세요"
@@ -104,8 +106,8 @@ export const StaffRegisterModal = ({
           </div>
         </div>
 
-        <div className="staff-register-modal__row">
-          <div className="staff-register-modal__field">
+        <div className="flex gap-2 items-end">
+          <div className="flex-1 min-w-0">
             <Input
               label="이름"
               placeholder="이름을 입력하세요"
@@ -114,11 +116,11 @@ export const StaffRegisterModal = ({
               fullWidth
             />
           </div>
-          <div className="staff-register-modal__field staff-register-modal__field--small">
-            <div className="staff-register-modal__gender-field">
-              <span className="staff-register-modal__gender-label">성별</span>
-              <div className="staff-register-modal__gender-options">
-                <label className="staff-register-modal__radio-label">
+          <div className="flex-none w-30 min-w-0">
+            <div className="flex flex-col gap-1">
+              <span className="px-2 text-base text-bg-800">성별</span>
+              <div className="flex items-center h-12.5 gap-4 px-4 border border-[#c6c6c6] rounded-lg bg-white">
+                <label className="flex items-center gap-1 text-[15px] text-[#4c4c4c] cursor-pointer">
                   <input
                     type="radio"
                     name="register-gender"
@@ -128,7 +130,7 @@ export const StaffRegisterModal = ({
                   />
                   남
                 </label>
-                <label className="staff-register-modal__radio-label">
+                <label className="flex items-center gap-1 text-[15px] text-[#4c4c4c] cursor-pointer">
                   <input
                     type="radio"
                     name="register-gender"
@@ -143,8 +145,8 @@ export const StaffRegisterModal = ({
           </div>
         </div>
 
-        <div className="staff-register-modal__row">
-          <div className="staff-register-modal__field">
+        <div className="flex gap-2 items-end">
+          <div className="flex-1 min-w-0">
             <Input
               label="비밀번호"
               type="password"
@@ -156,8 +158,8 @@ export const StaffRegisterModal = ({
           </div>
         </div>
 
-        <div className="staff-register-modal__row">
-          <div className="staff-register-modal__field">
+        <div className="flex gap-2 items-end">
+          <div className="flex-1 min-w-0">
             <Input
               label="비밀번호 확인"
               type="password"
@@ -169,7 +171,7 @@ export const StaffRegisterModal = ({
           </div>
         </div>
 
-        {error && <p className="staff-register-modal__error">{error}</p>}
+        {error && <p className="text-sm text-[#991b1b] text-center m-0">{error}</p>}
       </div>
     </Modal>
   );

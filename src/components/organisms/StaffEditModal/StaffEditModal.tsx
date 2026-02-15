@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal, Input } from '@components/atoms';
 import { resetStaffPassword } from '@/api/staff';
-import './StaffEditModal.css';
 
 export interface StaffEditData {
   id: number;
@@ -92,47 +91,56 @@ export const StaffEditModal = ({
         isEditMode ? (
           <>
             <button
-              className="modal__btn modal__btn--cancel"
+              className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
               onClick={() => setIsEditMode(false)}
             >
               취소
             </button>
-            <button className="modal__btn modal__btn--edit" onClick={handleSave}>
+            <button
+              className="px-6 py-2.5 bg-[#7a3c00] text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              onClick={handleSave}
+            >
               저장
             </button>
           </>
         ) : (
           <>
-            <button className="modal__btn modal__btn--edit" onClick={handleEdit}>
+            <button
+              className="px-6 py-2.5 bg-[#7a3c00] text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              onClick={handleEdit}
+            >
               수정
             </button>
-            <button className="modal__btn modal__btn--close" onClick={handleClose}>
+            <button
+              className="px-6 py-2.5 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100/50"
+              onClick={handleClose}
+            >
               닫기
             </button>
           </>
         )
       }
     >
-      <div className="staff-edit-modal__form">
-        <div className="staff-edit-modal__header-info">
-          <span className="staff-edit-modal__date-info">
+      <div className="flex flex-col gap-4 w-full">
+        <div className="flex justify-end">
+          <span className="text-xs text-bg-400">
             등록일: {staff.registeredDate}
           </span>
         </div>
 
-        <div className="staff-edit-modal__row">
-          <div className="staff-edit-modal__field">
-            <div className="staff-edit-modal__readonly">
-              <span className="staff-edit-modal__readonly-label">사번</span>
-              <div className="staff-edit-modal__readonly-value">
+        <div className="flex gap-2 items-end">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col gap-1">
+              <span className="px-2 text-base text-bg-800">사번</span>
+              <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
                 {staff.employeeId}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="staff-edit-modal__row">
-          <div className="staff-edit-modal__field">
+        <div className="flex gap-2 items-end">
+          <div className="flex-1 min-w-0">
             {isEditMode ? (
               <Input
                 label="이름"
@@ -141,20 +149,20 @@ export const StaffEditModal = ({
                 fullWidth
               />
             ) : (
-              <div className="staff-edit-modal__readonly">
-                <span className="staff-edit-modal__readonly-label">이름</span>
-                <div className="staff-edit-modal__readonly-value">
+              <div className="flex flex-col gap-1">
+                <span className="px-2 text-base text-bg-800">이름</span>
+                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
                   {staff.name}
                 </div>
               </div>
             )}
           </div>
-          <div className="staff-edit-modal__field staff-edit-modal__field--small">
+          <div className="flex-none w-30 min-w-0">
             {isEditMode ? (
-              <div className="staff-edit-modal__gender-field">
-                <span className="staff-edit-modal__gender-label">성별</span>
-                <div className="staff-edit-modal__gender-options">
-                  <label className="staff-edit-modal__radio-label">
+              <div className="flex flex-col gap-1">
+                <span className="px-2 text-base text-bg-800">성별</span>
+                <div className="flex items-center h-12.5 gap-4 px-4 border border-[#c6c6c6] rounded-lg bg-white">
+                  <label className="flex items-center gap-1 text-[15px] text-[#4c4c4c] cursor-pointer">
                     <input
                       type="radio"
                       name="gender"
@@ -164,7 +172,7 @@ export const StaffEditModal = ({
                     />
                     남
                   </label>
-                  <label className="staff-edit-modal__radio-label">
+                  <label className="flex items-center gap-1 text-[15px] text-[#4c4c4c] cursor-pointer">
                     <input
                       type="radio"
                       name="gender"
@@ -177,9 +185,9 @@ export const StaffEditModal = ({
                 </div>
               </div>
             ) : (
-              <div className="staff-edit-modal__readonly">
-                <span className="staff-edit-modal__readonly-label">성별</span>
-                <div className="staff-edit-modal__readonly-value">
+              <div className="flex flex-col gap-1">
+                <span className="px-2 text-base text-bg-800">성별</span>
+                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
                   {staff.gender}
                 </div>
               </div>
@@ -187,8 +195,8 @@ export const StaffEditModal = ({
           </div>
         </div>
 
-        <div className="staff-edit-modal__row">
-          <div className="staff-edit-modal__field">
+        <div className="flex gap-2 items-end">
+          <div className="flex-1 min-w-0">
             {isEditMode ? (
               <Input
                 label="연락처"
@@ -197,9 +205,9 @@ export const StaffEditModal = ({
                 fullWidth
               />
             ) : (
-              <div className="staff-edit-modal__readonly">
-                <span className="staff-edit-modal__readonly-label">연락처</span>
-                <div className="staff-edit-modal__readonly-value">
+              <div className="flex flex-col gap-1">
+                <span className="px-2 text-base text-bg-800">연락처</span>
+                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
                   {staff.phone}
                 </div>
               </div>
@@ -207,12 +215,12 @@ export const StaffEditModal = ({
           </div>
         </div>
 
-        <div className="staff-edit-modal__divider" />
+        <div className="h-px bg-gray-200 my-1" />
 
-        <div className="staff-edit-modal__password-section">
-          <span className="staff-edit-modal__section-title">비밀번호 관리</span>
+        <div className="flex items-center justify-between">
+          <span className="text-base font-medium text-bg-800">비밀번호 관리</span>
           <button
-            className="staff-edit-modal__reset-btn"
+            className="flex items-center justify-center px-5 py-2.5 bg-[#991b1b] border-none rounded-lg text-sm text-[#f9fafb] cursor-pointer transition-opacity duration-200 hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleResetPassword}
             disabled={isResetting}
           >
