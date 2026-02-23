@@ -186,90 +186,109 @@ export const SchoolListPage = () => {
           onButtonClick={() => setIsAddModalOpen(true)}
         />
 
-        <div className="flex flex-col gap-3 p-4 bg-[#fafafa] rounded-lg">
-          <div className="flex items-center gap-3">
-            <span className="text-[15px] font-normal text-[#374151] min-w-12.5">검색어</span>
-            <select
-              className="h-10 px-3 py-2 border border-gray-200 rounded-lg text-[15px] text-gray-700 bg-white"
-              value={searchType}
-              onChange={(e) => setSearchType(e.target.value)}
-            >
-              <option value="통합검색">통합검색</option>
-              <option value="학교명">학교명</option>
-            </select>
-            <Input
-              placeholder="검색어를 입력하세요."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        <div className="border-y border-gray-200 overflow-hidden">
+          {/* 검색어 */}
+          <div className="flex items-stretch border-b border-gray-200">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+              검색어
+            </div>
+            <div className="flex items-center gap-3 flex-1 px-4 py-3 bg-white">
+              <select
+                className="h-9 px-3 py-1.5 border border-gray-200 rounded text-[14px] text-gray-700 bg-white"
+                value={searchType}
+                onChange={(e) => setSearchType(e.target.value)}
+              >
+                <option value="통합검색">통합검색</option>
+                <option value="학교명">학교명</option>
+              </select>
+              <Input
+                placeholder="검색어를 입력하세요."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-[15px] font-normal text-[#374151] min-w-12.5">구분</span>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="checkbox" checked={typeFilters.all} onChange={() => setTypeFilters({...typeFilters, all: !typeFilters.all})} />
-              전체
-            </label>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="checkbox" checked={typeFilters.elementary} onChange={() => setTypeFilters({...typeFilters, elementary: !typeFilters.elementary})} />
-              초등학교
-            </label>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="checkbox" checked={typeFilters.middle} onChange={() => setTypeFilters({...typeFilters, middle: !typeFilters.middle})} />
-              중학교
-            </label>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="checkbox" checked={typeFilters.high} onChange={() => setTypeFilters({...typeFilters, high: !typeFilters.high})} />
-              고등학교
-            </label>
-
-            <span className="text-[15px] font-normal text-[#374151] min-w-12.5">활성</span>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="checkbox" checked={activeFilters.all} onChange={() => setActiveFilters({...activeFilters, all: !activeFilters.all})} />
-              전체
-            </label>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="checkbox" checked={activeFilters.active} onChange={() => setActiveFilters({...activeFilters, active: !activeFilters.active})} />
+          {/* 구분 + 활성 (같은 행) */}
+          <div className="flex items-stretch border-b border-gray-200">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+              구분
+            </div>
+            <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white border-r border-gray-200">
+              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={typeFilters.all} onChange={() => setTypeFilters({...typeFilters, all: !typeFilters.all})} className="w-4 h-4 accent-gray-500" />
+                전체
+              </label>
+              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={typeFilters.elementary} onChange={() => setTypeFilters({...typeFilters, elementary: !typeFilters.elementary})} className="w-4 h-4 accent-gray-500" />
+                초등학교
+              </label>
+              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={typeFilters.middle} onChange={() => setTypeFilters({...typeFilters, middle: !typeFilters.middle})} className="w-4 h-4 accent-gray-500" />
+                중학교
+              </label>
+              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={typeFilters.high} onChange={() => setTypeFilters({...typeFilters, high: !typeFilters.high})} className="w-4 h-4 accent-gray-500" />
+                고등학교
+              </label>
+            </div>
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
               활성
-            </label>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="checkbox" checked={activeFilters.inactive} onChange={() => setActiveFilters({...activeFilters, inactive: !activeFilters.inactive})} />
-              비활성
-            </label>
+            </div>
+            <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white">
+              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={activeFilters.all} onChange={() => setActiveFilters({...activeFilters, all: !activeFilters.all})} className="w-4 h-4 accent-gray-500" />
+                전체
+              </label>
+              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={activeFilters.active} onChange={() => setActiveFilters({...activeFilters, active: !activeFilters.active})} className="w-4 h-4 accent-gray-500" />
+                활성
+              </label>
+              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={activeFilters.inactive} onChange={() => setActiveFilters({...activeFilters, inactive: !activeFilters.inactive})} className="w-4 h-4 accent-gray-500" />
+                비활성
+              </label>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-[15px] font-normal text-[#374151] min-w-12.5">지원년도</span>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="checkbox" checked={yearFilters.all} onChange={() => setYearFilters({...yearFilters, all: !yearFilters.all})} />
-              전체
-            </label>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="checkbox" checked={yearFilters.noSupport} onChange={() => setYearFilters({...yearFilters, noSupport: !yearFilters.noSupport})} />
-              미지원
-            </label>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="checkbox" checked={yearFilters.y23} onChange={() => setYearFilters({...yearFilters, y23: !yearFilters.y23})} />
-              23년
-            </label>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="checkbox" checked={yearFilters.y24} onChange={() => setYearFilters({...yearFilters, y24: !yearFilters.y24})} />
-              24년
-            </label>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="checkbox" checked={yearFilters.y25} onChange={() => setYearFilters({...yearFilters, y25: !yearFilters.y25})} />
-              25년
-            </label>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="checkbox" checked={yearFilters.y26} onChange={() => setYearFilters({...yearFilters, y26: !yearFilters.y26})} />
-              26년
-            </label>
+          {/* 지원년도 */}
+          <div className="flex items-stretch">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+              지원년도
+            </div>
+            <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white">
+              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={yearFilters.all} onChange={() => setYearFilters({...yearFilters, all: !yearFilters.all})} className="w-4 h-4 accent-gray-500" />
+                전체
+              </label>
+              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={yearFilters.noSupport} onChange={() => setYearFilters({...yearFilters, noSupport: !yearFilters.noSupport})} className="w-4 h-4 accent-gray-500" />
+                미지원
+              </label>
+              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={yearFilters.y23} onChange={() => setYearFilters({...yearFilters, y23: !yearFilters.y23})} className="w-4 h-4 accent-gray-500" />
+                23년
+              </label>
+              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={yearFilters.y24} onChange={() => setYearFilters({...yearFilters, y24: !yearFilters.y24})} className="w-4 h-4 accent-gray-500" />
+                24년
+              </label>
+              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={yearFilters.y25} onChange={() => setYearFilters({...yearFilters, y25: !yearFilters.y25})} className="w-4 h-4 accent-gray-500" />
+                25년
+              </label>
+              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={yearFilters.y26} onChange={() => setYearFilters({...yearFilters, y26: !yearFilters.y26})} className="w-4 h-4 accent-gray-500" />
+                26년
+              </label>
+            </div>
           </div>
+        </div>
 
-          <div className="flex justify-center gap-3 mt-2">
-            <Button variant="primary" className="w-auto px-6 py-2">검색</Button>
-            <Button variant="outline" className="w-auto px-6 py-2">초기화</Button>
-          </div>
+        {/* 검색/초기화 버튼 */}
+        <div className="flex justify-center gap-3">
+          <Button variant="primary" className="w-auto px-8 py-2.5">검색</Button>
+          <Button variant="outline" className="w-auto px-8 py-2.5 bg-gray-400! text-white! border-gray-400! hover:bg-gray-500!">초기화</Button>
         </div>
 
         <div className="flex-1">

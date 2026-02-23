@@ -14,7 +14,7 @@ interface StudentOrder {
   school: string;
   grade: string;
   className: string;
-  gender: 'male' | 'female';
+  gender: 'M' | 'F' | 'U';
   items: string[];
   totalAmount: number;
   status: 'pending' | 'measured' | 'ordered' | 'received';
@@ -29,7 +29,7 @@ const mockStudentOrders: StudentOrder[] = [
     school: '가경중학교',
     grade: '1',
     className: '3',
-    gender: 'male',
+    gender: 'M',
     items: ['하복 상의', '하복 하의', '체육복'],
     totalAmount: 350000,
     status: 'pending',
@@ -42,7 +42,7 @@ const mockStudentOrders: StudentOrder[] = [
     school: '가경중학교',
     grade: '2',
     className: '1',
-    gender: 'female',
+    gender: 'F',
     items: ['동복 상의', '동복 하의'],
     totalAmount: 280000,
     status: 'measured',
@@ -80,7 +80,7 @@ export const StudentOrderPage = () => {
       key: 'gender',
       header: '성별',
       width: '60px',
-      render: (item) => (item.gender === 'male' ? '남' : '여'),
+      render: (item) => (item.gender === 'M' ? '남' : item.gender === 'F' ? '여' : '공용'),
     },
     {
       key: 'items',
@@ -124,12 +124,19 @@ export const StudentOrderPage = () => {
           buttonLabel="학생 추가"
           onButtonClick={() => console.log('학생 추가 클릭')}
         />
-        <div>
-          <Input
-            placeholder="학생명, 연락처, 학교로 검색"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="border-y border-gray-200 overflow-hidden">
+          <div className="flex items-stretch">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+              검색어
+            </div>
+            <div className="flex items-center gap-3 flex-1 px-4 py-3 bg-white">
+              <Input
+                placeholder="학생명, 연락처, 학교로 검색"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="flex-1">

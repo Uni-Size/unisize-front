@@ -46,7 +46,7 @@ export const StudentListPage = () => {
     category: student.grade === 1 ? '신입' : '재학',
     school: student.school_name,
     name: student.name,
-    gender: student.gender === 'male' ? '남' : '여',
+    gender: student.gender === 'M' ? '남' : student.gender === 'F' ? '여' : student.gender === 'U' ? '공용' : student.gender,
     studentPhone: student.student_phone,
     parentPhone: student.guardian_phone,
     governmentPurchase: student.government_purchase ? 'O' : 'X',
@@ -111,7 +111,7 @@ export const StudentListPage = () => {
         previousSchool: detail.previous_school,
         classNumber: detail.class_name || '',
         name: detail.name,
-        gender: detail.gender === 'male' ? 'M' : 'F',
+        gender: detail.gender,
         studentPhone: detail.student_phone,
         guardianPhone: detail.guardian_phone,
         registeredDate: detail.created_at ? new Date(detail.created_at).toLocaleDateString('ko-KR') : '',
@@ -179,63 +179,79 @@ export const StudentListPage = () => {
           onButtonClick={() => setIsAddModalOpen(true)}
         />
 
-        <div className="flex flex-col gap-3 p-4 bg-[#fafafa] rounded-lg">
-          <div className="flex items-center gap-3">
-            <Input
-              placeholder="검색어"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <select
-              className="h-10 px-3 py-2 border border-gray-200 rounded-lg text-[15px] text-gray-700 bg-white"
-              value={searchType}
-              onChange={(e) => setSearchType(e.target.value)}
-            >
-              <option value="통합검색">통합검색</option>
-              <option value="이름">이름</option>
-              <option value="연락처">연락처</option>
-            </select>
-            <Input
-              placeholder="검색어를 입력하세요."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        <div className="border-y border-gray-200 overflow-hidden">
+          {/* 검색어 */}
+          <div className="flex items-stretch border-b border-gray-200">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+              검색어
+            </div>
+            <div className="flex items-center gap-3 flex-1 px-4 py-3 bg-white">
+              <select
+                className="h-9 px-3 py-1.5 border border-gray-200 rounded text-[14px] text-gray-700 bg-white"
+                value={searchType}
+                onChange={(e) => setSearchType(e.target.value)}
+              >
+                <option value="통합검색">통합검색</option>
+                <option value="이름">이름</option>
+                <option value="연락처">연락처</option>
+              </select>
+              <Input
+                placeholder="검색어를 입력하세요."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-[15px] font-normal text-[#374151] min-w-12.5">학년</span>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="radio" name="category" checked={categoryFilter === '전체'} onChange={() => setCategoryFilter('전체')} />
-              전체
-            </label>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="radio" name="category" checked={categoryFilter === '신입'} onChange={() => setCategoryFilter('신입')} />
-              신입
-            </label>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="radio" name="category" checked={categoryFilter === '재학'} onChange={() => setCategoryFilter('재학')} />
-              재학
-            </label>
-
-            <span className="text-[15px] font-normal text-[#374151] min-w-12.5">주관구매</span>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="radio" name="purchase" checked={purchaseFilter === '전체'} onChange={() => setPurchaseFilter('전체')} />
-              전체
-            </label>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="radio" name="purchase" checked={purchaseFilter === '신청'} onChange={() => setPurchaseFilter('신청')} />
-              신청
-            </label>
-            <label className="flex items-center gap-1 text-[15px] text-[#374151] cursor-pointer">
-              <input type="radio" name="purchase" checked={purchaseFilter === '미신청'} onChange={() => setPurchaseFilter('미신청')} />
-              미신청
-            </label>
+          {/* 학년 + 주관구매 (같은 행) */}
+          <div className="flex items-stretch">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+              학년
+            </div>
+            <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white border-r border-gray-200">
+              {[
+                { value: '전체', label: '전체' },
+                { value: '신입', label: '신입' },
+                { value: '재학', label: '재학' },
+              ].map((opt) => (
+                <label key={opt.value} className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={categoryFilter === opt.value}
+                    onChange={() => setCategoryFilter(categoryFilter === opt.value ? '전체' : opt.value)}
+                    className="w-4 h-4 accent-gray-500"
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+              주관구매
+            </div>
+            <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white">
+              {[
+                { value: '전체', label: '전체' },
+                { value: '신청', label: '신청' },
+                { value: '미신청', label: '미신청' },
+              ].map((opt) => (
+                <label key={opt.value} className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={purchaseFilter === opt.value}
+                    onChange={() => setPurchaseFilter(purchaseFilter === opt.value ? '전체' : opt.value)}
+                    className="w-4 h-4 accent-gray-500"
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
           </div>
+        </div>
 
-          <div className="flex justify-center gap-3 mt-2">
-            <Button variant="primary" className="w-auto px-6 py-2" onClick={handleSearch}>검색</Button>
-            <Button variant="outline" className="w-auto px-6 py-2" onClick={handleReset}>초기화</Button>
-          </div>
+        {/* 검색/초기화 버튼 */}
+        <div className="flex justify-center gap-3">
+          <Button variant="primary" className="w-auto px-8 py-2.5" onClick={handleSearch}>검색</Button>
+          <Button variant="outline" className="w-auto px-8 py-2.5 bg-gray-400! text-white! border-gray-400! hover:bg-gray-500!" onClick={handleReset}>초기화</Button>
         </div>
 
         <div className="flex-1">

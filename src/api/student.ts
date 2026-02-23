@@ -1,5 +1,5 @@
-import { apiClient } from '@/lib/apiClient';
-import type { ApiResponse } from './auth';
+import { apiClient } from "@/lib/apiClient";
+import type { ApiResponse } from "./auth";
 
 // ============================================================================
 // 학생 등록 관련 타입
@@ -50,7 +50,7 @@ export interface RecommendedSizeItem {
   quantity: number;
   is_selectable?: boolean;
   selectable_with?: string[];
-  gender: 'male' | 'female' | 'unisex';
+  gender: "male" | "female" | "unisex";
 }
 
 export interface AddStudentResponse {
@@ -130,7 +130,7 @@ export interface UniformProduct {
   product_id: number;
   product_name: string;
   category: string;
-  gender: 'male' | 'female' | 'unisex';
+  gender: "male" | "female" | "unisex";
   price: number;
   recommended_size: string;
   available_sizes: string[];
@@ -151,7 +151,7 @@ export interface RecommendedUniformItem {
     stock_count: number;
   }>;
   selectable_with?: string[];
-  gender: 'male' | 'female' | 'unisex';
+  gender: "male" | "female" | "unisex";
   is_customization_required?: boolean;
   customization?: string;
 }
@@ -228,7 +228,7 @@ export interface CompleteMeasurementRequest {
 export interface MeasurementOrderItem {
   item_id: string;
   name: string;
-  season: 'winter' | 'summer' | 'all';
+  season: "winter" | "summer" | "all";
   selected_size: number;
   customization: string;
   purchase_count: number;
@@ -255,7 +255,7 @@ export interface MeasurementOrderRequest {
  * POST /api/v1/students/register
  */
 export async function addStudent(
-  formData: StudentFormData
+  formData: StudentFormData,
 ): Promise<AddStudentResponse> {
   const requestData: StudentApiRequest = {
     previous_school: formData.previousSchool,
@@ -274,8 +274,8 @@ export async function addStudent(
   };
 
   const response = await apiClient.post<ApiResponse<AddStudentResponse>>(
-    'api/v1/students/register',
-    requestData
+    "api/v1/students/register",
+    requestData,
   );
 
   return response.data.data;
@@ -294,8 +294,8 @@ export async function getRegisterStudents(params?: {
   limit?: number;
 }): Promise<RegisterStudentsResponse> {
   const response = await apiClient.get<RegisterStudentsResponse>(
-    '/api/v1/students/pending-measurements',
-    { params }
+    "/api/v1/students/pending-measurements",
+    { params },
   );
   return response.data;
 }
@@ -309,16 +309,16 @@ export async function getRegisterStudents(params?: {
  * POST /api/v1/students/:studentId/start-measurement
  */
 export async function startMeasurement(
-  studentId: number
+  studentId: number,
 ): Promise<StartMeasurementResponse> {
   const response = await apiClient.post<ApiResponse<StartMeasurementResponse>>(
-    `/api/v1/students/${studentId}/start-measurement`
+    `/api/v1/students/${studentId}/start-measurement`,
   );
 
   if (
     response.data &&
-    typeof response.data === 'object' &&
-    'data' in response.data
+    typeof response.data === "object" &&
+    "data" in response.data
   ) {
     return (response.data as ApiResponse<StartMeasurementResponse>).data;
   }
@@ -332,11 +332,11 @@ export async function startMeasurement(
  */
 export async function submitMeasurementOrder(
   studentId: number,
-  orderData: MeasurementOrderRequest
+  orderData: MeasurementOrderRequest,
 ): Promise<void> {
   await apiClient.post(
     `/api/v1/students/${studentId}/measurement-order`,
-    orderData
+    orderData,
   );
 }
 
@@ -346,11 +346,11 @@ export async function submitMeasurementOrder(
  */
 export async function completeMeasurement(
   studentId: number,
-  orderData: CompleteMeasurementRequest
+  orderData: CompleteMeasurementRequest,
 ): Promise<void> {
   await apiClient.post(
     `/api/v1/students/${studentId}/complete-measurement`,
-    orderData
+    orderData,
   );
 }
 
@@ -407,12 +407,14 @@ export interface GetStudentsResponse {
 
 /**
  * 학생 목록 조회
- * GET /api/v1/admin/students
+ * GET /api/v1/students
  */
-export async function getStudents(params?: GetStudentsParams): Promise<GetStudentsResponse> {
+export async function getStudents(
+  params?: GetStudentsParams,
+): Promise<GetStudentsResponse> {
   const response = await apiClient.get<GetStudentsResponse>(
-    '/api/v1/admin/students',
-    { params }
+    "/api/v1/students",
+    { params },
   );
   return response.data;
 }
@@ -423,7 +425,7 @@ export async function getStudents(params?: GetStudentsParams): Promise<GetStuden
  */
 export async function getStudentDetail(id: number): Promise<AdminStudent> {
   const response = await apiClient.get<ApiResponse<AdminStudent>>(
-    `/api/v1/admin/students/${id}`
+    `/api/v1/admin/students/${id}`,
   );
   return response.data.data;
 }
@@ -433,9 +435,7 @@ export async function getStudentDetail(id: number): Promise<AdminStudent> {
  * DELETE /api/v1/admin/students/:id
  */
 export async function deleteStudent(id: number): Promise<void> {
-  await apiClient.delete<ApiResponse<void>>(
-    `/api/v1/admin/students/${id}`
-  );
+  await apiClient.delete<ApiResponse<void>>(`/api/v1/admin/students/${id}`);
 }
 
 // ============================================================================

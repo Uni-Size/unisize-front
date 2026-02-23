@@ -58,9 +58,9 @@ const categoryOptions = [
 ];
 
 const genderOptions = [
-  { value: 'male', label: '남' },
-  { value: 'female', label: '여' },
-  { value: 'unisex', label: '공용' },
+  { value: 'M', label: '남자(M)' },
+  { value: 'F', label: '여자(F)' },
+  { value: 'U', label: '공용(U)' },
 ];
 
 const getPurchaseStatusLabel = (value: string) =>

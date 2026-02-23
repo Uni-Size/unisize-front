@@ -31,9 +31,9 @@ export interface ProductAddModalProps {
 }
 
 const seasonOptions = [
-  { value: 'summer', label: '하복' },
-  { value: 'winter', label: '동복' },
-  { value: 'spring-fall', label: '춘추복' },
+  { value: 'S', label: '하복(S)' },
+  { value: 'W', label: '동복(W)' },
+  { value: 'A', label: '사계절(A)' },
 ];
 
 const categoryOptions = [
@@ -48,9 +48,9 @@ const categoryOptions = [
 ];
 
 const genderOptions = [
-  { value: 'male', label: '남' },
-  { value: 'female', label: '여' },
-  { value: 'unisex', label: '공용' },
+  { value: 'M', label: '남자(M)' },
+  { value: 'F', label: '여자(F)' },
+  { value: 'U', label: '공용(U)' },
 ];
 
 const repairableOptions = [

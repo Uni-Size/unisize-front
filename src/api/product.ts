@@ -28,6 +28,7 @@ export interface GetProductsParams {
   limit?: number;
   category?: string;
   gender?: string;
+  season?: string;
   search?: string;
   active_only?: boolean;
 }
@@ -57,6 +58,7 @@ export async function getProducts(params?: GetProductsParams): Promise<ProductsD
   if (params?.limit) queryParams.append("limit", params.limit.toString());
   if (params?.category) queryParams.append("category", params.category);
   if (params?.gender) queryParams.append("gender", params.gender);
+  if (params?.season) queryParams.append("season", params.season);
   if (params?.search) queryParams.append("search", params.search);
   if (params?.active_only !== undefined) queryParams.append("active_only", params.active_only.toString());
 

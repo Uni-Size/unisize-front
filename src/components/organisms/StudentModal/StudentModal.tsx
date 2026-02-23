@@ -74,8 +74,8 @@ export interface StudentModalProps {
 // ============================================================================
 
 const genderOptions = [
-  { value: 'F', label: '여' },
-  { value: 'M', label: '남' },
+  { value: 'M', label: '남자(M)' },
+  { value: 'F', label: '여자(F)' },
 ];
 
 const sizeOptions = [
