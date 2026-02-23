@@ -23,6 +23,7 @@ import {
   deleteProduct,
   type Product as ApiProduct,
 } from "@/api/product";
+import { getApiErrorMessage } from "@/utils/errorUtils";
 
 interface ProductRow {
   id: string;
@@ -100,6 +101,7 @@ export const ProductListPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const itemsPerPage = 10;
 
   // Modal states
@@ -119,6 +121,7 @@ export const ProductListPage = () => {
       search?: string,
     ) => {
       setLoading(true);
+      setError(null);
       try {
         const data = await getProducts({
           page,
@@ -134,8 +137,9 @@ export const ProductListPage = () => {
           ),
         );
         setTotalPages(Math.ceil(data.total / itemsPerPage) || 1);
-      } catch (error) {
-        console.error("상품 목록 조회 실패:", error);
+      } catch (err) {
+        console.error("상품 목록 조회 실패:", err);
+        setError(getApiErrorMessage(err, "상품 목록을 불러오는 중 오류가 발생했습니다."));
       } finally {
         setLoading(false);
       }
@@ -494,24 +498,17 @@ export const ProductListPage = () => {
         </div>
 
         <div className="flex-1">
-          {loading ? (
-            <div className="flex justify-center items-center py-20 text-gray-400">
-              로딩 중...
-            </div>
-          ) : (
-            <>
-              <Table
-                columns={columns}
-                data={products}
-                onRowClick={(product) => handleOpenDetailModal(product)}
-              />
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            </>
-          )}
+          <Table
+            columns={columns}
+            data={loading ? [] : products}
+            onRowClick={(product) => handleOpenDetailModal(product)}
+            emptyMessage={loading ? "로딩 중..." : error ?? "데이터가 없습니다."}
+          />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
         </div>
       </div>
 

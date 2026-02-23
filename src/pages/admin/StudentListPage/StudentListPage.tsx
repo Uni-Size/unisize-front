@@ -10,6 +10,7 @@ import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
 import { getStudents, getStudentDetail, deleteStudent } from '@/api/student';
 import type { AdminStudent } from '@/api/student';
+import { getApiErrorMessage } from '@/utils/errorUtils';
 
 interface StudentRow {
   id: number;
@@ -33,6 +34,7 @@ export const StudentListPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const itemsPerPage = 10;
 
   // 모달 state
@@ -55,6 +57,7 @@ export const StudentListPage = () => {
 
   const fetchStudents = useCallback(async (page: number, search?: string, school?: string, grade?: number) => {
     setLoading(true);
+    setError(null);
     try {
       const response = await getStudents({
         page,
@@ -66,8 +69,9 @@ export const StudentListPage = () => {
       const rows = response.data.map((s, i) => mapToRow(s, i, page));
       setStudents(rows);
       setTotalPages(response.meta.total_pages);
-    } catch (error) {
-      console.error('학생 목록 조회 실패:', error);
+    } catch (err) {
+      console.error('학생 목록 조회 실패:', err);
+      setError(getApiErrorMessage(err, '학생 목록을 불러오는 중 오류가 발생했습니다.'));
     } finally {
       setLoading(false);
     }
@@ -255,22 +259,17 @@ export const StudentListPage = () => {
         </div>
 
         <div className="flex-1">
-          {loading ? (
-            <div className="flex items-center justify-center py-10 text-[#959595]">로딩 중...</div>
-          ) : (
-            <>
-              <Table
-                columns={columns}
-                data={students}
-                onRowClick={handleRowClick}
-              />
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            </>
-          )}
+          <Table
+            columns={columns}
+            data={loading ? [] : students}
+            onRowClick={handleRowClick}
+            emptyMessage={loading ? "로딩 중..." : error ?? "데이터가 없습니다."}
+          />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
 
         <StudentModal

@@ -4,6 +4,7 @@ import { AdminHeader } from '@components/organisms/AdminHeader';
 import { Table } from '@components/atoms/Table';
 import type { Column } from '@components/atoms/Table';
 import { getPaymentPendingOrders, type PaymentPendingOrder } from '@/api/order';
+import { getApiErrorMessage } from '@/utils/errorUtils';
 
 interface PendingRow {
   id: number;
@@ -30,14 +31,17 @@ const toRow = (item: PaymentPendingOrder, index: number): PendingRow => ({
 export const MainPage = () => {
   const [orders, setOrders] = useState<PendingRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await getPaymentPendingOrders();
       setOrders(data.map(toRow));
-    } catch (error) {
-      console.error('결제 대기자 목록 조회 실패:', error);
+    } catch (err) {
+      console.error('결제 대기자 목록 조회 실패:', err);
+      setError(getApiErrorMessage(err, '결제 대기자 목록을 불러오는 중 오류가 발생했습니다.'));
     } finally {
       setLoading(false);
     }
@@ -88,15 +92,12 @@ export const MainPage = () => {
         <AdminHeader title="결제 대기자" />
 
         <div className="flex-1">
-          {loading ? (
-            <div>불러오는 중...</div>
-          ) : (
-            <Table
-              columns={columns}
-              data={orders}
-              onRowClick={(order) => console.log('Order clicked:', order)}
-            />
-          )}
+          <Table
+            columns={columns}
+            data={loading ? [] : orders}
+            onRowClick={(order) => console.log('Order clicked:', order)}
+            emptyMessage={loading ? "로딩 중..." : error ?? "데이터가 없습니다."}
+          />
         </div>
       </div>
     </AdminLayout>

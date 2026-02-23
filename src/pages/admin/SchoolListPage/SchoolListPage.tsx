@@ -15,6 +15,7 @@ import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
 import { getSupportedSchoolsByYear, deleteSupportedSchool, type School as ApiSchool } from '@/api/school';
 import { getTargetYear } from '@/utils/schoolUtils';
+import { getApiErrorMessage } from '@/utils/errorUtils';
 
 interface SchoolRow {
   id: number;
@@ -61,6 +62,7 @@ const toSchoolRow = (item: ApiSchool, index: number): SchoolRow => ({
 export const SchoolListPage = () => {
   const [schools, setSchools] = useState<SchoolRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('통합검색');
   const [typeFilters, setTypeFilters] = useState({ all: true, elementary: false, middle: false, high: false });
@@ -76,12 +78,14 @@ export const SchoolListPage = () => {
 
   const fetchSchools = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const year = getTargetYear();
       const data = await getSupportedSchoolsByYear(year);
       setSchools(data.map(toSchoolRow));
-    } catch (error) {
-      console.error('학교 목록 조회 실패:', error);
+    } catch (err) {
+      console.error('학교 목록 조회 실패:', err);
+      setError(getApiErrorMessage(err, '학교 목록을 불러오는 중 오류가 발생했습니다.'));
     } finally {
       setLoading(false);
     }
@@ -292,22 +296,17 @@ export const SchoolListPage = () => {
         </div>
 
         <div className="flex-1">
-          {loading ? (
-            <div>불러오는 중...</div>
-          ) : (
-            <>
-              <Table
-                columns={columns}
-                data={paginatedSchools}
-                onRowClick={(school) => handleOpenDetailModal(school)}
-              />
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            </>
-          )}
+          <Table
+            columns={columns}
+            data={loading ? [] : paginatedSchools}
+            onRowClick={(school) => handleOpenDetailModal(school)}
+            emptyMessage={loading ? "로딩 중..." : error ?? "데이터가 없습니다."}
+          />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
 

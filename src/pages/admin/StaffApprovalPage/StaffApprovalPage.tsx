@@ -6,6 +6,7 @@ import { Button } from '@components/atoms/Button';
 import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
 import { getPendingStaffList, approveStaff, type StaffItem } from '@/api/staff';
+import { getApiErrorMessage } from '@/utils/errorUtils';
 
 interface PendingStaffRow {
   id: number;
@@ -30,16 +31,19 @@ const toPendingRow = (item: StaffItem, index: number): PendingStaffRow => ({
 export const StaffApprovalPage = () => {
   const [pendingList, setPendingList] = useState<PendingStaffRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   const fetchPendingList = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await getPendingStaffList();
       setPendingList(data.map(toPendingRow));
-    } catch (error) {
-      console.error('승인 대기 목록 조회 실패:', error);
+    } catch (err) {
+      console.error('승인 대기 목록 조회 실패:', err);
+      setError(getApiErrorMessage(err, '승인 대기 목록을 불러오는 중 오류가 발생했습니다.'));
     } finally {
       setLoading(false);
     }
@@ -98,22 +102,17 @@ export const StaffApprovalPage = () => {
         <AdminHeader title="스태프 승인대기" />
 
         <div className="bg-white rounded-lg p-2.5">
-          {loading ? (
-            <div>불러오는 중...</div>
-          ) : (
-            <>
-              <Table
-                columns={columns}
-                data={paginatedStaff}
-                onRowClick={(staff) => console.log('Staff clicked:', staff)}
-              />
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            </>
-          )}
+          <Table
+            columns={columns}
+            data={loading ? [] : paginatedStaff}
+            onRowClick={(staff) => console.log('Staff clicked:', staff)}
+            emptyMessage={loading ? "로딩 중..." : error ?? "데이터가 없습니다."}
+          />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
     </AdminLayout>

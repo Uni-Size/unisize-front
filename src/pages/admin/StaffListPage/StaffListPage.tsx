@@ -8,6 +8,7 @@ import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
 import type { StaffEditData } from '@components/organisms/StaffEditModal';
 import { getStaffList, type StaffItem } from '@/api/staff';
+import { getApiErrorMessage } from '@/utils/errorUtils';
 
 interface StaffRow {
   id: number;
@@ -41,6 +42,7 @@ const toStaffEditData = (row: StaffRow): StaffEditData => ({
 export const StaffListPage = () => {
   const [staffList, setStaffList] = useState<StaffRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
@@ -49,11 +51,13 @@ export const StaffListPage = () => {
 
   const fetchStaffList = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await getStaffList();
       setStaffList(data.map(toStaffRow));
-    } catch (error) {
-      console.error('스태프 목록 조회 실패:', error);
+    } catch (err) {
+      console.error('스태프 목록 조회 실패:', err);
+      setError(getApiErrorMessage(err, '스태프 목록을 불러오는 중 오류가 발생했습니다.'));
     } finally {
       setLoading(false);
     }
@@ -124,22 +128,17 @@ export const StaffListPage = () => {
         />
 
         <div className="flex-1">
-          {loading ? (
-            <div>불러오는 중...</div>
-          ) : (
-            <>
-              <Table
-                columns={columns}
-                data={paginatedStaff}
-                onRowClick={(staff) => console.log('Staff clicked:', staff)}
-              />
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            </>
-          )}
+          <Table
+            columns={columns}
+            data={loading ? [] : paginatedStaff}
+            onRowClick={(staff) => console.log('Staff clicked:', staff)}
+            emptyMessage={loading ? "로딩 중..." : error ?? "데이터가 없습니다."}
+          />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
 
