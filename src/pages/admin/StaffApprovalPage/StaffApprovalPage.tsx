@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { ReactNode } from 'react';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import { AdminHeader } from '@components/organisms/AdminHeader';
 import { Table } from '@components/atoms/Table';
@@ -31,7 +32,7 @@ const toPendingRow = (item: StaffItem, index: number): PendingStaffRow => ({
 export const StaffApprovalPage = () => {
   const [pendingList, setPendingList] = useState<PendingStaffRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ReactNode>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 

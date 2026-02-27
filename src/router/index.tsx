@@ -2,7 +2,6 @@ import { createBrowserRouter } from 'react-router-dom';
 import {
   LoginPage,
   MainPage,
-  OrderListPage,
   StudentOrderPage,
   ProductListPage,
   SchoolListPage,

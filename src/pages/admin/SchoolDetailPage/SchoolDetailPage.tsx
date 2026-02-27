@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import type { ReactNode } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { AdminLayout } from "@components/templates/AdminLayout";
 import { AdminHeader } from "@components/organisms/AdminHeader";
@@ -44,7 +45,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
   const [totalPages, setTotalPages] = useState(1);
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ReactNode>(null);
   const itemsPerPage = 10;
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { ReactNode } from 'react';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import { AdminHeader } from '@components/organisms/AdminHeader';
 import { Table } from '@components/atoms/Table';
@@ -31,7 +32,7 @@ const toRow = (item: PaymentPendingOrder, index: number): PendingRow => ({
 export const MainPage = () => {
   const [orders, setOrders] = useState<PendingRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ReactNode>(null);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
