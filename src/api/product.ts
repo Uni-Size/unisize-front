@@ -48,6 +48,28 @@ export interface CreateProductRequest {
 // ============================================================================
 
 /**
+ * 전체 상품 조회 (학교 품목 추가용)
+ * GET /api/v1/products/all
+ */
+export async function getAllProducts(params?: GetProductsParams): Promise<ProductsData> {
+  const queryParams = new URLSearchParams();
+
+  if (params?.page) queryParams.append("page", params.page.toString());
+  if (params?.limit) queryParams.append("limit", params.limit.toString());
+  if (params?.category) queryParams.append("category", params.category);
+  if (params?.gender) queryParams.append("gender", params.gender);
+  if (params?.season) queryParams.append("season", params.season);
+  if (params?.search) queryParams.append("search", params.search);
+  if (params?.active_only !== undefined) queryParams.append("active_only", params.active_only.toString());
+
+  const queryString = queryParams.toString();
+  const url = queryString ? `/api/v1/products/all?${queryString}` : "/api/v1/products/all";
+
+  const response = await apiClient.get<ApiResponse<ProductsData>>(url);
+  return response.data.data;
+}
+
+/**
  * 상품 리스트 조회
  * GET /api/v1/products
  */

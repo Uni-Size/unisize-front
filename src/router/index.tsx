@@ -9,6 +9,7 @@ import {
   StudentListPage,
   StaffListPage,
   StaffApprovalPage,
+  SchoolDetailPage,
 } from '@pages/admin';
 import {
   OnboardingPage,
@@ -79,12 +80,20 @@ export const router = createBrowserRouter([
         element: <MainPage />,
       },
       {
-        path: 'orders/middle/:schoolId',
-        element: <OrderListPage schoolType="middle" />,
+        path: 'orders/middle/:schoolId/students',
+        element: <SchoolDetailPage />,
       },
       {
-        path: 'orders/high/:schoolId',
-        element: <OrderListPage schoolType="high" />,
+        path: 'orders/middle/:schoolId/orders',
+        element: <SchoolDetailPage />,
+      },
+      {
+        path: 'orders/high/:schoolId/students',
+        element: <SchoolDetailPage />,
+      },
+      {
+        path: 'orders/high/:schoolId/orders',
+        element: <SchoolDetailPage />,
       },
       {
         path: 'orders/students',

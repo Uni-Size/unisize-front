@@ -157,6 +157,7 @@ export const SchoolListPage = () => {
               if (!confirm('정말 삭제하시겠습니까?')) return;
               try {
                 await deleteSupportedSchool(school.id);
+                window.dispatchEvent(new CustomEvent('school-deleted', { detail: { schoolId: school.id } }));
                 fetchSchools();
               } catch (error) {
                 console.error('학교 삭제 실패:', error);

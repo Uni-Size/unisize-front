@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { Modal, Select, Input } from "@components/atoms";
-import { getProducts, type Product } from "@/api/product";
+import { getAllProducts, type Product } from "@/api/product";
 import {
   addSupportedSchool,
   addSchoolProducts,
@@ -14,6 +14,7 @@ export interface SchoolProductItem {
   displayName: string;
   contractPrice: number;
   freeQuantity: number;
+  productApiId?: string;
 }
 
 export interface SchoolAddData {
@@ -80,7 +81,7 @@ export const SchoolAddModal = ({
       const cacheKey = `${category}:${gender}`;
       if (productsCache[cacheKey]) return;
       try {
-        const data = await getProducts({ category, gender });
+        const data = await getAllProducts({ category, gender });
         setProductsCache((prev) => ({ ...prev, [cacheKey]: data.products }));
       } catch (error) {
         console.error("상품 조회 실패:", error);
@@ -132,21 +133,23 @@ export const SchoolAddModal = ({
             ...p,
             category: newCategory,
             displayName: "",
+            productApiId: "",
             contractPrice: 0,
           };
         }
         if (field === "gender") {
           const newGender = value as string;
           if (p.category) fetchProducts(p.category, newGender);
-          return { ...p, gender: newGender, displayName: "", contractPrice: 0 };
+          return { ...p, gender: newGender, displayName: "", productApiId: "", contractPrice: 0 };
         }
         if (field === "displayName") {
           const cacheKey = `${p.category}:${p.gender}`;
           const cached = productsCache[cacheKey];
-          const matched = cached?.find((item) => item.name === value);
+          const matched = cached?.find((item) => String(item.id) === value);
           return {
             ...p,
-            displayName: value as string,
+            productApiId: value as string,
+            displayName: matched?.name ?? (value as string),
             contractPrice: matched?.price ?? p.contractPrice,
           };
         }
@@ -218,7 +221,7 @@ export const SchoolAddModal = ({
     const cacheKey = `${category}:${gender}`;
     const products = productsCache[cacheKey];
     if (!products) return [];
-    return products.map((p) => ({ value: p.name, label: p.name }));
+    return products.map((p) => ({ value: String(p.id), label: p.name }));
   };
 
   const renderProductRow = (
@@ -267,7 +270,7 @@ export const SchoolAddModal = ({
                       : "표시명"
                 }
                 options={options}
-                value={product.displayName}
+                value={product.productApiId ?? ""}
                 onChange={(value) =>
                   handleProductChange(season, product.id, "displayName", value)
                 }

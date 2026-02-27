@@ -45,7 +45,7 @@ export const StudentListPage = () => {
   const mapToRow = (student: AdminStudent, index: number, page: number): StudentRow => ({
     id: student.id,
     no: (page - 1) * itemsPerPage + index + 1,
-    category: student.grade === 1 ? '신입' : '재학',
+    category: `${student.admission_grade}학년`,
     school: student.school_name,
     name: student.name,
     gender: student.gender === 'M' ? '남' : student.gender === 'F' ? '여' : student.gender === 'U' ? '공용' : student.gender,
@@ -66,9 +66,10 @@ export const StudentListPage = () => {
         school,
         grade,
       });
-      const rows = response.data.map((s, i) => mapToRow(s, i, page));
+      const list = Array.isArray(response.data) ? response.data : (response.data as unknown as { students: AdminStudent[] }).students ?? [];
+      const rows = list.map((s, i) => mapToRow(s, i, page));
       setStudents(rows);
-      setTotalPages(response.meta.total_pages);
+      setTotalPages(response.meta?.total_pages ?? 1);
     } catch (err) {
       console.error('학생 목록 조회 실패:', err);
       setError(getApiErrorMessage(err, '학생 목록을 불러오는 중 오류가 발생했습니다.'));

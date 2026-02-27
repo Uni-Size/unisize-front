@@ -12,7 +12,7 @@ export interface TableProps<T> {
   columns: Column<T>[];
   data: T[];
   onRowClick?: (item: T) => void;
-  emptyMessage?: string;
+  emptyMessage?: ReactNode;
 }
 
 export const Table = <T extends object>({

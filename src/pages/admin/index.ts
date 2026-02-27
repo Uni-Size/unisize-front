@@ -7,3 +7,4 @@ export * from './SchoolListPage';
 export * from './StudentListPage';
 export * from './StaffListPage';
 export * from './StaffApprovalPage';
+export * from './SchoolDetailPage';
