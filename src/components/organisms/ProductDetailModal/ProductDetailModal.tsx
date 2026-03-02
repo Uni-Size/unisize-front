@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Modal, Select, Input } from '@components/atoms';
-import type { SelectOption } from '@components/atoms/Select/Select';
-import type { SchoolPrice } from '../ProductAddModal';
-import { CATEGORY_GROUPS, getCategoryLabel } from '@/constants/productCategories';
-import { GENDER_OPTIONS } from '@/constants/gender';
+import { useState, useEffect } from "react";
+import { Modal, Select, Input } from "@components/atoms";
+import type { SelectOption } from "@components/atoms/Select/Select";
+import type { SchoolPrice } from "../ProductAddModal";
+import {
+  CATEGORY_GROUPS,
+  getCategoryLabel,
+} from "@/constants/productCategories";
+import { GENDER_OPTIONS } from "@/constants/gender";
 
 export interface ProductDetailData {
   id: string;
@@ -34,27 +37,27 @@ export interface ProductDetailModalProps {
 // ============================================================================
 
 export const seasonOptions: SelectOption[] = [
-  { value: 'S', label: '하복(S)' },
-  { value: 'W', label: '동복(W)' },
-  { value: 'A', label: '사계절(A)' },
+  { value: "S", label: "하복(S)" },
+  { value: "W", label: "동복(W)" },
+  { value: "A", label: "사계절(A)" },
 ];
 
 export const genderOptions: SelectOption[] = GENDER_OPTIONS;
 
 export const repairableOptions: SelectOption[] = [
-  { value: 'yes', label: '가능' },
-  { value: 'no', label: '불가능' },
+  { value: "yes", label: "가능" },
+  { value: "no", label: "불가능" },
 ];
 
 export const repairRequiredOptions: SelectOption[] = [
-  { value: 'required', label: '필수' },
-  { value: 'optional', label: '선택사항' },
+  { value: "required", label: "필수" },
+  { value: "optional", label: "선택사항" },
 ];
 
 export const sizeUnitOptions: SelectOption[] = [
-  { value: '5', label: '5단위' },
-  { value: '10', label: '10단위' },
-  { value: 'free', label: '프리' },
+  { value: "5", label: "5단위" },
+  { value: "10", label: "10단위" },
+  { value: "free", label: "프리" },
 ];
 
 const getOptionLabel = (options: SelectOption[], value: string) =>
@@ -64,10 +67,20 @@ const getOptionLabel = (options: SelectOption[], value: string) =>
 // 뷰 모드 필드 컴포넌트
 // ============================================================================
 
-const FieldView = ({ label, value, align = 'left' }: { label: string; value: string; align?: 'left' | 'right' }) => (
+const FieldView = ({
+  label,
+  value,
+  align = "left",
+}: {
+  label: string;
+  value: string;
+  align?: "left" | "right";
+}) => (
   <div className="flex flex-col gap-2">
     <span className="text-[15px] font-normal text-gray-700">{label}</span>
-    <div className={`flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-transparent text-[15px] font-normal leading-none text-gray-700 ${align === 'right' ? 'justify-end' : ''}`}>
+    <div
+      className={`flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-transparent text-[15px] font-normal leading-none text-gray-700 ${align === "right" ? "justify-end" : ""}`}
+    >
       {value}
     </div>
   </div>
@@ -88,14 +101,14 @@ export const ProductDetailModal = ({
   onSchoolPriceChange,
 }: ProductDetailModalProps) => {
   const [isEditMode, setIsEditMode] = useState(false);
-  const [season, setSeason] = useState('');
-  const [category, setCategory] = useState('');
-  const [gender, setGender] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [originalPrice, setOriginalPrice] = useState('');
-  const [isRepairable, setIsRepairable] = useState('');
-  const [isRepairRequired, setIsRepairRequired] = useState('');
-  const [sizeUnit, setSizeUnit] = useState('');
+  const [season, setSeason] = useState("");
+  const [category, setCategory] = useState("");
+  const [gender, setGender] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [originalPrice, setOriginalPrice] = useState("");
+  const [isRepairable, setIsRepairable] = useState("");
+  const [isRepairRequired, setIsRepairRequired] = useState("");
+  const [sizeUnit, setSizeUnit] = useState("");
 
   useEffect(() => {
     if (product) {
@@ -182,23 +195,54 @@ export const ProductDetailModal = ({
         <div className="flex gap-2 items-start">
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Select label="시즌" placeholder="시즌" options={seasonOptions} value={season} onChange={setSeason} fullWidth />
+              <Select
+                label="시즌"
+                placeholder="시즌"
+                options={seasonOptions}
+                value={season}
+                onChange={setSeason}
+                fullWidth
+              />
             ) : (
-              <FieldView label="시즌" value={getOptionLabel(seasonOptions, product.season)} />
+              <FieldView
+                label="시즌"
+                value={getOptionLabel(seasonOptions, product.season)}
+              />
             )}
           </div>
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Select label="카테고리" placeholder="카테고리" groups={CATEGORY_GROUPS} value={category} onChange={setCategory} fullWidth />
+              <Select
+                label="카테고리"
+                options={CATEGORY_GROUPS.flatMap((g) => g.options)}
+                placeholder="카테고리"
+                groups={CATEGORY_GROUPS}
+                value={category}
+                onChange={setCategory}
+                fullWidth
+              />
             ) : (
-              <FieldView label="카테고리" value={getCategoryLabel(product.category)} />
+              <FieldView
+                label="카테고리"
+                value={getCategoryLabel(product.category)}
+              />
             )}
           </div>
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Select label="성별" placeholder="성별" options={genderOptions} value={gender} onChange={setGender} fullWidth />
+              <Select
+                label="성별"
+                placeholder="성별"
+                options={genderOptions}
+                value={gender}
+                onChange={setGender}
+                fullWidth
+              />
             ) : (
-              <FieldView label="성별" value={getOptionLabel(genderOptions, product.gender)} />
+              <FieldView
+                label="성별"
+                value={getOptionLabel(genderOptions, product.gender)}
+              />
             )}
           </div>
         </div>
@@ -207,16 +251,34 @@ export const ProductDetailModal = ({
         <div className="flex gap-2 items-start">
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Input label="표시명" placeholder="흰색 오각" value={displayName} onChange={(e) => setDisplayName(e.target.value)} fullWidth />
+              <Input
+                label="표시명"
+                placeholder="흰색 오각"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                fullWidth
+              />
             ) : (
               <FieldView label="표시명" value={product.displayName} />
             )}
           </div>
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Input label="가격" placeholder="가격" type="number" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value)} className="text-right" fullWidth />
+              <Input
+                label="가격"
+                placeholder="가격"
+                type="number"
+                value={originalPrice}
+                onChange={(e) => setOriginalPrice(e.target.value)}
+                className="text-right"
+                fullWidth
+              />
             ) : (
-              <FieldView label="가격" value={`${product.originalPrice.toLocaleString()}원`} align="right" />
+              <FieldView
+                label="가격"
+                value={`${product.originalPrice.toLocaleString()}원`}
+                align="right"
+              />
             )}
           </div>
         </div>
@@ -225,16 +287,39 @@ export const ProductDetailModal = ({
         <div className="flex gap-2 items-start">
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Select label="수선 가능여부" placeholder="불가능" options={repairableOptions} value={isRepairable} onChange={setIsRepairable} fullWidth />
+              <Select
+                label="수선 가능여부"
+                placeholder="불가능"
+                options={repairableOptions}
+                value={isRepairable}
+                onChange={setIsRepairable}
+                fullWidth
+              />
             ) : (
-              <FieldView label="수선 가능여부" value={getOptionLabel(repairableOptions, product.isRepairable)} />
+              <FieldView
+                label="수선 가능여부"
+                value={getOptionLabel(repairableOptions, product.isRepairable)}
+              />
             )}
           </div>
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Select label="수선 필수 여부" placeholder="선택사항" options={repairRequiredOptions} value={isRepairRequired} onChange={setIsRepairRequired} fullWidth />
+              <Select
+                label="수선 필수 여부"
+                placeholder="선택사항"
+                options={repairRequiredOptions}
+                value={isRepairRequired}
+                onChange={setIsRepairRequired}
+                fullWidth
+              />
             ) : (
-              <FieldView label="수선 필수 여부" value={getOptionLabel(repairRequiredOptions, product.isRepairRequired)} />
+              <FieldView
+                label="수선 필수 여부"
+                value={getOptionLabel(
+                  repairRequiredOptions,
+                  product.isRepairRequired,
+                )}
+              />
             )}
           </div>
         </div>
@@ -243,9 +328,19 @@ export const ProductDetailModal = ({
         <div className="flex gap-2 items-start">
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Select label="사이즈" placeholder="5단위" options={sizeUnitOptions} value={sizeUnit} onChange={setSizeUnit} fullWidth />
+              <Select
+                label="사이즈"
+                placeholder="5단위"
+                options={sizeUnitOptions}
+                value={sizeUnit}
+                onChange={setSizeUnit}
+                fullWidth
+              />
             ) : (
-              <FieldView label="사이즈" value={getOptionLabel(sizeUnitOptions, product.sizeUnit)} />
+              <FieldView
+                label="사이즈"
+                value={getOptionLabel(sizeUnitOptions, product.sizeUnit)}
+              />
             )}
           </div>
           <div className="flex-1 min-w-0" />
@@ -254,7 +349,9 @@ export const ProductDetailModal = ({
         {/* 사용 학교 */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2.5">
-            <span className="text-[15px] font-normal text-gray-700">사용 학교</span>
+            <span className="text-[15px] font-normal text-gray-700">
+              사용 학교
+            </span>
             {isEditMode && onOpenSchoolModal && (
               <button
                 className="px-4 py-1.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
@@ -267,19 +364,27 @@ export const ProductDetailModal = ({
           {schools.length > 0 ? (
             <div className="flex flex-col gap-3">
               {Object.entries(
-                schools.reduce<Record<string, typeof schools>>((acc, school) => {
-                  if (!acc[school.year]) acc[school.year] = [];
-                  acc[school.year].push(school);
-                  return acc;
-                }, {})
+                schools.reduce<Record<string, typeof schools>>(
+                  (acc, school) => {
+                    if (!acc[school.year]) acc[school.year] = [];
+                    acc[school.year].push(school);
+                    return acc;
+                  },
+                  {},
+                ),
               )
                 .sort(([a], [b]) => b.localeCompare(a))
                 .map(([year, yearSchools]) => (
                   <div key={year} className="flex flex-col gap-2">
-                    <span className="text-sm font-medium text-gray-600">{year}</span>
+                    <span className="text-sm font-medium text-gray-600">
+                      {year}
+                    </span>
                     <div className="flex flex-wrap gap-2">
                       {yearSchools.map((school) => (
-                        <div key={`${school.year}-${school.schoolId}`} className="flex items-center gap-2">
+                        <div
+                          key={`${school.year}-${school.schoolId}`}
+                          className="flex items-center gap-2"
+                        >
                           <span className="flex items-center px-4 py-2 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
                             {school.schoolName}
                           </span>
@@ -290,7 +395,12 @@ export const ProductDetailModal = ({
                                   type="number"
                                   className="w-20 border-none bg-transparent text-[15px] text-gray-700 text-right outline-none"
                                   value={school.price}
-                                  onChange={(e) => onSchoolPriceChange(school.schoolId, Number(e.target.value))}
+                                  onChange={(e) =>
+                                    onSchoolPriceChange(
+                                      school.schoolId,
+                                      Number(e.target.value),
+                                    )
+                                  }
                                 />
                                 <span className="ml-1">원</span>
                               </>
@@ -313,7 +423,9 @@ export const ProductDetailModal = ({
                 ))}
             </div>
           ) : (
-            <p className="text-[15px] text-gray-400 text-center py-2">사용하는 학교가 없습니다</p>
+            <p className="text-[15px] text-gray-400 text-center py-2">
+              사용하는 학교가 없습니다
+            </p>
           )}
         </div>
       </div>
