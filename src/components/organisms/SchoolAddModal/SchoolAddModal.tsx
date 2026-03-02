@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { Modal, Select, Input } from "@components/atoms";
 import { getAllProducts, type Product } from "@/api/product";
+import { GENDER_OPTIONS } from "@/constants/gender";
 import {
   addSupportedSchool,
   addSchoolProducts,
@@ -53,11 +54,7 @@ const categoryOptions = [
   { value: "아우터", label: "아우터" },
 ];
 
-const genderOptions = [
-  { value: "M", label: "남자(M)" },
-  { value: "F", label: "여자(F)" },
-  { value: "U", label: "공용(U)" },
-];
+const genderOptions = GENDER_OPTIONS;
 
 export const SchoolAddModal = ({
   isOpen,
@@ -377,7 +374,7 @@ export const SchoolAddModal = ({
         </>
       }
     >
-      <div className="flex flex-col gap-4 w-190 mx-auto">
+      <div className="flex flex-col gap-4 w-full">
         <div className="flex gap-2 items-end">
           <div className="flex-1 min-w-0">
             <Input

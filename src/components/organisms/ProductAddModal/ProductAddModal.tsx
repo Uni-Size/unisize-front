@@ -1,5 +1,13 @@
 import { useState } from 'react';
 import { Modal, Select, Input } from '@components/atoms';
+import { CATEGORY_GROUPS } from '@/constants/productCategories';
+import {
+  seasonOptions,
+  genderOptions,
+  repairableOptions,
+  repairRequiredOptions,
+  sizeUnitOptions,
+} from '../ProductDetailModal/ProductDetailModal';
 
 export interface SchoolPrice {
   schoolId: string;
@@ -29,45 +37,6 @@ export interface ProductAddModalProps {
   onRemoveSchool: (schoolId: string) => void;
   onSchoolPriceChange: (schoolId: string, price: number) => void;
 }
-
-const seasonOptions = [
-  { value: 'S', label: '하복(S)' },
-  { value: 'W', label: '동복(W)' },
-  { value: 'A', label: '사계절(A)' },
-];
-
-const categoryOptions = [
-  { value: 'jacket', label: '자켓' },
-  { value: 'pants', label: '바지' },
-  { value: 'skirt', label: '치마' },
-  { value: 'shirt', label: '셔츠' },
-  { value: 'blouse', label: '블라우스' },
-  { value: 'vest', label: '조끼' },
-  { value: 'tie', label: '넥타이' },
-  { value: 'socks', label: '양말' },
-];
-
-const genderOptions = [
-  { value: 'M', label: '남자(M)' },
-  { value: 'F', label: '여자(F)' },
-  { value: 'U', label: '공용(U)' },
-];
-
-const repairableOptions = [
-  { value: 'yes', label: '가능' },
-  { value: 'no', label: '불가능' },
-];
-
-const repairRequiredOptions = [
-  { value: 'required', label: '필수' },
-  { value: 'optional', label: '선택사항' },
-];
-
-const sizeUnitOptions = [
-  { value: '5', label: '5단위' },
-  { value: '10', label: '10단위' },
-  { value: 'free', label: '프리' },
-];
 
 export const ProductAddModal = ({
   isOpen,
@@ -141,144 +110,91 @@ export const ProductAddModal = ({
         </>
       }
     >
-      <div className="flex flex-col gap-4 w-[760px]">
+      <div className="flex flex-col gap-4 w-full">
+        {/* 시즌 / 카테고리 / 성별 */}
         <div className="flex gap-2 items-start">
           <div className="flex-1 min-w-0">
-            <Select
-              label="시즌"
-              placeholder="시즌"
-              options={seasonOptions}
-              value={season}
-              onChange={setSeason}
-              fullWidth
-            />
+            <Select label="시즌" placeholder="시즌" options={seasonOptions} value={season} onChange={setSeason} fullWidth />
           </div>
           <div className="flex-1 min-w-0">
-            <Select
-              label="카테고리 *"
-              placeholder="카테고리"
-              options={categoryOptions}
-              value={category}
-              onChange={setCategory}
-              fullWidth
-            />
+            <Select label="카테고리 *" placeholder="카테고리" groups={CATEGORY_GROUPS} value={category} onChange={setCategory} fullWidth />
           </div>
           <div className="flex-1 min-w-0">
-            <Select
-              label="성별 *"
-              placeholder="성별"
-              options={genderOptions}
-              value={gender}
-              onChange={setGender}
-              fullWidth
-            />
+            <Select label="성별 *" placeholder="성별" options={genderOptions} value={gender} onChange={setGender} fullWidth />
           </div>
         </div>
 
+        {/* 표시명 / 가격 */}
         <div className="flex gap-2 items-start">
           <div className="flex-1 min-w-0">
-            <Input
-              label="표시명 *"
-              placeholder="흰색 오각 (2글자 이상)"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              fullWidth
-            />
+            <Input label="표시명 *" placeholder="흰색 오각 (2글자 이상)" value={displayName} onChange={(e) => setDisplayName(e.target.value)} fullWidth />
           </div>
           <div className="flex-1 min-w-0">
-            <Input
-              label="가격 *"
-              placeholder="가격"
-              type="number"
-              value={originalPrice}
-              onChange={(e) => setOriginalPrice(e.target.value)}
-              fullWidth
-            />
+            <Input label="가격 *" placeholder="가격" type="number" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value)} className="text-right" fullWidth />
           </div>
         </div>
 
+        {/* 수선 가능여부 / 수선 필수 여부 */}
         <div className="flex gap-2 items-start">
           <div className="flex-1 min-w-0">
-            <Select
-              label="수선 가능여부"
-              placeholder="불가능"
-              options={repairableOptions}
-              value={isRepairable}
-              onChange={setIsRepairable}
-              fullWidth
-            />
+            <Select label="수선 가능여부" placeholder="불가능" options={repairableOptions} value={isRepairable} onChange={setIsRepairable} fullWidth />
           </div>
           <div className="flex-1 min-w-0">
-            <Select
-              label="수선 필수 여부"
-              placeholder="선택사항"
-              options={repairRequiredOptions}
-              value={isRepairRequired}
-              onChange={setIsRepairRequired}
-              fullWidth
-            />
+            <Select label="수선 필수 여부" placeholder="선택사항" options={repairRequiredOptions} value={isRepairRequired} onChange={setIsRepairRequired} fullWidth />
           </div>
         </div>
 
+        {/* 사이즈 */}
         <div className="flex gap-2 items-start">
           <div className="flex-1 min-w-0">
-            <Select
-              label="사이즈"
-              placeholder="5단위"
-              options={sizeUnitOptions}
-              value={sizeUnit}
-              onChange={setSizeUnit}
-              fullWidth
-            />
+            <Select label="사이즈" placeholder="5단위" options={sizeUnitOptions} value={sizeUnit} onChange={setSizeUnit} fullWidth />
           </div>
           <div className="flex-1 min-w-0" />
         </div>
 
-        <div className="flex flex-col gap-1">
+        {/* 사용 학교 */}
+        <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2.5">
-            <span className="flex-1 text-base font-normal text-[#393939]">사용 학교</span>
+            <span className="text-[15px] font-normal text-gray-700">사용 학교</span>
             <button
-              className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90 h-[30px] w-[100px] !rounded-[5px]"
+              className="px-4 py-1.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
               onClick={onOpenSchoolModal}
             >
               학교 추가
             </button>
           </div>
           {selectedSchools.length === 0 ? (
-            <p className="text-[15px] font-normal text-[#959595] text-center py-2.5">사용하는 학교가 없습니다</p>
+            <p className="text-[15px] text-gray-400 text-center py-2">사용하는 학교가 없습니다</p>
           ) : (
-            <div className="flex flex-col gap-3 mt-2">
+            <div className="flex flex-col gap-3">
               {Object.entries(
                 selectedSchools.reduce<Record<string, SchoolPrice[]>>((acc, school) => {
-                  const year = school.year;
-                  if (!acc[year]) {
-                    acc[year] = [];
-                  }
-                  acc[year].push(school);
+                  if (!acc[school.year]) acc[school.year] = [];
+                  acc[school.year].push(school);
                   return acc;
                 }, {})
               )
                 .sort(([a], [b]) => b.localeCompare(a))
                 .map(([year, schools]) => (
                   <div key={year} className="flex flex-col gap-2">
-                    <span className="text-sm font-medium text-[#4c4c4c]">{year}</span>
+                    <span className="text-sm font-medium text-gray-600">{year}</span>
                     <div className="flex flex-wrap gap-2">
                       {schools.map((school) => (
-                        <div key={`${school.year}-${school.schoolId}`} className="flex items-center gap-2 px-4 py-2 border border-[#c6c6c6] rounded-lg bg-white">
-                          <span className="text-[15px] font-normal text-[#4c4c4c]">{school.schoolName}</span>
-                          <div className="flex items-center px-4 py-2 border border-[#c6c6c6] rounded-lg bg-white">
+                        <div key={`${school.year}-${school.schoolId}`} className="flex items-center gap-2">
+                          <span className="flex items-center px-4 py-2 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
+                            {school.schoolName}
+                          </span>
+                          <div className="flex items-center px-4 py-2 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
                             <input
                               type="number"
-                              className="w-20 border-none bg-transparent text-[15px] font-normal text-[#4c4c4c] text-right outline-none"
+                              className="w-20 border-none bg-transparent text-[15px] text-gray-700 text-right outline-none"
                               value={school.price}
-                              onChange={(e) =>
-                                onSchoolPriceChange(school.schoolId, Number(e.target.value))
-                              }
+                              onChange={(e) => onSchoolPriceChange(school.schoolId, Number(e.target.value))}
                             />
-                            <span className="text-[15px] font-normal text-[#4c4c4c] ml-1">원</span>
+                            <span className="ml-1">원</span>
                           </div>
                           <button
-                            className="flex items-center justify-center w-5 h-5 border-none bg-none cursor-pointer text-[#959595] text-lg hover:text-red-500"
+                            className="flex items-center justify-center w-5 h-5 border-none bg-transparent cursor-pointer text-gray-400 text-lg hover:text-red-500"
                             onClick={() => onRemoveSchool(school.schoolId)}
                           >
                             ×

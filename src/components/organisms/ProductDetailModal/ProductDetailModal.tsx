@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Modal, Select, Input } from '@components/atoms';
+import type { SelectOption } from '@components/atoms/Select/Select';
 import type { SchoolPrice } from '../ProductAddModal';
+import { CATEGORY_GROUPS, getCategoryLabel } from '@/constants/productCategories';
+import { GENDER_OPTIONS } from '@/constants/gender';
 
 export interface ProductDetailData {
   id: string;
@@ -26,57 +29,53 @@ export interface ProductDetailModalProps {
   onSchoolPriceChange?: (schoolId: string, price: number) => void;
 }
 
-const seasonOptions = [
+// ============================================================================
+// 공통 옵션 목록
+// ============================================================================
+
+export const seasonOptions: SelectOption[] = [
   { value: 'S', label: '하복(S)' },
   { value: 'W', label: '동복(W)' },
   { value: 'A', label: '사계절(A)' },
 ];
 
-const categoryOptions = [
-  { value: 'jacket', label: '자켓' },
-  { value: 'pants', label: '바지' },
-  { value: 'skirt', label: '치마' },
-  { value: 'shirt', label: '셔츠' },
-  { value: 'blouse', label: '블라우스' },
-  { value: 'vest', label: '조끼' },
-  { value: 'tie', label: '넥타이' },
-  { value: 'socks', label: '양말' },
-];
+export const genderOptions: SelectOption[] = GENDER_OPTIONS;
 
-const genderOptions = [
-  { value: 'M', label: '남자(M)' },
-  { value: 'F', label: '여자(F)' },
-  { value: 'U', label: '공용(U)' },
-];
-
-const repairableOptions = [
+export const repairableOptions: SelectOption[] = [
   { value: 'yes', label: '가능' },
   { value: 'no', label: '불가능' },
 ];
 
-const repairRequiredOptions = [
+export const repairRequiredOptions: SelectOption[] = [
   { value: 'required', label: '필수' },
   { value: 'optional', label: '선택사항' },
 ];
 
-const sizeUnitOptions = [
+export const sizeUnitOptions: SelectOption[] = [
   { value: '5', label: '5단위' },
   { value: '10', label: '10단위' },
   { value: 'free', label: '프리' },
 ];
 
-const getSeasonLabel = (value: string) =>
-  seasonOptions.find((opt) => opt.value === value)?.label || value;
-const getCategoryLabel = (value: string) =>
-  categoryOptions.find((opt) => opt.value === value)?.label || value;
-const getGenderLabel = (value: string) =>
-  genderOptions.find((opt) => opt.value === value)?.label || value;
-const getRepairableLabel = (value: string) =>
-  repairableOptions.find((opt) => opt.value === value)?.label || value;
-const getRepairRequiredLabel = (value: string) =>
-  repairRequiredOptions.find((opt) => opt.value === value)?.label || value;
-const getSizeUnitLabel = (value: string) =>
-  sizeUnitOptions.find((opt) => opt.value === value)?.label || value;
+const getOptionLabel = (options: SelectOption[], value: string) =>
+  options.find((opt) => opt.value === value)?.label ?? value;
+
+// ============================================================================
+// 뷰 모드 필드 컴포넌트
+// ============================================================================
+
+const FieldView = ({ label, value, align = 'left' }: { label: string; value: string; align?: 'left' | 'right' }) => (
+  <div className="flex flex-col gap-2">
+    <span className="text-[15px] font-normal text-gray-700">{label}</span>
+    <div className={`flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-transparent text-[15px] font-normal leading-none text-gray-700 ${align === 'right' ? 'justify-end' : ''}`}>
+      {value}
+    </div>
+  </div>
+);
+
+// ============================================================================
+// 컴포넌트
+// ============================================================================
 
 export const ProductDetailModal = ({
   isOpen,
@@ -114,10 +113,6 @@ export const ProductDetailModal = ({
   const handleClose = () => {
     setIsEditMode(false);
     onClose();
-  };
-
-  const handleEdit = () => {
-    setIsEditMode(true);
   };
 
   const handleSave = () => {
@@ -168,7 +163,7 @@ export const ProductDetailModal = ({
           <>
             <button
               className="px-6 py-2.5 bg-[#7a3c00] text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
-              onClick={handleEdit}
+              onClick={() => setIsEditMode(true)}
             >
               수정
             </button>
@@ -182,211 +177,120 @@ export const ProductDetailModal = ({
         )
       }
     >
-      <div className="flex flex-col gap-4 w-190">
+      <div className="flex flex-col gap-4 w-full">
+        {/* 시즌 / 카테고리 / 성별 */}
         <div className="flex gap-2 items-start">
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Select
-                label="시즌"
-                placeholder="시즌"
-                options={seasonOptions}
-                value={season}
-                onChange={setSeason}
-                fullWidth
-              />
+              <Select label="시즌" placeholder="시즌" options={seasonOptions} value={season} onChange={setSeason} fullWidth />
             ) : (
-              <div className="flex flex-col gap-1">
-                <span className="px-2 text-base text-bg-800">시즌</span>
-                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
-                  {getSeasonLabel(product.season)}
-                </div>
-              </div>
+              <FieldView label="시즌" value={getOptionLabel(seasonOptions, product.season)} />
             )}
           </div>
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Select
-                label="카테고리"
-                placeholder="카테고리"
-                options={categoryOptions}
-                value={category}
-                onChange={setCategory}
-                fullWidth
-              />
+              <Select label="카테고리" placeholder="카테고리" groups={CATEGORY_GROUPS} value={category} onChange={setCategory} fullWidth />
             ) : (
-              <div className="flex flex-col gap-1">
-                <span className="px-2 text-base text-bg-800">카테고리</span>
-                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
-                  {getCategoryLabel(product.category)}
-                </div>
-              </div>
+              <FieldView label="카테고리" value={getCategoryLabel(product.category)} />
             )}
           </div>
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Select
-                label="성별"
-                placeholder="성별"
-                options={genderOptions}
-                value={gender}
-                onChange={setGender}
-                fullWidth
-              />
+              <Select label="성별" placeholder="성별" options={genderOptions} value={gender} onChange={setGender} fullWidth />
             ) : (
-              <div className="flex flex-col gap-1">
-                <span className="px-2 text-base text-bg-800">성별</span>
-                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
-                  {getGenderLabel(product.gender)}
-                </div>
-              </div>
+              <FieldView label="성별" value={getOptionLabel(genderOptions, product.gender)} />
             )}
           </div>
         </div>
 
+        {/* 표시명 / 가격 */}
         <div className="flex gap-2 items-start">
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Input
-                label="표시명"
-                placeholder="흰색 오각"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                fullWidth
-              />
+              <Input label="표시명" placeholder="흰색 오각" value={displayName} onChange={(e) => setDisplayName(e.target.value)} fullWidth />
             ) : (
-              <div className="flex flex-col gap-1">
-                <span className="px-2 text-base text-bg-800">표시명</span>
-                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">{product.displayName}</div>
-              </div>
+              <FieldView label="표시명" value={product.displayName} />
             )}
           </div>
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Input
-                label="가격"
-                placeholder="가격"
-                type="number"
-                value={originalPrice}
-                onChange={(e) => setOriginalPrice(e.target.value)}
-                fullWidth
-              />
+              <Input label="가격" placeholder="가격" type="number" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value)} className="text-right" fullWidth />
             ) : (
-              <div className="flex flex-col gap-1">
-                <span className="px-2 text-base text-bg-800">가격</span>
-                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
-                  {product.originalPrice.toLocaleString()}원
-                </div>
-              </div>
+              <FieldView label="가격" value={`${product.originalPrice.toLocaleString()}원`} align="right" />
             )}
           </div>
         </div>
 
+        {/* 수선 가능여부 / 수선 필수 여부 */}
         <div className="flex gap-2 items-start">
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Select
-                label="수선 가능여부"
-                placeholder="불가능"
-                options={repairableOptions}
-                value={isRepairable}
-                onChange={setIsRepairable}
-                fullWidth
-              />
+              <Select label="수선 가능여부" placeholder="불가능" options={repairableOptions} value={isRepairable} onChange={setIsRepairable} fullWidth />
             ) : (
-              <div className="flex flex-col gap-1">
-                <span className="px-2 text-base text-bg-800">수선 가능여부</span>
-                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
-                  {getRepairableLabel(product.isRepairable)}
-                </div>
-              </div>
+              <FieldView label="수선 가능여부" value={getOptionLabel(repairableOptions, product.isRepairable)} />
             )}
           </div>
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Select
-                label="수선 필수 여부"
-                placeholder="선택사항"
-                options={repairRequiredOptions}
-                value={isRepairRequired}
-                onChange={setIsRepairRequired}
-                fullWidth
-              />
+              <Select label="수선 필수 여부" placeholder="선택사항" options={repairRequiredOptions} value={isRepairRequired} onChange={setIsRepairRequired} fullWidth />
             ) : (
-              <div className="flex flex-col gap-1">
-                <span className="px-2 text-base text-bg-800">수선 필수 여부</span>
-                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
-                  {getRepairRequiredLabel(product.isRepairRequired)}
-                </div>
-              </div>
+              <FieldView label="수선 필수 여부" value={getOptionLabel(repairRequiredOptions, product.isRepairRequired)} />
             )}
           </div>
         </div>
 
+        {/* 사이즈 */}
         <div className="flex gap-2 items-start">
           <div className="flex-1 min-w-0">
             {isEditMode ? (
-              <Select
-                label="사이즈"
-                placeholder="5단위"
-                options={sizeUnitOptions}
-                value={sizeUnit}
-                onChange={setSizeUnit}
-                fullWidth
-              />
+              <Select label="사이즈" placeholder="5단위" options={sizeUnitOptions} value={sizeUnit} onChange={setSizeUnit} fullWidth />
             ) : (
-              <div className="flex flex-col gap-1">
-                <span className="px-2 text-base text-bg-800">사이즈</span>
-                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
-                  {getSizeUnitLabel(product.sizeUnit)}
-                </div>
-              </div>
+              <FieldView label="사이즈" value={getOptionLabel(sizeUnitOptions, product.sizeUnit)} />
             )}
           </div>
           <div className="flex-1 min-w-0" />
         </div>
 
-        <div className="flex flex-col gap-1">
+        {/* 사용 학교 */}
+        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2.5">
-            <span className="text-base text-bg-800">사용 학교</span>
+            <span className="text-[15px] font-normal text-gray-700">사용 학교</span>
             {isEditMode && onOpenSchoolModal && (
               <button
-                className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+                className="px-4 py-1.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
                 onClick={onOpenSchoolModal}
               >
                 학교 추가
               </button>
             )}
           </div>
-          {schools.length > 0 && (
-            <div className="flex flex-col gap-3 mt-2">
+          {schools.length > 0 ? (
+            <div className="flex flex-col gap-3">
               {Object.entries(
                 schools.reduce<Record<string, typeof schools>>((acc, school) => {
-                  const year = school.year;
-                  if (!acc[year]) {
-                    acc[year] = [];
-                  }
-                  acc[year].push(school);
+                  if (!acc[school.year]) acc[school.year] = [];
+                  acc[school.year].push(school);
                   return acc;
                 }, {})
               )
                 .sort(([a], [b]) => b.localeCompare(a))
                 .map(([year, yearSchools]) => (
                   <div key={year} className="flex flex-col gap-2">
-                    <span className="text-sm font-medium text-[#4c4c4c]">{year}</span>
+                    <span className="text-sm font-medium text-gray-600">{year}</span>
                     <div className="flex flex-wrap gap-2">
                       {yearSchools.map((school) => (
                         <div key={`${school.year}-${school.schoolId}`} className="flex items-center gap-2">
-                          <span className="flex items-center px-4 py-2 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">{school.schoolName}</span>
-                          <div className="flex items-center px-4 py-2 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
+                          <span className="flex items-center px-4 py-2 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
+                            {school.schoolName}
+                          </span>
+                          <div className="flex items-center px-4 py-2 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
                             {isEditMode && onSchoolPriceChange ? (
                               <>
                                 <input
                                   type="number"
-                                  className="w-20 border-none bg-transparent text-[15px] text-[#4c4c4c] text-right outline-none"
+                                  className="w-20 border-none bg-transparent text-[15px] text-gray-700 text-right outline-none"
                                   value={school.price}
-                                  onChange={(e) =>
-                                    onSchoolPriceChange(school.schoolId, Number(e.target.value))
-                                  }
+                                  onChange={(e) => onSchoolPriceChange(school.schoolId, Number(e.target.value))}
                                 />
                                 <span className="ml-1">원</span>
                               </>
@@ -396,7 +300,7 @@ export const ProductDetailModal = ({
                           </div>
                           {isEditMode && onRemoveSchool && (
                             <button
-                              className="flex items-center justify-center w-5 h-5 border-none bg-transparent cursor-pointer text-bg-400 text-lg hover:text-error"
+                              className="flex items-center justify-center w-5 h-5 border-none bg-transparent cursor-pointer text-gray-400 text-lg hover:text-red-500"
                               onClick={() => onRemoveSchool(school.schoolId)}
                             >
                               ×
@@ -408,6 +312,8 @@ export const ProductDetailModal = ({
                   </div>
                 ))}
             </div>
+          ) : (
+            <p className="text-[15px] text-gray-400 text-center py-2">사용하는 학교가 없습니다</p>
           )}
         </div>
       </div>

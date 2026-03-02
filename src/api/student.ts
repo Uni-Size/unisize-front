@@ -421,21 +421,21 @@ export async function getStudents(
 
 /**
  * 학생 상세 조회
- * GET /api/v1/admin/students/:id
+ * GET /api/v1/students/:id
  */
 export async function getStudentDetail(id: number): Promise<AdminStudent> {
   const response = await apiClient.get<ApiResponse<AdminStudent>>(
-    `/api/v1/admin/students/${id}`,
+    `/api/v1/students/${id}`,
   );
   return response.data.data;
 }
 
 /**
  * 학생 삭제
- * DELETE /api/v1/admin/students/:id
+ * DELETE /api/v1/students/:id
  */
 export async function deleteStudent(id: number): Promise<void> {
-  await apiClient.delete<ApiResponse<void>>(`/api/v1/admin/students/${id}`);
+  await apiClient.delete<ApiResponse<void>>(`/api/v1/students/${id}`);
 }
 
 // ============================================================================

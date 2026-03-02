@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal, Input, Select } from '@components/atoms';
+import { GENDER_OPTIONS_MF } from '@/constants/gender';
 
 // ============================================================================
 // 타입 정의
@@ -30,6 +31,11 @@ export interface NameTagInfo {
   attachQuantity: number;
 }
 
+export interface HistoryItem {
+  date: string;
+  content: string;
+}
+
 export interface StudentDetailData {
   id: string;
   admissionSchool: string;
@@ -39,12 +45,14 @@ export interface StudentDetailData {
   gender: string;
   studentPhone: string;
   guardianPhone: string;
-  registeredDate?: string;
-  modifiedDate?: string;
+  registeredDate?: string;   // 학생 created_at
+  modifiedDate?: string;     // 주문 last_modified_date
+  orderDates?: string[];     // 주문 탭 날짜 목록 (order.created_at)
   winterUniforms: UniformItem[];
   summerUniforms: UniformItem[];
   supplies: SupplyItem[];
   nameTag: NameTagInfo;
+  history?: HistoryItem[];
 }
 
 export interface StudentFormInput {
@@ -64,19 +72,16 @@ export interface StudentFormInput {
 export interface StudentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode: 'add' | 'edit';
+  mode: 'add' | 'edit' | 'view';
   student?: StudentDetailData | null;
-  onSubmit: (data: StudentFormInput) => void;
+  onSubmit?: (data: StudentFormInput) => void;
 }
 
 // ============================================================================
 // 옵션 데이터
 // ============================================================================
 
-const genderOptions = [
-  { value: 'M', label: '남자(M)' },
-  { value: 'F', label: '여자(F)' },
-];
+const genderOptions = GENDER_OPTIONS_MF;
 
 const sizeOptions = [
   { value: '77', label: '77' },
@@ -118,6 +123,8 @@ export const StudentModal = ({
   student,
   onSubmit,
 }: StudentModalProps) => {
+  const isView = mode === 'view';
+
   // 학생 정보 폼 state
   const [admissionSchool, setAdmissionSchool] = useState('');
   const [previousSchool, setPreviousSchool] = useState('');
@@ -137,9 +144,12 @@ export const StudentModal = ({
   // 명찰 state
   const [nameTag, setNameTag] = useState<NameTagInfo>({ orderQuantity: 0, attachQuantity: 0 });
 
-  // edit 모드에서 기존 데이터로 초기화
+  // view 모드: 활성 날짜 탭
+  const [activeDateIndex, setActiveDateIndex] = useState(0);
+
+  // edit/view 모드에서 기존 데이터로 초기화
   useEffect(() => {
-    if (mode === 'edit' && student) {
+    if ((mode === 'edit' || mode === 'view') && student) {
       setAdmissionSchool(student.admissionSchool);
       setPreviousSchool(student.previousSchool);
       setClassNumber(student.classNumber);
@@ -151,6 +161,7 @@ export const StudentModal = ({
       setSummerUniforms(student.summerUniforms);
       setSupplies(student.supplies.length > 0 ? student.supplies : defaultSupplies);
       setNameTag(student.nameTag);
+      setActiveDateIndex(0);
     }
   }, [mode, student]);
 
@@ -166,6 +177,7 @@ export const StudentModal = ({
     setSummerUniforms([]);
     setSupplies(defaultSupplies.map((s) => ({ ...s, size: '', quantity: 0 })));
     setNameTag({ orderQuantity: 0, attachQuantity: 0 });
+    setActiveDateIndex(0);
   };
 
   const handleClose = () => {
@@ -174,7 +186,7 @@ export const StudentModal = ({
   };
 
   const handleSubmit = () => {
-    onSubmit({
+    onSubmit?.({
       admissionSchool,
       previousSchool,
       classNumber,
@@ -226,6 +238,8 @@ export const StudentModal = ({
 
   const hasSchool = admissionSchool.trim() !== '';
 
+  const genderLabel = gender === 'M' ? '남' : gender === 'F' ? '여' : gender;
+
   // ============================================================================
   // 교복 테이블 렌더링
   // ============================================================================
@@ -258,7 +272,7 @@ export const StudentModal = ({
           ) : items.length === 0 ? (
             <tr>
               <td colSpan={7} className="text-center p-5 text-sm text-[#959595]">
-                학교를 먼저 선택해주세요
+                {mode === 'add' ? '학교를 먼저 선택해주세요' : '데이터가 없습니다'}
               </td>
             </tr>
           ) : (
@@ -268,7 +282,7 @@ export const StudentModal = ({
                 className={item.isDeleted ? 'bg-[#fee2e2] [&_td]:text-[#9b4d4d]' : ''}
               >
                 <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle relative">
-                  {item.isDeleted && (
+                  {!isView && item.isDeleted && (
                     <button
                       className="inline-flex items-center justify-center px-2.5 py-1 bg-[#ef4444] border-none rounded text-xs font-medium text-white cursor-pointer mr-2 hover:bg-[#dc2626]"
                       onClick={() => handleUniformDelete(season, item.id)}
@@ -276,7 +290,7 @@ export const StudentModal = ({
                       삭제
                     </button>
                   )}
-                  {!item.isDeleted && mode === 'edit' && (
+                  {!isView && !item.isDeleted && mode === 'edit' && (
                     <button
                       className="absolute left-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center bg-transparent border border-[#c6c6c6] rounded text-sm text-[#9b4d4d] cursor-pointer p-0 hover:bg-[#fee2e2] hover:border-[#9b4d4d]"
                       onClick={() => handleUniformDelete(season, item.id)}
@@ -288,39 +302,51 @@ export const StudentModal = ({
                   {item.name}
                 </td>
                 <td className="p-1 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
-                  <Select
-                    options={sizeOptions}
-                    value={item.size}
-                    onChange={(value) => handleUniformChange(season, item.id, 'size', value)}
-                    fullWidth
-                  />
+                  {isView ? (
+                    <span>{item.size || '-'}</span>
+                  ) : (
+                    <Select
+                      options={sizeOptions}
+                      value={item.size}
+                      onChange={(value) => handleUniformChange(season, item.id, 'size', value)}
+                      fullWidth
+                    />
+                  )}
                 </td>
                 <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
                   {item.supportedQuantity}
                 </td>
                 <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
-                  <input
-                    type="number"
-                    className="w-[50px] px-2 py-1 border border-[#c6c6c6] rounded text-sm text-center text-[#4c4c4c] bg-white outline-none focus:border-[#1f234f] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    value={item.additionalQuantity}
-                    onChange={(e) =>
-                      handleUniformChange(season, item.id, 'additionalQuantity', Number(e.target.value))
-                    }
-                    min={0}
-                  />
+                  {isView ? (
+                    <span>{item.additionalQuantity}</span>
+                  ) : (
+                    <input
+                      type="number"
+                      className="w-[50px] px-2 py-1 border border-[#c6c6c6] rounded text-sm text-center text-[#4c4c4c] bg-white outline-none focus:border-[#1f234f] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      value={item.additionalQuantity}
+                      onChange={(e) =>
+                        handleUniformChange(season, item.id, 'additionalQuantity', Number(e.target.value))
+                      }
+                      min={0}
+                    />
+                  )}
                 </td>
                 <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
                   {item.repair}
                 </td>
                 <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
-                  <input
-                    type="checkbox"
-                    className="w-[18px] h-[18px] accent-[#1f234f] cursor-pointer"
-                    checked={item.reservation}
-                    onChange={(e) =>
-                      handleUniformChange(season, item.id, 'reservation', e.target.checked)
-                    }
-                  />
+                  {isView ? (
+                    <span>{item.reservation ? '✓' : ''}</span>
+                  ) : (
+                    <input
+                      type="checkbox"
+                      className="w-[18px] h-[18px] accent-[#1f234f] cursor-pointer"
+                      checked={item.reservation}
+                      onChange={(e) =>
+                        handleUniformChange(season, item.id, 'reservation', e.target.checked)
+                      }
+                    />
+                  )}
                 </td>
                 <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
                   {item.nameTag !== null ? item.nameTag : '-'}
@@ -338,7 +364,6 @@ export const StudentModal = ({
   // ============================================================================
 
   const renderSupplyTable = () => {
-    // 카테고리별 그룹핑
     const grouped: { category: string; items: SupplyItem[] }[] = [];
     supplies.forEach((item) => {
       const existing = grouped.find((g) => g.category === item.category);
@@ -375,7 +400,9 @@ export const StudentModal = ({
                     {item.name}
                   </td>
                   <td className="p-1 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
-                    {item.category === '스타킹' ? (
+                    {isView ? (
+                      <span>{item.size || '-'}</span>
+                    ) : item.category === '스타킹' ? (
                       <span>-</span>
                     ) : (
                       <Select
@@ -388,15 +415,19 @@ export const StudentModal = ({
                     )}
                   </td>
                   <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
-                    <input
-                      type="number"
-                      className="w-[50px] px-2 py-1 border border-[#c6c6c6] rounded text-sm text-center text-[#4c4c4c] bg-white outline-none focus:border-[#1f234f] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        handleSupplyChange(item.id, 'quantity', Number(e.target.value))
-                      }
-                      min={0}
-                    />
+                    {isView ? (
+                      <span>{item.quantity}</span>
+                    ) : (
+                      <input
+                        type="number"
+                        className="w-[50px] px-2 py-1 border border-[#c6c6c6] rounded text-sm text-center text-[#4c4c4c] bg-white outline-none focus:border-[#1f234f] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          handleSupplyChange(item.id, 'quantity', Number(e.target.value))
+                        }
+                        min={0}
+                      />
+                    )}
                   </td>
                 </tr>
               )),
@@ -425,26 +456,34 @@ export const StudentModal = ({
           <tr>
             <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">명찰</td>
             <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
-              <input
-                type="number"
-                className="w-[50px] px-2 py-1 border border-[#c6c6c6] rounded text-sm text-center text-[#4c4c4c] bg-white outline-none focus:border-[#1f234f] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                value={nameTag.orderQuantity}
-                onChange={(e) =>
-                  setNameTag((prev) => ({ ...prev, orderQuantity: Number(e.target.value) }))
-                }
-                min={0}
-              />
+              {isView ? (
+                <span>{nameTag.orderQuantity}</span>
+              ) : (
+                <input
+                  type="number"
+                  className="w-[50px] px-2 py-1 border border-[#c6c6c6] rounded text-sm text-center text-[#4c4c4c] bg-white outline-none focus:border-[#1f234f] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  value={nameTag.orderQuantity}
+                  onChange={(e) =>
+                    setNameTag((prev) => ({ ...prev, orderQuantity: Number(e.target.value) }))
+                  }
+                  min={0}
+                />
+              )}
             </td>
             <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
-              <input
-                type="number"
-                className="w-[50px] px-2 py-1 border border-[#c6c6c6] rounded text-sm text-center text-[#4c4c4c] bg-white outline-none focus:border-[#1f234f] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                value={nameTag.attachQuantity}
-                onChange={(e) =>
-                  setNameTag((prev) => ({ ...prev, attachQuantity: Number(e.target.value) }))
-                }
-                min={0}
-              />
+              {isView ? (
+                <span>{nameTag.attachQuantity}</span>
+              ) : (
+                <input
+                  type="number"
+                  className="w-[50px] px-2 py-1 border border-[#c6c6c6] rounded text-sm text-center text-[#4c4c4c] bg-white outline-none focus:border-[#1f234f] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  value={nameTag.attachQuantity}
+                  onChange={(e) =>
+                    setNameTag((prev) => ({ ...prev, attachQuantity: Number(e.target.value) }))
+                  }
+                  min={0}
+                />
+              )}
             </td>
           </tr>
         </tbody>
@@ -456,99 +495,155 @@ export const StudentModal = ({
   // 렌더링
   // ============================================================================
 
+  const title = mode === 'add'
+    ? '학생추가'
+    : mode === 'edit'
+    ? '학생수정'
+    : student
+    ? `${student.admissionSchool} ${student.name}`
+    : '학생 상세';
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={mode === 'add' ? '학생추가' : '학생수정'}
-      width={850}
+      title={title}
+      width={1000}
       actions={
-        <>
-          <button className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90" onClick={handleClose}>
-            취소
+        isView ? (
+          <button
+            className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+            onClick={handleClose}
+          >
+            닫기
           </button>
-          <button className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90" onClick={handleSubmit}>
-            {mode === 'add' ? '추가' : '저장'}
-          </button>
-        </>
+        ) : (
+          <>
+            <button className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90" onClick={handleClose}>
+              취소
+            </button>
+            <button className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90" onClick={handleSubmit}>
+              {mode === 'add' ? '추가' : '저장'}
+            </button>
+          </>
+        )
       }
     >
-      <div className="flex flex-col gap-4 w-[810px]">
+      <div className="flex flex-col gap-4 w-full">
+        {/* 수정 버튼 (view 모드) */}
+        {isView && (
+          <div className="flex justify-end">
+            <button className="px-5 py-2 bg-[#b07a50] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90">
+              수정
+            </button>
+          </div>
+        )}
+
         {/* 학생 정보 */}
-        <div className="flex flex-col border border-[#c6c6c6] rounded-lg overflow-hidden [&_.input-wrapper]:flex-row [&_.input-wrapper]:items-center [&_.input-wrapper]:w-full [&_.input-wrapper]:gap-0 [&_.input-label]:flex-[0_0_100px] [&_.input-label]:px-4 [&_.input-label]:py-3 [&_.input-label]:text-[15px] [&_.input-label]:font-medium [&_.input-label]:text-[#393939] [&_.input-label]:bg-[#f9fafb] [&_.input-label]:border-r [&_.input-label]:border-[#c6c6c6] [&_.input-label]:mb-0 [&_.input-label]:h-full [&_.input-label]:flex [&_.input-label]:items-center [&_.input]:border-none [&_.input]:rounded-none [&_.input]:h-12 [&_.input:focus]:shadow-none [&_.input:focus]:border-none [&_.select-wrapper]:flex-row [&_.select-wrapper]:items-center [&_.select-wrapper]:w-full [&_.select-wrapper]:gap-0 [&_.select-label]:flex-[0_0_100px] [&_.select-label]:px-4 [&_.select-label]:py-3 [&_.select-label]:text-[15px] [&_.select-label]:font-medium [&_.select-label]:text-[#393939] [&_.select-label]:bg-[#f9fafb] [&_.select-label]:border-r [&_.select-label]:border-[#c6c6c6] [&_.select-label]:mb-0 [&_.select-label]:h-full [&_.select-label]:flex [&_.select-label]:items-center [&_.select]:border-none [&_.select]:rounded-none [&_.select]:h-12">
+        <div className="flex flex-col border border-[#c6c6c6] rounded-lg overflow-hidden [&_.input-wrapper]:flex-row [&_.input-wrapper]:items-center [&_.input-wrapper]:w-full [&_.input-wrapper]:gap-0 [&_.input-label]:flex-[0_0_120px] [&_.input-label]:px-4 [&_.input-label]:py-3 [&_.input-label]:text-[15px] [&_.input-label]:font-medium [&_.input-label]:text-[#393939] [&_.input-label]:bg-[#f9fafb] [&_.input-label]:border-r [&_.input-label]:border-[#c6c6c6] [&_.input-label]:mb-0 [&_.input-label]:h-full [&_.input-label]:flex [&_.input-label]:items-center [&_.input]:border-none [&_.input]:rounded-none [&_.input]:h-12 [&_.input:focus]:shadow-none [&_.input:focus]:border-none [&_.select-wrapper]:flex-row [&_.select-wrapper]:items-center [&_.select-wrapper]:w-full [&_.select-wrapper]:gap-0 [&_.select-label]:flex-[0_0_120px] [&_.select-label]:px-4 [&_.select-label]:py-3 [&_.select-label]:text-[15px] [&_.select-label]:font-medium [&_.select-label]:text-[#393939] [&_.select-label]:bg-[#f9fafb] [&_.select-label]:border-r [&_.select-label]:border-[#c6c6c6] [&_.select-label]:mb-0 [&_.select-label]:h-full [&_.select-label]:flex [&_.select-label]:items-center [&_.select]:border-none [&_.select]:rounded-none [&_.select]:h-12">
           <div className="flex items-stretch border-b border-[#c6c6c6]">
             <div className="flex-1 min-w-0 flex items-center border-r border-[#c6c6c6]">
-              <Input
-                label="입학학교"
-                placeholder="입학 학교"
-                value={admissionSchool}
-                onChange={(e) => setAdmissionSchool(e.target.value)}
-                fullWidth
-              />
+              {isView ? (
+                <ViewField label="입학학교" value={admissionSchool} />
+              ) : (
+                <Input
+                  label="입학학교"
+                  placeholder="입학 학교"
+                  value={admissionSchool}
+                  onChange={(e) => setAdmissionSchool(e.target.value)}
+                  fullWidth
+                />
+              )}
             </div>
             <div className="flex-1 min-w-0 flex items-center border-r border-[#c6c6c6]">
-              <Input
-                label="출신학교"
-                placeholder="출신 학교"
-                value={previousSchool}
-                onChange={(e) => setPreviousSchool(e.target.value)}
-                fullWidth
-              />
+              {isView ? (
+                <ViewField label="출신학교" value={previousSchool} />
+              ) : (
+                <Input
+                  label="출신학교"
+                  placeholder="출신 학교"
+                  value={previousSchool}
+                  onChange={(e) => setPreviousSchool(e.target.value)}
+                  fullWidth
+                />
+              )}
             </div>
             <div className="flex-[0_0_80px] flex items-center">
-              <Input
-                placeholder="반"
-                label=" "
-                value={classNumber}
-                onChange={(e) => setClassNumber(e.target.value)}
-                fullWidth
-              />
+              {isView ? (
+                <span className="flex-1 px-4 py-3 text-sm text-[#4c4c4c] h-12 flex items-center">
+                  {classNumber || '-'}
+                </span>
+              ) : (
+                <Input
+                  placeholder="반"
+                  label=" "
+                  value={classNumber}
+                  onChange={(e) => setClassNumber(e.target.value)}
+                  fullWidth
+                />
+              )}
             </div>
           </div>
 
           <div className="flex items-stretch border-b border-[#c6c6c6]">
             <div className="flex-1 min-w-0 flex items-center border-r border-[#c6c6c6]">
-              <Input
-                label="이름"
-                placeholder="학생이름"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                fullWidth
-              />
+              {isView ? (
+                <ViewField label="이름" value={name} />
+              ) : (
+                <Input
+                  label="이름"
+                  placeholder="학생이름"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  fullWidth
+                />
+              )}
             </div>
-            <div className="flex-1 min-w-0 flex items-center">
-              <Select
-                label="성별"
-                placeholder="성별"
-                options={genderOptions}
-                value={gender}
-                onChange={setGender}
-                fullWidth
-              />
+            <div className="flex-[1_1_0%] min-w-0 flex items-center" style={{ marginRight: '80px' }}>
+              {isView ? (
+                <ViewField label="성별" value={genderLabel} />
+              ) : (
+                <Select
+                  label="성별"
+                  placeholder="성별"
+                  options={genderOptions}
+                  value={gender}
+                  onChange={setGender}
+                  fullWidth
+                />
+              )}
             </div>
           </div>
 
           <div className="flex items-stretch border-b border-[#c6c6c6]">
             <div className="flex-1 min-w-0 flex items-center">
-              <Input
-                label="학생 연락처"
-                placeholder="학생연락처"
-                value={studentPhone}
-                onChange={(e) => setStudentPhone(e.target.value)}
-                fullWidth
-              />
+              {isView ? (
+                <ViewField label="학생 연락처" value={studentPhone} />
+              ) : (
+                <Input
+                  label="학생 연락처"
+                  placeholder="학생연락처"
+                  value={studentPhone}
+                  onChange={(e) => setStudentPhone(e.target.value)}
+                  fullWidth
+                />
+              )}
             </div>
           </div>
 
           <div className="flex items-stretch">
             <div className="flex-1 min-w-0 flex items-center">
-              <Input
-                label="보호자 연락처"
-                placeholder="보호자연락처"
-                value={guardianPhone}
-                onChange={(e) => setGuardianPhone(e.target.value)}
-                fullWidth
-              />
+              {isView ? (
+                <ViewField label="보호자 연락처" value={guardianPhone} />
+              ) : (
+                <Input
+                  label="보호자 연락처"
+                  placeholder="보호자연락처"
+                  value={guardianPhone}
+                  onChange={(e) => setGuardianPhone(e.target.value)}
+                  fullWidth
+                />
+              )}
             </div>
           </div>
         </div>
@@ -574,8 +669,27 @@ export const StudentModal = ({
           </div>
         )}
 
-        {/* 동복 테이블 */}
-        {renderUniformTable('동복', winterUniforms, 'winter')}
+        {/* 날짜 탭 + 동복 테이블 */}
+        <div className="flex flex-col gap-1">
+          {isView && student?.orderDates && student.orderDates.length > 0 && (
+            <div className="flex gap-3">
+              {student.orderDates.map((date, i) => (
+                <button
+                  key={date}
+                  className={`text-sm px-1 py-0.5 border-none bg-transparent cursor-pointer ${
+                    i === activeDateIndex
+                      ? 'font-bold text-[#393939]'
+                      : 'text-[#959595]'
+                  }`}
+                  onClick={() => setActiveDateIndex(i)}
+                >
+                  {date}
+                </button>
+              ))}
+            </div>
+          )}
+          {renderUniformTable('동복', winterUniforms, 'winter')}
+        </div>
 
         {/* 하복 테이블 */}
         {renderUniformTable('하복', summerUniforms, 'summer')}
@@ -585,7 +699,56 @@ export const StudentModal = ({
           {renderSupplyTable()}
           {renderNameTagTable()}
         </div>
+
+        {/* 이력 (view 모드) */}
+        {isView && student?.history && student.history.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <div className="flex border-b border-[#c6c6c6] pb-1">
+              <span className="text-sm font-medium text-[#393939] w-[160px]">날짜</span>
+              <span className="text-sm font-medium text-[#393939]">내용</span>
+            </div>
+            {student.history.map((h, i) => (
+              <div key={i} className="flex">
+                <span className="text-sm text-[#4c4c4c] w-[160px]">{h.date}</span>
+                <span className="text-sm text-[#4c4c4c]">{h.content}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 등록일/최종수정일 (view 모드) */}
+        {isView && (student?.registeredDate || student?.modifiedDate) && (
+          <div className="flex justify-end gap-6">
+            {student.registeredDate && (
+              <div className="flex flex-col items-end">
+                <span className="text-xs text-[#959595]">등록일</span>
+                <span className="text-xs text-[#4c4c4c]">{student.registeredDate}</span>
+              </div>
+            )}
+            {student.modifiedDate && (
+              <div className="flex flex-col items-end">
+                <span className="text-xs text-[#959595]">최종 수정일</span>
+                <span className="text-xs text-[#4c4c4c]">{student.modifiedDate}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </Modal>
   );
 };
+
+// ============================================================================
+// read-only 필드 컴포넌트
+// ============================================================================
+
+const ViewField = ({ label, value }: { label: string; value: string }) => (
+  <div className="input-wrapper flex flex-row items-center w-full gap-0">
+    <span className="input-label flex-[0_0_120px] px-4 py-3 text-[15px] font-medium text-[#393939] bg-[#f9fafb] border-r border-[#c6c6c6] h-12 flex items-center">
+      {label}
+    </span>
+    <span className="flex-1 px-4 py-3 text-sm text-[#4c4c4c] h-12 flex items-center">
+      {value || '-'}
+    </span>
+  </div>
+);

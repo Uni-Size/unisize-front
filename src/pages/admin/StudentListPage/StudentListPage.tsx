@@ -40,7 +40,7 @@ export const StudentListPage = () => {
 
   // 모달 state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<StudentDetailData | null>(null);
 
   const mapToRow = (student: AdminStudent, index: number, page: number): StudentRow => ({
@@ -53,7 +53,7 @@ export const StudentListPage = () => {
     studentPhone: student.student_phone,
     parentPhone: student.guardian_phone,
     governmentPurchase: student.government_purchase ? 'O' : 'X',
-    registeredDate: student.created_at ? new Date(student.created_at).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' }) : '',
+    registeredDate: student.created_at ?? '',
   });
 
   const fetchStudents = useCallback(async (page: number, search?: string, school?: string, grade?: number) => {
@@ -120,14 +120,14 @@ export const StudentListPage = () => {
         gender: detail.gender,
         studentPhone: detail.student_phone,
         guardianPhone: detail.guardian_phone,
-        registeredDate: detail.created_at ? new Date(detail.created_at).toLocaleDateString('ko-KR') : '',
+        registeredDate: detail.created_at ?? undefined,
         winterUniforms: [],
         summerUniforms: [],
         supplies: [],
         nameTag: { orderQuantity: 0, attachQuantity: 0 },
       };
       setSelectedStudent(detailData);
-      setIsEditModalOpen(true);
+      setIsViewModalOpen(true);
     } catch (error) {
       console.error('학생 상세 조회 실패:', error);
     }
@@ -282,11 +282,10 @@ export const StudentListPage = () => {
         />
 
         <StudentModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          mode="edit"
+          isOpen={isViewModalOpen}
+          onClose={() => setIsViewModalOpen(false)}
+          mode="view"
           student={selectedStudent}
-          onSubmit={handleEditStudent}
         />
       </div>
     </AdminLayout>

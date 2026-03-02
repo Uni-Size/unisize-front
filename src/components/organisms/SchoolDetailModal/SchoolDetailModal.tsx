@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal, Select, Input } from '@components/atoms';
 import type { SchoolProductItem } from '../SchoolAddModal';
+import { GENDER_OPTIONS, getGenderLabel } from '@/constants/gender';
 
 export interface PurchaseInfo {
   id: string;
@@ -51,24 +52,18 @@ const yearOptions = Array.from({ length: 10 }, (_, i) => ({
 }));
 
 const categoryOptions = [
-  { value: 'top', label: '상의' },
-  { value: 'bottom', label: '하의' },
-  { value: 'hood', label: '후드' },
-  { value: 'outer', label: '아우터' },
+  { value: '상의', label: '상의' },
+  { value: '하의', label: '하의' },
+  { value: '후드', label: '후드' },
+  { value: '아우터', label: '아우터' },
 ];
 
-const genderOptions = [
-  { value: 'M', label: '남자(M)' },
-  { value: 'F', label: '여자(F)' },
-  { value: 'U', label: '공용(U)' },
-];
+const genderOptions = GENDER_OPTIONS;
 
 const getPurchaseStatusLabel = (value: string) =>
   purchaseStatusOptions.find((opt) => opt.value === value)?.label || value;
 const getCategoryLabel = (value: string) =>
   categoryOptions.find((opt) => opt.value === value)?.label || value;
-const getGenderLabel = (value: string) =>
-  genderOptions.find((opt) => opt.value === value)?.label || value;
 
 export const SchoolDetailModal = ({
   isOpen,
@@ -296,7 +291,7 @@ export const SchoolDetailModal = ({
         )
       }
     >
-      <div className="flex flex-col gap-4 w-190">
+      <div className="flex flex-col gap-4 w-full">
         <div className="flex flex-col items-end gap-1 absolute top-3.75 right-30">
           <span className="text-xs text-bg-400">등록일</span>
           <span className="text-xs text-bg-400">{school.registeredDate}</span>
@@ -345,10 +340,10 @@ export const SchoolDetailModal = ({
                   </div>
                 )}
               </div>
-              <div className="flex-none w-35 min-w-0">
+              <div className="flex-none w-25 min-w-0">
                 {isEditMode ? (
                   <Select
-                    label="주관구매 진행년도"
+                    label="진행년도"
                     options={yearOptions}
                     value={purchase.purchaseYear}
                     onChange={(value) => handlePurchaseChange(purchase.id, 'purchaseYear', value)}
@@ -356,7 +351,7 @@ export const SchoolDetailModal = ({
                   />
                 ) : (
                   <div className="flex flex-col gap-1">
-                    <span className="px-2 text-base text-bg-800">주관구매 진행년도</span>
+                    <span className="px-2 text-base text-bg-800">진행년도</span>
                     <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
                       {purchase.purchaseYear}
                     </div>

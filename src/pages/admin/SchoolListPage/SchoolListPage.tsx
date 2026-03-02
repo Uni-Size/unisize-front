@@ -17,6 +17,7 @@ import type { Column } from '@components/atoms/Table';
 import { getSupportedSchoolsByYear, deleteSupportedSchool, type School as ApiSchool } from '@/api/school';
 import { getTargetYear } from '@/utils/schoolUtils';
 import { getApiErrorMessage } from '@/utils/errorUtils';
+import { DUMMY_SCHOOL_DETAIL } from '../SchoolDetailPage/schoolDetailDummyData';
 
 interface SchoolRow {
   id: number;
@@ -102,14 +103,13 @@ export const SchoolListPage = () => {
   };
 
   const handleOpenDetailModal = (school: SchoolRow) => {
+    // TODO: 학교 디테일 조회 API 연동 시 실제 데이터로 교체
     const detailData: SchoolDetailData = {
+      ...DUMMY_SCHOOL_DETAIL,
       id: String(school.id),
       schoolName: school.schoolName,
       registeredDate: school.registeredDate,
       lastModifiedDate: school.modifiedDate,
-      purchases: [],
-      winterProducts: [],
-      summerProducts: [],
     };
     setSelectedSchool(detailData);
     setIsDetailModalOpen(true);

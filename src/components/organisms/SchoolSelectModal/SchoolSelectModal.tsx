@@ -102,7 +102,7 @@ export const SchoolSelectModal = ({
         </>
       }
     >
-      <div className="flex flex-col gap-4 w-135">
+      <div className="flex flex-col gap-4 w-full">
         <div className="flex gap-2 items-start">
           <div className="flex-none w-25 min-w-0">
             <Select

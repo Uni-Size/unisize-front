@@ -25,6 +25,8 @@ import {
   type Product as ApiProduct,
 } from "@/api/product";
 import { getApiErrorMessage } from "@/utils/errorUtils";
+import { CATEGORY_LABEL_MAP } from "@/constants/productCategories";
+import { GENDER_LABEL_MAP, GENDER_OPTIONS } from "@/constants/gender";
 
 interface ProductRow {
   id: string;
@@ -49,17 +51,8 @@ const seasonLabel: Record<string, string> = {
   A: "사계절",
 };
 
-const categoryLabel: Record<string, string> = {
-  shirt: "셔츠",
-  pants: "바지",
-  skirt: "치마",
-};
 
-const genderLabel: Record<string, string> = {
-  M: "남",
-  F: "여",
-  U: "공용",
-};
+const genderLabel = GENDER_LABEL_MAP;
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return "";
@@ -79,7 +72,7 @@ const toProductRow = (
   id: String(item.id),
   no: (page - 1) * limit + index + 1,
   season: seasonLabel[item.season ?? ""] ?? item.season ?? "",
-  category: categoryLabel[item.category] ?? item.category,
+  category: CATEGORY_LABEL_MAP[item.category] ?? item.category,
   gender: genderLabel[item.gender] ?? item.gender,
   productName: item.name,
   price: item.price,
@@ -435,12 +428,7 @@ export const ProductListPage = () => {
               성별
             </div>
             <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white">
-              {[
-                { value: "", label: "전체" },
-                { value: "F", label: "여자(F)" },
-                { value: "M", label: "남자(M)" },
-                { value: "U", label: "공용(U)" },
-              ].map((opt) => (
+              {[{ value: "", label: "전체" }, ...GENDER_OPTIONS].map((opt) => (
                 <label key={opt.value} className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
                   <input
                     type="checkbox"

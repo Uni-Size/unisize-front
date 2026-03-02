@@ -8,6 +8,7 @@ import type {
   StudentDetailData,
   StudentFormInput,
 } from "@components/organisms/StudentModal";
+import { OrderSizeTable } from "@components/organisms/OrderSizeTable";
 import { Table } from "@components/atoms/Table";
 import { Input } from "@components/atoms/Input";
 import { Button } from "@components/atoms/Button";
@@ -18,6 +19,8 @@ import type { AdminStudent } from "@/api/student";
 import { getSupportedSchoolsByYear } from "@/api/school";
 import { getTargetYear } from "@/utils/schoolUtils";
 import { getApiErrorMessage } from "@/utils/errorUtils";
+import { DUMMY_SECTIONS } from "./orderDummyData";
+import type { ProductSection } from "./orderDummyData";
 
 interface StudentRow {
   id: number;
@@ -382,39 +385,6 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
 // 주문/예약 탭
 // ============================================================================
 
-// 사이즈 목록
-const SIZES = [
-  "85",
-  "90",
-  "95",
-  "100",
-  "105",
-  "110",
-  "115",
-  "120",
-  "125",
-  "130",
-  "135",
-];
-
-interface SizeData {
-  ordered: number;
-  purchased: number;
-}
-
-interface ProductSizeRow {
-  studentName: string;
-  gender: string;
-  sizes: Record<string, string>;
-  reserved?: boolean;
-}
-
-interface ProductSection {
-  name: string;
-  sizeTotals: Record<string, SizeData>;
-  rows: ProductSizeRow[];
-}
-
 const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
   const [selectedProducts, setSelectedProducts] = useState<string[]>(["전체"]);
   const productOptions = [
@@ -427,7 +397,7 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
   ];
 
   // TODO: 실제 API 연동 시 학교별 주문/재고 데이터를 가져오도록 교체
-  const [sections] = useState<ProductSection[]>([]);
+  const [sections] = useState<ProductSection[]>(DUMMY_SECTIONS);
 
   const individualOptions = productOptions.filter((o) => o !== "전체");
 
@@ -449,81 +419,9 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
     }
   };
 
-  const renderSizeHeader = (sizeTotals: Record<string, SizeData>) => (
-    <tr className="bg-gray-50">
-      {SIZES.map((size) => {
-        const data = sizeTotals[size] || { ordered: 0, purchased: 0 };
-        const remaining = data.ordered - data.purchased;
-        return (
-          <td
-            key={size}
-            className="border border-gray-200 px-2 py-1.5 text-center text-[13px] font-medium"
-          >
-            <div>
-              {data.ordered} ({data.purchased})
-            </div>
-            {remaining !== 0 && (
-              <div
-                className={
-                  remaining < 0 ? "text-red-600 font-bold" : "text-blue-600"
-                }
-              >
-                잔여 {remaining}
-              </div>
-            )}
-          </td>
-        );
-      })}
-    </tr>
-  );
-
-  const renderProductSection = (section: ProductSection) => (
-    <div key={section.name} className="mb-6">
-      <h3 className="text-[15px] font-medium text-gray-800 mb-2">
-        {section.name}
-      </h3>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-[13px]">
-          <thead>
-            <tr className="bg-gray-100">
-              {SIZES.map((size) => (
-                <th
-                  key={size}
-                  className="border border-gray-200 px-2 py-2 text-center font-medium min-w-[70px]"
-                >
-                  {size} ({section.sizeTotals[size]?.ordered ?? 0})
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {renderSizeHeader(section.sizeTotals)}
-            {section.rows.map((row, idx) => (
-              <tr key={idx} className={row.reserved ? "bg-yellow-50" : ""}>
-                {SIZES.map((size) => (
-                  <td
-                    key={size}
-                    className="border border-gray-200 px-2 py-1.5 text-center text-[13px]"
-                  >
-                    {row.sizes[size] || ""}
-                    {row.sizes[size] && (
-                      <span className="ml-1 text-gray-400 text-[11px]">
-                        {row.reserved ? "예약" : ""}
-                      </span>
-                    )}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
-  const handleSearch = () => {
-    // TODO: 검색 API 연동
-  };
+  const visibleSections = selectedProducts.includes("전체")
+    ? sections
+    : sections.filter((s) => selectedProducts.includes(s.name));
 
   const handleReset = () => {
     setSelectedProducts(["전체"]);
@@ -561,11 +459,7 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
       </div>
 
       <div className="flex justify-center gap-3">
-        <Button
-          variant="primary"
-          className="w-auto px-8 py-2.5"
-          onClick={handleSearch}
-        >
+        <Button variant="primary" className="w-auto px-8 py-2.5">
           검색
         </Button>
         <Button
@@ -577,8 +471,10 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
         </Button>
       </div>
 
-      {sections.length > 0 ? (
-        sections.map(renderProductSection)
+      {visibleSections.length > 0 ? (
+        visibleSections.map((section) => (
+          <OrderSizeTable key={section.name} section={section} />
+        ))
       ) : (
         <div className="flex items-center justify-center py-20 text-gray-400 text-[14px]">
           주문/예약 데이터가 없습니다.
