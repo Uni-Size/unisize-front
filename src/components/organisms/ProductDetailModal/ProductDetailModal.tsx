@@ -1,12 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Modal, Select, Input } from "@components/atoms";
-import type { SelectOption } from "@components/atoms/Select/Select";
 import type { SchoolPrice } from "../ProductAddModal";
 import {
   CATEGORY_GROUPS,
   getCategoryLabel,
 } from "@/constants/productCategories";
-import { GENDER_OPTIONS } from "@/constants/gender";
+import { GENDER_OPTIONS, getGenderLabel } from "@/constants/gender";
+import {
+  SEASON_OPTIONS,
+  REPAIRABLE_OPTIONS,
+  REPAIR_REQUIRED_OPTIONS,
+  SIZE_UNIT_OPTIONS,
+  getSeasonLabel,
+} from "@/constants/product";
 
 export interface ProductDetailData {
   id: string;
@@ -33,37 +39,6 @@ export interface ProductDetailModalProps {
 }
 
 // ============================================================================
-// 공통 옵션 목록
-// ============================================================================
-
-export const seasonOptions: SelectOption[] = [
-  { value: "S", label: "하복(S)" },
-  { value: "W", label: "동복(W)" },
-  { value: "A", label: "사계절(A)" },
-];
-
-export const genderOptions: SelectOption[] = GENDER_OPTIONS;
-
-export const repairableOptions: SelectOption[] = [
-  { value: "yes", label: "가능" },
-  { value: "no", label: "불가능" },
-];
-
-export const repairRequiredOptions: SelectOption[] = [
-  { value: "required", label: "필수" },
-  { value: "optional", label: "선택사항" },
-];
-
-export const sizeUnitOptions: SelectOption[] = [
-  { value: "5", label: "5단위" },
-  { value: "10", label: "10단위" },
-  { value: "free", label: "프리" },
-];
-
-const getOptionLabel = (options: SelectOption[], value: string) =>
-  options.find((opt) => opt.value === value)?.label ?? value;
-
-// ============================================================================
 // 뷰 모드 필드 컴포넌트
 // ============================================================================
 
@@ -87,41 +62,28 @@ const FieldView = ({
 );
 
 // ============================================================================
-// 컴포넌트
+// 편집 state를 담당하는 내부 컴포넌트 (key로 리마운트해서 초기화)
 // ============================================================================
 
-export const ProductDetailModal = ({
-  isOpen,
-  onClose,
+const ProductDetailModalContent = ({
   product,
+  onClose,
   onUpdate,
   onOpenSchoolModal,
   selectedSchools,
   onRemoveSchool,
   onSchoolPriceChange,
-}: ProductDetailModalProps) => {
+  isOpen,
+}: ProductDetailModalProps & { product: ProductDetailData }) => {
   const [isEditMode, setIsEditMode] = useState(false);
-  const [season, setSeason] = useState("");
-  const [category, setCategory] = useState("");
-  const [gender, setGender] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [originalPrice, setOriginalPrice] = useState("");
-  const [isRepairable, setIsRepairable] = useState("");
-  const [isRepairRequired, setIsRepairRequired] = useState("");
-  const [sizeUnit, setSizeUnit] = useState("");
-
-  useEffect(() => {
-    if (product) {
-      setSeason(product.season);
-      setCategory(product.category);
-      setGender(product.gender);
-      setDisplayName(product.displayName);
-      setOriginalPrice(String(product.originalPrice));
-      setIsRepairable(product.isRepairable);
-      setIsRepairRequired(product.isRepairRequired);
-      setSizeUnit(product.sizeUnit);
-    }
-  }, [product]);
+  const [season, setSeason] = useState(product.season);
+  const [category, setCategory] = useState(product.category);
+  const [gender, setGender] = useState(product.gender);
+  const [displayName, setDisplayName] = useState(product.displayName);
+  const [originalPrice, setOriginalPrice] = useState(String(product.originalPrice));
+  const [isRepairable, setIsRepairable] = useState(product.isRepairable);
+  const [isRepairRequired, setIsRepairRequired] = useState(product.isRepairRequired);
+  const [sizeUnit, setSizeUnit] = useState(product.sizeUnit);
 
   const handleClose = () => {
     setIsEditMode(false);
@@ -129,26 +91,25 @@ export const ProductDetailModal = ({
   };
 
   const handleSave = () => {
-    if (product) {
-      onUpdate({
-        ...product,
-        season,
-        category,
-        gender,
-        displayName,
-        originalPrice: Number(originalPrice),
-        isRepairable,
-        isRepairRequired,
-        sizeUnit,
-        schools: selectedSchools || product.schools,
-      });
-    }
+    onUpdate({
+      ...product,
+      season,
+      category,
+      gender,
+      displayName,
+      originalPrice: Number(originalPrice),
+      isRepairable,
+      isRepairRequired,
+      sizeUnit,
+      schools: selectedSchools || product.schools,
+    });
     setIsEditMode(false);
   };
 
-  const schools = selectedSchools || product?.schools || [];
+  const schools = selectedSchools || product.schools;
 
-  if (!product) return null;
+  const getOptionLabel = (options: { value: string; label: string }[], value: string) =>
+    options.find((opt) => opt.value === value)?.label ?? value;
 
   return (
     <Modal
@@ -198,16 +159,13 @@ export const ProductDetailModal = ({
               <Select
                 label="시즌"
                 placeholder="시즌"
-                options={seasonOptions}
+                options={SEASON_OPTIONS}
                 value={season}
                 onChange={setSeason}
                 fullWidth
               />
             ) : (
-              <FieldView
-                label="시즌"
-                value={getOptionLabel(seasonOptions, product.season)}
-              />
+              <FieldView label="시즌" value={getSeasonLabel(product.season)} />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -222,10 +180,7 @@ export const ProductDetailModal = ({
                 fullWidth
               />
             ) : (
-              <FieldView
-                label="카테고리"
-                value={getCategoryLabel(product.category)}
-              />
+              <FieldView label="카테고리" value={getCategoryLabel(product.category)} />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -233,16 +188,13 @@ export const ProductDetailModal = ({
               <Select
                 label="성별"
                 placeholder="성별"
-                options={genderOptions}
+                options={GENDER_OPTIONS}
                 value={gender}
                 onChange={setGender}
                 fullWidth
               />
             ) : (
-              <FieldView
-                label="성별"
-                value={getOptionLabel(genderOptions, product.gender)}
-              />
+              <FieldView label="성별" value={getGenderLabel(product.gender)} />
             )}
           </div>
         </div>
@@ -290,7 +242,7 @@ export const ProductDetailModal = ({
               <Select
                 label="수선 가능여부"
                 placeholder="불가능"
-                options={repairableOptions}
+                options={REPAIRABLE_OPTIONS}
                 value={isRepairable}
                 onChange={setIsRepairable}
                 fullWidth
@@ -298,7 +250,7 @@ export const ProductDetailModal = ({
             ) : (
               <FieldView
                 label="수선 가능여부"
-                value={getOptionLabel(repairableOptions, product.isRepairable)}
+                value={getOptionLabel(REPAIRABLE_OPTIONS, product.isRepairable)}
               />
             )}
           </div>
@@ -307,7 +259,7 @@ export const ProductDetailModal = ({
               <Select
                 label="수선 필수 여부"
                 placeholder="선택사항"
-                options={repairRequiredOptions}
+                options={REPAIR_REQUIRED_OPTIONS}
                 value={isRepairRequired}
                 onChange={setIsRepairRequired}
                 fullWidth
@@ -315,10 +267,7 @@ export const ProductDetailModal = ({
             ) : (
               <FieldView
                 label="수선 필수 여부"
-                value={getOptionLabel(
-                  repairRequiredOptions,
-                  product.isRepairRequired,
-                )}
+                value={getOptionLabel(REPAIR_REQUIRED_OPTIONS, product.isRepairRequired)}
               />
             )}
           </div>
@@ -331,7 +280,7 @@ export const ProductDetailModal = ({
               <Select
                 label="사이즈"
                 placeholder="5단위"
-                options={sizeUnitOptions}
+                options={SIZE_UNIT_OPTIONS}
                 value={sizeUnit}
                 onChange={setSizeUnit}
                 fullWidth
@@ -339,7 +288,7 @@ export const ProductDetailModal = ({
             ) : (
               <FieldView
                 label="사이즈"
-                value={getOptionLabel(sizeUnitOptions, product.sizeUnit)}
+                value={getOptionLabel(SIZE_UNIT_OPTIONS, product.sizeUnit)}
               />
             )}
           </div>
@@ -349,9 +298,7 @@ export const ProductDetailModal = ({
         {/* 사용 학교 */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2.5">
-            <span className="text-[15px] font-normal text-gray-700">
-              사용 학교
-            </span>
+            <span className="text-[15px] font-normal text-gray-700">사용 학교</span>
             {isEditMode && onOpenSchoolModal && (
               <button
                 className="px-4 py-1.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
@@ -376,9 +323,7 @@ export const ProductDetailModal = ({
                 .sort(([a], [b]) => b.localeCompare(a))
                 .map(([year, yearSchools]) => (
                   <div key={year} className="flex flex-col gap-2">
-                    <span className="text-sm font-medium text-gray-600">
-                      {year}
-                    </span>
+                    <span className="text-sm font-medium text-gray-600">{year}</span>
                     <div className="flex flex-wrap gap-2">
                       {yearSchools.map((school) => (
                         <div
@@ -396,10 +341,7 @@ export const ProductDetailModal = ({
                                   className="w-20 border-none bg-transparent text-[15px] text-gray-700 text-right outline-none"
                                   value={school.price}
                                   onChange={(e) =>
-                                    onSchoolPriceChange(
-                                      school.schoolId,
-                                      Number(e.target.value),
-                                    )
+                                    onSchoolPriceChange(school.schoolId, Number(e.target.value))
                                   }
                                 />
                                 <span className="ml-1">원</span>
@@ -431,4 +373,13 @@ export const ProductDetailModal = ({
       </div>
     </Modal>
   );
+};
+
+// ============================================================================
+// 외부 컴포넌트 (product.id를 key로 내부 컴포넌트 리마운트)
+// ============================================================================
+
+export const ProductDetailModal = (props: ProductDetailModalProps) => {
+  if (!props.product) return null;
+  return <ProductDetailModalContent key={props.product.id} {...props} product={props.product} />;
 };

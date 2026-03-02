@@ -103,11 +103,6 @@ export const StudentListPage = () => {
     fetchStudents(currentPage);
   };
 
-  const handleEditStudent = (data: StudentFormInput) => {
-    console.log('학생 수정:', data);
-    fetchStudents(currentPage);
-  };
-
   const handleRowClick = async (student: StudentRow) => {
     try {
       const detail = await getStudentDetail(student.id);

@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Modal, Select, Input } from "@components/atoms";
 import { CATEGORY_GROUPS } from "@/constants/productCategories";
+import { GENDER_OPTIONS } from "@/constants/gender";
 import {
-  seasonOptions,
-  genderOptions,
-  repairableOptions,
-  repairRequiredOptions,
-  sizeUnitOptions,
-} from "../ProductDetailModal/ProductDetailModal";
+  SEASON_OPTIONS,
+  REPAIRABLE_OPTIONS,
+  REPAIR_REQUIRED_OPTIONS,
+  SIZE_UNIT_OPTIONS,
+} from "@/constants/product";
 
 export interface SchoolPrice {
   schoolId: string;
@@ -124,7 +124,7 @@ export const ProductAddModal = ({
             <Select
               label="시즌"
               placeholder="시즌"
-              options={seasonOptions}
+              options={SEASON_OPTIONS}
               value={season}
               onChange={setSeason}
               fullWidth
@@ -145,7 +145,7 @@ export const ProductAddModal = ({
             <Select
               label="성별 *"
               placeholder="성별"
-              options={genderOptions}
+              options={GENDER_OPTIONS}
               value={gender}
               onChange={setGender}
               fullWidth
@@ -183,7 +183,7 @@ export const ProductAddModal = ({
             <Select
               label="수선 가능여부"
               placeholder="불가능"
-              options={repairableOptions}
+              options={REPAIRABLE_OPTIONS}
               value={isRepairable}
               onChange={setIsRepairable}
               fullWidth
@@ -193,7 +193,7 @@ export const ProductAddModal = ({
             <Select
               label="수선 필수 여부"
               placeholder="선택사항"
-              options={repairRequiredOptions}
+              options={REPAIR_REQUIRED_OPTIONS}
               value={isRepairRequired}
               onChange={setIsRepairRequired}
               fullWidth
@@ -207,7 +207,7 @@ export const ProductAddModal = ({
             <Select
               label="사이즈"
               placeholder="5단위"
-              options={sizeUnitOptions}
+              options={SIZE_UNIT_OPTIONS}
               value={sizeUnit}
               onChange={setSizeUnit}
               fullWidth
