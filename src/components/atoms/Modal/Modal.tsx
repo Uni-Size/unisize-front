@@ -6,6 +6,7 @@ export interface ModalProps {
   title: string;
   children: ReactNode;
   actions?: ReactNode;
+  titleExtra?: ReactNode;
   width?: number;
 }
 
@@ -15,6 +16,7 @@ export const Modal = ({
   title,
   children,
   actions,
+  titleExtra,
   width = 800,
 }: ModalProps) => {
   useEffect(() => {
@@ -54,8 +56,9 @@ export const Modal = ({
         style={{ maxWidth: `${width}px` }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center w-full">
+        <div className="flex items-center justify-between w-full">
           <h2 className="text-xl font-normal text-[#111827] m-0">{title}</h2>
+          {titleExtra && <div>{titleExtra}</div>}
         </div>
         <div className="flex-1 overflow-y-auto scrollbar-hide">{children}</div>
         {actions && <div className="flex gap-2 items-center justify-center w-full pt-4">{actions}</div>}

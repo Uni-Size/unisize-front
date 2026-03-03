@@ -80,9 +80,13 @@ const ProductDetailModalContent = ({
   const [category, setCategory] = useState(product.category);
   const [gender, setGender] = useState(product.gender);
   const [displayName, setDisplayName] = useState(product.displayName);
-  const [originalPrice, setOriginalPrice] = useState(String(product.originalPrice));
+  const [originalPrice, setOriginalPrice] = useState(
+    String(product.originalPrice),
+  );
   const [isRepairable, setIsRepairable] = useState(product.isRepairable);
-  const [isRepairRequired, setIsRepairRequired] = useState(product.isRepairRequired);
+  const [isRepairRequired, setIsRepairRequired] = useState(
+    product.isRepairRequired,
+  );
   const [sizeUnit, setSizeUnit] = useState(product.sizeUnit);
 
   const handleClose = () => {
@@ -108,8 +112,10 @@ const ProductDetailModalContent = ({
 
   const schools = selectedSchools || product.schools;
 
-  const getOptionLabel = (options: { value: string; label: string }[], value: string) =>
-    options.find((opt) => opt.value === value)?.label ?? value;
+  const getOptionLabel = (
+    options: { value: string; label: string }[],
+    value: string,
+  ) => options.find((opt) => opt.value === value)?.label ?? value;
 
   return (
     <Modal
@@ -180,7 +186,10 @@ const ProductDetailModalContent = ({
                 fullWidth
               />
             ) : (
-              <FieldView label="카테고리" value={getCategoryLabel(product.category)} />
+              <FieldView
+                label="카테고리"
+                value={getCategoryLabel(product.category)}
+              />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -267,7 +276,10 @@ const ProductDetailModalContent = ({
             ) : (
               <FieldView
                 label="수선 필수 여부"
-                value={getOptionLabel(REPAIR_REQUIRED_OPTIONS, product.isRepairRequired)}
+                value={getOptionLabel(
+                  REPAIR_REQUIRED_OPTIONS,
+                  product.isRepairRequired,
+                )}
               />
             )}
           </div>
@@ -297,8 +309,10 @@ const ProductDetailModalContent = ({
 
         {/* 사용 학교 */}
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2.5">
-            <span className="text-[15px] font-normal text-gray-700">사용 학교</span>
+          <div className="flex items-center justify-between">
+            <span className="text-[15px] font-normal text-gray-700">
+              사용 학교
+            </span>
             {isEditMode && onOpenSchoolModal && (
               <button
                 className="px-4 py-1.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
@@ -323,41 +337,48 @@ const ProductDetailModalContent = ({
                 .sort(([a], [b]) => b.localeCompare(a))
                 .map(([year, yearSchools]) => (
                   <div key={year} className="flex flex-col gap-2">
-                    <span className="text-sm font-medium text-gray-600">{year}</span>
-                    <div className="flex flex-wrap gap-2">
+                    <span className="text-sm font-medium text-gray-600">
+                      {year}
+                    </span>
+                    <div className="grid grid-cols-2 gap-4">
                       {yearSchools.map((school) => (
                         <div
                           key={`${school.year}-${school.schoolId}`}
-                          className="flex items-center gap-2"
+                          className="flex items-stretch gap-1"
                         >
-                          <span className="flex items-center px-4 py-2 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
-                            {school.schoolName}
-                          </span>
-                          <div className="flex items-center px-4 py-2 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
-                            {isEditMode && onSchoolPriceChange ? (
-                              <>
-                                <input
-                                  type="number"
-                                  className="w-20 border-none bg-transparent text-[15px] text-gray-700 text-right outline-none"
-                                  value={school.price}
-                                  onChange={(e) =>
-                                    onSchoolPriceChange(school.schoolId, Number(e.target.value))
-                                  }
-                                />
-                                <span className="ml-1">원</span>
-                              </>
-                            ) : (
-                              <>{school.price.toLocaleString()}원</>
-                            )}
-                          </div>
                           {isEditMode && onRemoveSchool && (
                             <button
-                              className="flex items-center justify-center w-5 h-5 border-none bg-transparent cursor-pointer text-gray-400 text-lg hover:text-red-500"
+                              className="shrink-0 flex items-center justify-center px-4 bg-[#9b7373] text-white text-sm font-medium cursor-pointer hover:bg-[#7a5555] border border-[#c6a8a8] rounded-lg"
                               onClick={() => onRemoveSchool(school.schoolId)}
                             >
-                              ×
+                              삭제
                             </button>
                           )}
+                          <div className="flex-1 flex items-stretch border border-gray-200 rounded-lg bg-white overflow-hidden">
+                            <span className="flex-1 flex items-center px-4 py-3 text-[15px] text-gray-700 border-r border-gray-200">
+                              {school.schoolName}
+                            </span>
+                            <div className="flex items-center px-4 py-3 text-[15px] text-gray-700 justify-end min-w-0 flex-1">
+                              {isEditMode && onSchoolPriceChange ? (
+                                <>
+                                  <input
+                                    type="number"
+                                    className="min-w-0 flex-1 border-none bg-transparent text-[15px] text-gray-700 text-right outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                    value={school.price}
+                                    onChange={(e) =>
+                                      onSchoolPriceChange(
+                                        school.schoolId,
+                                        Number(e.target.value),
+                                      )
+                                    }
+                                  />
+                                  <span className="ml-1 shrink-0">원</span>
+                                </>
+                              ) : (
+                                <>{school.price.toLocaleString()}원</>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -381,5 +402,11 @@ const ProductDetailModalContent = ({
 
 export const ProductDetailModal = (props: ProductDetailModalProps) => {
   if (!props.product) return null;
-  return <ProductDetailModalContent key={props.product.id} {...props} product={props.product} />;
+  return (
+    <ProductDetailModalContent
+      key={props.product.id}
+      {...props}
+      product={props.product}
+    />
+  );
 };

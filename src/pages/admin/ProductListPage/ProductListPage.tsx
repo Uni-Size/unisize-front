@@ -25,6 +25,7 @@ import {
   type Product as ApiProduct,
 } from "@/api/product";
 import { getApiErrorMessage } from "@/utils/errorUtils";
+import { downloadCSV } from "@/utils/csvUtils";
 import { CATEGORY_LABEL_MAP } from "@/constants/productCategories";
 import { GENDER_LABEL_MAP, GENDER_OPTIONS } from "@/constants/gender";
 
@@ -287,6 +288,34 @@ export const ProductListPage = () => {
     );
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const data = await getProducts({
+        category: categoryFilter || undefined,
+        gender: genderFilter || undefined,
+        season: seasonFilter || undefined,
+        search: searchTerm || undefined,
+        limit: 99999,
+      });
+      downloadCSV(
+        ['No.', '시즌', '카테고리', '성별', '상품명', '가격', '생성일', '수정일'],
+        data.products.map((p, i) => [
+          i + 1,
+          seasonLabel[p.season ?? ''] ?? p.season ?? '',
+          CATEGORY_LABEL_MAP[p.category] ?? p.category,
+          genderLabel[p.gender] ?? p.gender,
+          p.name,
+          `${p.price.toLocaleString()}원`,
+          formatDate(p.created_at),
+          formatDate(p.updated_at),
+        ]),
+        '교복용품목록',
+      );
+    } catch (err) {
+      console.error('CSV 내보내기 실패:', err);
+    }
+  };
+
   const columns: Column<ProductRow>[] = [
     { key: "no", header: "No.", width: "40px", align: "center" },
     { key: "season", header: "시즌", width: "60px", align: "center" },
@@ -376,6 +405,16 @@ export const ProductListPage = () => {
           title="교복/용품"
           buttonLabel="품목추가"
           onButtonClick={handleOpenAddModal}
+          actions={
+            <button
+              type="button"
+              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleExportCSV}
+              disabled={products.length === 0}
+            >
+              CSV 내보내기
+            </button>
+          }
         />
 
         <div className="border-y border-gray-200 overflow-hidden">

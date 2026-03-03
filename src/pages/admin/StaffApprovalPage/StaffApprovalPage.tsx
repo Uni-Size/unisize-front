@@ -8,6 +8,7 @@ import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
 import { getPendingStaffList, approveStaff, type StaffItem } from '@/api/staff';
 import { getApiErrorMessage } from '@/utils/errorUtils';
+import { downloadCSV } from '@/utils/csvUtils';
 
 interface PendingStaffRow {
   id: number;
@@ -64,6 +65,14 @@ export const StaffApprovalPage = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    downloadCSV(
+      ['No.', '사번', '이름', '성별', '연락처', '등록일'],
+      pendingList.map((s) => [s.no, s.employeeId, s.name, s.gender, s.phone, s.registeredDate]),
+      '스태프승인대기목록',
+    );
+  };
+
   const columns: Column<PendingStaffRow>[] = [
     { key: 'no', header: 'No.', width: '34px', align: 'center' },
     { key: 'employeeId', header: '사번', width: '100px', align: 'center' },
@@ -100,7 +109,19 @@ export const StaffApprovalPage = () => {
   return (
     <AdminLayout>
       <div className="flex flex-col gap-5">
-        <AdminHeader title="스태프 승인대기" />
+        <AdminHeader
+          title="스태프 승인대기"
+          actions={
+            <button
+              type="button"
+              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleExportCSV}
+              disabled={pendingList.length === 0}
+            >
+              CSV 내보내기
+            </button>
+          }
+        />
 
         <div className="bg-white rounded-lg p-2.5">
           <Table

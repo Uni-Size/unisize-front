@@ -226,6 +226,12 @@ export const SchoolAddModal = ({
     season: "winter" | "summer",
   ) => (
     <div key={product.id} className="flex gap-2 items-start">
+      <button
+        className="shrink-0 flex items-center justify-center w-14 h-12.5 border border-[#c6a8a8] rounded-lg bg-[#9b7373] text-white cursor-pointer hover:bg-[#7a5555] text-sm font-medium"
+        onClick={() => handleRemoveProduct(season, product.id)}
+      >
+        삭제
+      </button>
       <div className="w-30 shrink-0">
         <Select
           placeholder="카테고리"
@@ -286,11 +292,11 @@ export const SchoolAddModal = ({
           />
         )}
       </div>
-      <div className="w-27.5 shrink-0">
-        <div className="flex items-center h-12.5 px-3 border border-[#c6c6c6] rounded-lg bg-white">
+      <div className="w-35 shrink-0">
+        <div className="flex items-center h-12.5 px-3 border border-gray-200 rounded-lg bg-white gap-1">
           <input
             type="number"
-            className="w-full border-none bg-transparent text-[15px] text-[#4c4c4c] text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="min-w-0 flex-1 border-none bg-transparent text-[15px] text-[#4c4c4c] text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             placeholder="-"
             value={product.contractPrice || ""}
             onChange={(e) =>
@@ -302,7 +308,7 @@ export const SchoolAddModal = ({
               )
             }
           />
-          <span className="text-[15px] text-[#4c4c4c] ml-1 shrink-0">원</span>
+          <span className="text-[15px] text-[#4c4c4c] shrink-0">원</span>
         </div>
       </div>
       <div className="w-17.5 shrink-0">
@@ -321,17 +327,12 @@ export const SchoolAddModal = ({
           fullWidth
         />
       </div>
-      <button
-        className="shrink-0 flex items-center justify-center w-8 h-8 mt-2.5 border border-[#fecaca] rounded bg-[#fef2f2] text-[#991b1b] cursor-pointer hover:bg-[#fecaca] text-sm"
-        onClick={() => handleRemoveProduct(season, product.id)}
-      >
-        ×
-      </button>
     </div>
   );
 
   const renderProductHeader = () => (
     <div className="flex gap-2 items-start">
+      <div className="w-14 shrink-0" />
       <div className="w-30 shrink-0">
         <span className="px-2 text-base text-bg-800">카테고리</span>
       </div>
@@ -341,13 +342,12 @@ export const SchoolAddModal = ({
       <div className="flex-1 min-w-30">
         <span className="px-2 text-base text-bg-800">표시명</span>
       </div>
-      <div className="w-27.5 shrink-0">
+      <div className="w-35 shrink-0">
         <span className="px-2 text-base text-bg-800">계약가격</span>
       </div>
       <div className="w-17.5 shrink-0">
         <span className="px-2 text-base text-bg-800">무상</span>
       </div>
-      <div className="w-8 shrink-0" />
     </div>
   );
 

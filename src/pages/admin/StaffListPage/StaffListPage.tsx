@@ -10,6 +10,7 @@ import type { Column } from '@components/atoms/Table';
 import type { StaffEditData } from '@components/organisms/StaffEditModal';
 import { getStaffList, type StaffItem } from '@/api/staff';
 import { getApiErrorMessage } from '@/utils/errorUtils';
+import { downloadCSV } from '@/utils/csvUtils';
 
 interface StaffRow {
   id: number;
@@ -84,17 +85,24 @@ export const StaffListPage = () => {
     fetchStaffList();
   };
 
+  const handleExportCSV = () => {
+    downloadCSV(
+      ['No.', '사번', '이름', '성별', '등록일'],
+      staffList.map((s) => [s.no, s.employeeId, s.name, s.gender, s.registeredDate]),
+      '스태프목록',
+    );
+  };
+
   const columns: Column<StaffRow>[] = [
     { key: 'no', header: 'No.', width: '34px', align: 'center' },
     { key: 'employeeId', header: '사번', width: '100px', align: 'center' },
     { key: 'name', header: '이름', align: 'center' },
     { key: 'gender', header: '성별', width: '28px', align: 'center' },
-    { key: 'phone', header: '연락처', align: 'center' },
-    { key: 'registeredDate', header: '등록일', align: 'center' },
+{ key: 'registeredDate', header: '등록일', align: 'center' },
     {
       key: 'actions',
       header: '관리',
-      width: '80px',
+      width: '120px',
       align: 'center',
       render: (item) => (
         <div className="flex gap-1">
@@ -126,6 +134,16 @@ export const StaffListPage = () => {
           title="스태프 관리"
           buttonLabel="스태프 추가"
           onButtonClick={() => setIsRegisterModalOpen(true)}
+          actions={
+            <button
+              type="button"
+              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleExportCSV}
+              disabled={staffList.length === 0}
+            >
+              CSV 내보내기
+            </button>
+          }
         />
 
         <div className="flex-1">

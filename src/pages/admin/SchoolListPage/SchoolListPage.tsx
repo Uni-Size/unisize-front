@@ -17,6 +17,7 @@ import type { Column } from '@components/atoms/Table';
 import { getSupportedSchoolsByYear, deleteSupportedSchool, type School as ApiSchool } from '@/api/school';
 import { getTargetYear } from '@/utils/schoolUtils';
 import { getApiErrorMessage } from '@/utils/errorUtils';
+import { downloadCSV } from '@/utils/csvUtils';
 import { DUMMY_SCHOOL_DETAIL } from '../SchoolDetailPage/schoolDetailDummyData';
 
 interface SchoolRow {
@@ -126,6 +127,14 @@ export const SchoolListPage = () => {
     fetchSchools();
   };
 
+  const handleExportCSV = () => {
+    downloadCSV(
+      ['No.', '구분', '지원년도', '학교명', '활성', '측정기간', '등록일', '수정일'],
+      filteredSchools.map((s) => [s.no, s.type, s.supportYear, s.schoolName, s.isActive, s.measurementPeriod, s.registeredDate, s.modifiedDate]),
+      '학교목록',
+    );
+  };
+
   const columns: Column<SchoolRow>[] = [
     { key: 'no', header: 'No.', width: '40px', align: 'center' },
     { key: 'type', header: '구분', width: '80px', align: 'center' },
@@ -190,6 +199,16 @@ export const SchoolListPage = () => {
           title="학교"
           buttonLabel="학교추가"
           onButtonClick={() => setIsAddModalOpen(true)}
+          actions={
+            <button
+              type="button"
+              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleExportCSV}
+              disabled={filteredSchools.length === 0}
+            >
+              CSV 내보내기
+            </button>
+          }
         />
 
         <div className="border-y border-gray-200 overflow-hidden">

@@ -125,17 +125,17 @@ export const SchoolSelectModal = ({
             />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex flex-col gap-1">
-              <span className="px-2 text-base text-bg-800">계약금액</span>
-              <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white">
+            <div className="flex flex-col gap-2">
+              <span className="text-[15px] font-normal text-gray-700">계약금액</span>
+              <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white gap-1">
                 <input
                   type="number"
                   placeholder=""
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  className="flex-1 border-none bg-transparent text-[15px] text-[#4c4c4c] text-right outline-none placeholder:text-bg-400"
+                  className="min-w-0 flex-1 border-none bg-transparent text-[15px] text-[#4c4c4c] text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
-                <span className="text-[15px] text-[#4c4c4c] ml-1">원</span>
+                <span className="text-[15px] text-[#4c4c4c] shrink-0">원</span>
               </div>
             </div>
           </div>

@@ -509,6 +509,13 @@ export const StudentModal = ({
       onClose={handleClose}
       title={title}
       width={1000}
+      titleExtra={
+        isView ? (
+          <button className="px-5 py-2 bg-[#b07a50] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90">
+            수정
+          </button>
+        ) : undefined
+      }
       actions={
         isView ? (
           <button
@@ -530,15 +537,6 @@ export const StudentModal = ({
       }
     >
       <div className="flex flex-col gap-4 w-full">
-        {/* 수정 버튼 (view 모드) */}
-        {isView && (
-          <div className="flex justify-end">
-            <button className="px-5 py-2 bg-[#b07a50] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90">
-              수정
-            </button>
-          </div>
-        )}
-
         {/* 학생 정보 */}
         <div className="flex flex-col border border-[#c6c6c6] rounded-lg overflow-hidden [&_.input-wrapper]:flex-row [&_.input-wrapper]:items-center [&_.input-wrapper]:w-full [&_.input-wrapper]:gap-0 [&_.input-label]:flex-[0_0_120px] [&_.input-label]:px-4 [&_.input-label]:py-3 [&_.input-label]:text-[15px] [&_.input-label]:font-medium [&_.input-label]:text-[#393939] [&_.input-label]:bg-[#f9fafb] [&_.input-label]:border-r [&_.input-label]:border-[#c6c6c6] [&_.input-label]:mb-0 [&_.input-label]:h-full [&_.input-label]:flex [&_.input-label]:items-center [&_.input]:border-none [&_.input]:rounded-none [&_.input]:h-12 [&_.input:focus]:shadow-none [&_.input:focus]:border-none [&_.select-wrapper]:flex-row [&_.select-wrapper]:items-center [&_.select-wrapper]:w-full [&_.select-wrapper]:gap-0 [&_.select-label]:flex-[0_0_120px] [&_.select-label]:px-4 [&_.select-label]:py-3 [&_.select-label]:text-[15px] [&_.select-label]:font-medium [&_.select-label]:text-[#393939] [&_.select-label]:bg-[#f9fafb] [&_.select-label]:border-r [&_.select-label]:border-[#c6c6c6] [&_.select-label]:mb-0 [&_.select-label]:h-full [&_.select-label]:flex [&_.select-label]:items-center [&_.select]:border-none [&_.select]:rounded-none [&_.select]:h-12">
           <div className="flex items-stretch border-b border-[#c6c6c6]">

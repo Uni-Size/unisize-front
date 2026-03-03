@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import { AdminHeader } from '@components/organisms/AdminHeader';
+import { downloadCSV } from '@/utils/csvUtils';
 import { Table } from '@components/atoms/Table';
 import { Badge } from '@components/atoms/Badge';
 import { Input } from '@components/atoms/Input';
@@ -110,6 +111,24 @@ export const StudentOrderPage = () => {
       order.school.includes(searchTerm)
   );
 
+  const handleExportCSV = () => {
+    downloadCSV(
+      ['학생명', '연락처', '학교', '학년/반', '성별', '품목', '금액', '상태', '등록일'],
+      filteredOrders.map((o) => [
+        o.studentName,
+        o.phone,
+        o.school,
+        `${o.grade}-${o.className}`,
+        o.gender === 'M' ? '남' : o.gender === 'F' ? '여' : '공용',
+        o.items.join(', '),
+        `${o.totalAmount.toLocaleString()}원`,
+        { pending: '대기', measured: '치수측정', ordered: '주문완료', received: '수령완료' }[o.status],
+        o.registeredDate,
+      ]),
+      '학생주문목록',
+    );
+  };
+
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
   const paginatedOrders = filteredOrders.slice(
     (currentPage - 1) * itemsPerPage,
@@ -123,6 +142,16 @@ export const StudentOrderPage = () => {
           title="학생 주문"
           buttonLabel="학생 추가"
           onButtonClick={() => console.log('학생 추가 클릭')}
+          actions={
+            <button
+              type="button"
+              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleExportCSV}
+              disabled={filteredOrders.length === 0}
+            >
+              CSV 내보내기
+            </button>
+          }
         />
         <div className="border-y border-gray-200 overflow-hidden">
           <div className="flex items-stretch">

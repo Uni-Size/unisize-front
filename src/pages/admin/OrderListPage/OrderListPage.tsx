@@ -7,6 +7,7 @@ import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
 import { getSupportedSchoolsByYear } from '@/api/school';
 import { getTargetYear } from '@/utils/schoolUtils';
+import { downloadCSV } from '@/utils/csvUtils';
 
 type SchoolType = 'middle' | 'high';
 
@@ -54,6 +55,14 @@ export const OrderListPage = ({ schoolType }: OrderListPageProps) => {
     currentPage * itemsPerPage
   );
 
+  const handleExportCSV = () => {
+    downloadCSV(
+      ['No.', '측정완료', '학생이름', '성별', '입학학교', '분류', '결제 예정 금액'],
+      data.map((s) => [s.no, s.measuredAt, s.studentName, s.gender, s.school, s.category, s.expectedAmount]),
+      '주문목록',
+    );
+  };
+
   const columns: Column<PendingStudent>[] = [
     { key: 'no', header: 'No.', width: '34px', align: 'center' },
     { key: 'measuredAt', header: '측정완료', width: '130px', align: 'center' },
@@ -92,7 +101,19 @@ export const OrderListPage = ({ schoolType }: OrderListPageProps) => {
   return (
     <AdminLayout>
       <div className="flex flex-col gap-5 p-5">
-        <AdminHeader title={getTitle()} />
+        <AdminHeader
+          title={getTitle()}
+          actions={
+            <button
+              type="button"
+              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleExportCSV}
+              disabled={data.length === 0}
+            >
+              CSV 내보내기
+            </button>
+          }
+        />
         <div className="flex flex-col">
           <Table
             columns={columns}

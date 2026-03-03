@@ -12,6 +12,7 @@ import type { Column } from '@components/atoms/Table';
 import { getStudents, getStudentDetail, deleteStudent } from '@/api/student';
 import type { AdminStudent } from '@/api/student';
 import { getApiErrorMessage } from '@/utils/errorUtils';
+import { downloadCSV } from '@/utils/csvUtils';
 
 interface StudentRow {
   id: number;
@@ -139,6 +140,31 @@ export const StudentListPage = () => {
     }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const gradeParam = categoryFilter === '신입' ? 1 : categoryFilter === '재학' ? 2 : undefined;
+      const response = await getStudents({ search: searchTerm || undefined, grade: gradeParam, limit: 99999 });
+      const list = Array.isArray(response.data) ? response.data : (response.data as unknown as { students: AdminStudent[] }).students ?? [];
+      downloadCSV(
+        ['No.', '학년', '입학학교', '학생이름', '성별', '학생 연락처', '학부모 연락처', '주관구매', '등록일'],
+        list.map((s, i) => [
+          i + 1,
+          `${s.admission_grade}학년`,
+          s.school_name,
+          s.name,
+          s.gender === 'M' ? '남' : s.gender === 'F' ? '여' : s.gender === 'U' ? '공용' : s.gender,
+          s.student_phone,
+          s.guardian_phone,
+          s.government_purchase ? 'O' : 'X',
+          s.created_at ?? '',
+        ]),
+        '학생목록',
+      );
+    } catch (err) {
+      console.error('CSV 내보내기 실패:', err);
+    }
+  };
+
   const columns: Column<StudentRow>[] = [
     { key: 'no', header: 'No.', width: '40px', align: 'center' },
     { key: 'category', header: '학년', width: '50px', align: 'center' },
@@ -178,6 +204,16 @@ export const StudentListPage = () => {
           title="학생"
           buttonLabel="학생추가"
           onButtonClick={() => setIsAddModalOpen(true)}
+          actions={
+            <button
+              type="button"
+              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleExportCSV}
+              disabled={students.length === 0}
+            >
+              CSV 내보내기
+            </button>
+          }
         />
 
         <div className="border-y border-gray-200 overflow-hidden">

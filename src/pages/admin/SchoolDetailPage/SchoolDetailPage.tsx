@@ -19,8 +19,10 @@ import type { AdminStudent } from "@/api/student";
 import { getSupportedSchoolsByYear } from "@/api/school";
 import { getTargetYear } from "@/utils/schoolUtils";
 import { getApiErrorMessage } from "@/utils/errorUtils";
+import { downloadCSV } from "@/utils/csvUtils";
 import { DUMMY_SECTIONS } from "./orderDummyData";
 import type { ProductSection } from "./orderDummyData";
+import { SIZES } from "@components/organisms/OrderSizeTable/constants";
 
 interface StudentRow {
   id: number;
@@ -191,6 +193,31 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const gradeParam = categoryFilter === "신입" ? 1 : categoryFilter === "재학" ? 2 : undefined;
+      const response = await getStudents({ search: searchTerm || undefined, school: schoolName, grade: gradeParam, limit: 99999 });
+      const list = Array.isArray(response.data) ? response.data : ((response.data as unknown as { students: AdminStudent[] }).students ?? []);
+      downloadCSV(
+        ['No.', '학년', '입학학교', '학생이름', '성별', '학생 연락처', '학부모 연락처', '주관구매', '등록일'],
+        list.map((s, i) => [
+          i + 1,
+          `${s.admission_grade}학년`,
+          s.school_name,
+          s.name,
+          s.gender === "M" ? "남" : s.gender === "F" ? "여" : s.gender === "U" ? "공용" : s.gender,
+          s.student_phone,
+          s.guardian_phone,
+          s.government_purchase ? "O" : "X",
+          s.created_at ?? '',
+        ]),
+        `${schoolName}_학생목록`,
+      );
+    } catch (err) {
+      console.error('CSV 내보내기 실패:', err);
+    }
+  };
+
   const columns: Column<StudentRow>[] = [
     { key: "no", header: "No.", width: "40px", align: "center" },
     { key: "category", header: "학년", width: "50px", align: "center" },
@@ -248,6 +275,16 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         title={`${schoolName} 학생`}
         buttonLabel="학생추가"
         onButtonClick={() => setIsAddModalOpen(true)}
+        actions={
+          <button
+            type="button"
+            className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+            onClick={handleExportCSV}
+            disabled={students.length === 0}
+          >
+            CSV 내보내기
+          </button>
+        }
       />
 
       <div className="border-y border-gray-200 overflow-hidden">
@@ -427,9 +464,61 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
     setSelectedProducts(["전체"]);
   };
 
+  const handleExportCSV = () => {
+    // 열 구조: [구분레이블, 학생이름, 사이즈1, 사이즈2, ...]
+    // - 헤더/집계 행: 구분레이블에 품목명/재고/주문/잔여, 학생이름 열은 빈칸
+    // - 학생 행: 구분레이블 빈칸, 학생이름 열에 이름
+
+    const sectionBlocks = visibleSections.map((section) => {
+      const sizes = section.sizes ?? SIZES;
+      const cols = ['', '', ...sizes]; // 첫 열: 구분 레이블, 두 번째 열: 학생이름, 나머지: 사이즈
+      const headerRow = [`[${section.name}]`, '', ...sizes];
+      const stockRow = ['재고', '', ...sizes.map((s) => section.sizeStocks[s]?.stock ?? 0)];
+      const orderedRow = ['주문', '', ...sizes.map((s) => section.sizeStocks[s]?.ordered ?? 0)];
+      const remainRow = ['잔여', '', ...sizes.map((s) => { const d = section.sizeStocks[s]; return d ? d.stock - d.ordered : 0; })];
+      const studentRows = section.rows.map((row) => [
+        '',
+        row.studentName,
+        ...sizes.map((s) => (row.sizes[s] ? row.sizes[s].name : '')),
+      ]);
+      return { cols, rows: [headerRow, stockRow, orderedRow, remainRow, ...studentRows] };
+    });
+
+    if (sectionBlocks.length === 0) return;
+
+    // 전체 행 수 = 가장 행이 많은 섹션 기준
+    const maxRowCount = Math.max(...sectionBlocks.map((b) => b.rows.length));
+
+    // 가로 병합: 각 행 인덱스에서 모든 섹션의 열을 옆으로 이어 붙임 (섹션 사이 빈 열 1개)
+    const csvRows: (string | number)[][] = [];
+    for (let i = 0; i < maxRowCount; i++) {
+      const row: (string | number)[] = [];
+      sectionBlocks.forEach((block, bi) => {
+        if (bi > 0) row.push(''); // 섹션 구분 빈 열
+        const cells = block.rows[i] ?? Array(block.cols.length).fill('');
+        row.push(...cells);
+      });
+      csvRows.push(row);
+    }
+
+    downloadCSV([], csvRows, `${schoolName}_주문예약`);
+  };
+
   return (
     <>
-      <AdminHeader title={`${schoolName} 주문/예약`} />
+      <AdminHeader
+        title={`${schoolName} 주문/예약`}
+        actions={
+          <button
+            type="button"
+            className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+            onClick={handleExportCSV}
+            disabled={visibleSections.length === 0}
+          >
+            CSV 내보내기
+          </button>
+        }
+      />
 
       <div className="border-y border-gray-200 overflow-hidden">
         <div className="flex items-stretch">
