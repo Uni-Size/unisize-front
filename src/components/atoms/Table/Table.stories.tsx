@@ -2,7 +2,14 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { Badge } from '../Badge/Badge';
 import { Table } from './Table';
 
-const meta: Meta<typeof Table> = {
+interface SampleUser {
+  id: number;
+  name: string;
+  email: string;
+  status: string;
+}
+
+const meta: Meta<typeof Table<SampleUser>> = {
   title: 'Atoms/Table',
   component: Table,
   parameters: {
@@ -13,13 +20,6 @@ const meta: Meta<typeof Table> = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-interface SampleUser {
-  id: number;
-  name: string;
-  email: string;
-  status: string;
-}
 
 const sampleColumns = [
   { key: 'id', header: 'ID', width: '60px', align: 'center' as const },
