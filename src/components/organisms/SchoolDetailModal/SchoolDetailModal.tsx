@@ -1,49 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Modal, Select, Input } from '@components/atoms';
 import type { SchoolProductItem } from '../SchoolAddModal';
-import { GENDER_OPTIONS, getGenderLabel } from '@/constants/gender';
-
-export interface PurchaseInfo {
-  id: string;
-  purchaseStatus: string;
-  purchaseYear: string;
-  expectedStudents: number;
-  measurementStartDate: string;
-  measurementEndDate: string;
-}
-
-export interface SchoolDetailData {
-  id: string;
-  schoolName: string;
-  registeredDate: string;
-  lastModifiedDate: string;
-  purchases: PurchaseInfo[];
-  winterProducts: SchoolProductItem[];
-  summerProducts: SchoolProductItem[];
-}
+import { GENDER_OPTIONS } from '@/constants/gender';
+import { getAllProducts, type Product } from '@/api/product';
+import { CATEGORY_OPTIONS } from '@/constants/productCategories';
+import type { SchoolListItem, SupportedYear, UniformItem } from '@/api/school';
+import { getSchoolDetail } from '@/api/school';
 
 export interface SchoolDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  school: SchoolDetailData | null;
-  onUpdate: (data: SchoolDetailData) => void;
-  onOpenProductModal?: (season: 'winter' | 'summer') => void;
-  winterProducts?: SchoolProductItem[];
-  summerProducts?: SchoolProductItem[];
-  onRemoveProduct?: (season: 'winter' | 'summer', productId: string) => void;
-  onProductChange?: (
-    season: 'winter' | 'summer',
-    productId: string,
-    field: keyof SchoolProductItem,
-    value: string | number
-  ) => void;
+  school: SchoolListItem | null;
+  onUpdate: () => void;
+  onSubmit: (schoolName: string, data: {
+    school_name: string;
+    is_permanent?: boolean;
+    years?: { year: number; expected_student_count?: number; measurement_start_date?: string; measurement_end_date?: string; }[];
+    uniforms?: { winter?: UniformItem[]; summer?: UniformItem[]; };
+  }) => Promise<void>;
+  onAddNewProduct?: () => void;
 }
-
-const purchaseStatusOptions = [
-  { value: 'in-progress', label: '진행' },
-  { value: 'completed', label: '종료' },
-  { value: 'pending', label: '대기' },
-];
 
 const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: 10 }, (_, i) => ({
@@ -51,40 +27,72 @@ const yearOptions = Array.from({ length: 10 }, (_, i) => ({
   label: String(currentYear - 5 + i),
 }));
 
-const categoryOptions = [
-  { value: '상의', label: '상의' },
-  { value: '하의', label: '하의' },
-  { value: '후드', label: '후드' },
-  { value: '아우터', label: '아우터' },
-];
-
+const categoryOptions = CATEGORY_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
 const genderOptions = GENDER_OPTIONS;
 
-const getPurchaseStatusLabel = (value: string) =>
-  purchaseStatusOptions.find((opt) => opt.value === value)?.label || value;
-const getCategoryLabel = (value: string) =>
-  categoryOptions.find((opt) => opt.value === value)?.label || value;
+interface EditableYear extends SupportedYear {
+  _id: string;
+  expected_student_count?: number;
+}
+
+interface EditableProduct extends SchoolProductItem {
+  productApiId?: string;
+}
 
 export const SchoolDetailModal = ({
   isOpen,
   onClose,
   school,
   onUpdate,
-  onOpenProductModal,
-  winterProducts: externalWinterProducts,
-  summerProducts: externalSummerProducts,
-  onRemoveProduct,
-  onProductChange,
+  onSubmit,
+  onAddNewProduct,
 }: SchoolDetailModalProps) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [schoolName, setSchoolName] = useState('');
-  const [purchases, setPurchases] = useState<PurchaseInfo[]>([]);
+  const [isPermanent, setIsPermanent] = useState(false);
+  const [years, setYears] = useState<EditableYear[]>([]);
+  const [winterProducts, setWinterProducts] = useState<EditableProduct[]>([]);
+  const [summerProducts, setSummerProducts] = useState<EditableProduct[]>([]);
+  const [productsCache, setProductsCache] = useState<Record<string, Product[]>>({});
 
   useEffect(() => {
-    if (school) {
-      setSchoolName(school.schoolName);
-      setPurchases(school.purchases);
-    }
+    if (!school) return;
+    setSchoolName(school.school_name);
+    setIsPermanent(school.is_permanent);
+    setYears(
+      school.supported_years.map((sy) => ({
+        ...sy,
+        _id: `sy-${sy.year}`,
+      }))
+    );
+    setWinterProducts([]);
+    setSummerProducts([]);
+    setProductsCache({});
+
+    getSchoolDetail(school.school_name).then((detail) => {
+      setYears(
+        detail.years.map((y) => ({
+          _id: `sy-${y.id}`,
+          year: y.year,
+          measurement_start_date: y.measurement_start_date,
+          measurement_end_date: y.measurement_end_date,
+          expected_student_count: y.expected_student_count,
+        }))
+      );
+      const toEditableProduct = (u: typeof detail.uniforms.winter[number]): EditableProduct => ({
+        id: `uniform-${u.id}`,
+        category: u.category,
+        gender: u.gender,
+        displayName: u.display_name,
+        contractPrice: u.contract_price,
+        freeQuantity: u.free_support_count,
+        productApiId: String(u.product_id),
+      });
+      setWinterProducts(detail.uniforms.winter.map(toEditableProduct));
+      setSummerProducts(detail.uniforms.summer.map(toEditableProduct));
+    }).catch((err) => {
+      console.error('학교 상세 조회 실패:', err);
+    });
   }, [school]);
 
   const handleClose = () => {
@@ -92,170 +100,249 @@ export const SchoolDetailModal = ({
     onClose();
   };
 
-  const handleEdit = () => {
-    setIsEditMode(true);
-  };
+  const fetchProducts = useCallback(
+    async (season: string, category: string, gender: string) => {
+      const cacheKey = `${season}:${category}:${gender}`;
+      if (productsCache[cacheKey]) return;
+      try {
+        const data = await getAllProducts({ season, category, gender });
+        setProductsCache((prev) => ({ ...prev, [cacheKey]: data.products }));
+      } catch (error) {
+        console.error('상품 조회 실패:', error);
+      }
+    },
+    [productsCache],
+  );
 
-  const handleSave = () => {
-    if (school) {
-      onUpdate({
-        ...school,
-        schoolName,
-        purchases,
-        winterProducts: externalWinterProducts || school.winterProducts,
-        summerProducts: externalSummerProducts || school.summerProducts,
-      });
-    }
-    setIsEditMode(false);
-  };
-
-  const handlePurchaseChange = (
-    purchaseId: string,
-    field: keyof PurchaseInfo,
-    value: string | number
-  ) => {
-    setPurchases((prev) =>
-      prev.map((p) => (p.id === purchaseId ? { ...p, [field]: value } : p))
-    );
-  };
-
-  const handleAddPurchase = () => {
-    const newPurchase: PurchaseInfo = {
-      id: `purchase-${Date.now()}`,
-      purchaseStatus: 'pending',
-      purchaseYear: String(currentYear),
-      expectedStudents: 0,
-      measurementStartDate: '',
-      measurementEndDate: '',
-    };
-    setPurchases((prev) => [...prev, newPurchase]);
-  };
-
-  const winterProducts = externalWinterProducts || school?.winterProducts || [];
-  const summerProducts = externalSummerProducts || school?.summerProducts || [];
-
-  if (!school) return null;
-
-  const renderProductRow = (
-    product: SchoolProductItem,
+  const handleProductChange = (
     season: 'winter' | 'summer',
-    showLabels: boolean
-  ) => (
-    <div key={product.id}>
-      {showLabels && (
-        <div className="flex gap-2 items-start">
-          {isEditMode && (
-            <div className="flex-none w-10 flex items-center justify-center pt-3" />
-          )}
-          <div className="flex-none w-30 min-w-0">
-            <span className="text-sm text-bg-800 px-2">카테고리</span>
-          </div>
-          <div className="flex-none w-17.5 min-w-0">
-            <span className="text-sm text-bg-800 px-2">성별</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <span className="text-sm text-bg-800 px-2">표시명</span>
-          </div>
-          <div className="flex-none w-27.5 min-w-0">
-            <span className="text-sm text-bg-800 px-2">계약가격</span>
-          </div>
-          <div className="flex-none w-17.5 min-w-0">
-            <span className="text-sm text-bg-800 px-2">무상개수</span>
-          </div>
-        </div>
-      )}
-      <div className="flex gap-2 items-start">
-        {isEditMode && onRemoveProduct && (
-          <div className="flex-none w-10 flex items-center justify-center pt-3">
-            <button
-              className="flex items-center justify-center w-10 h-11 px-3 py-2 bg-[#9b4d4d] border-none rounded-lg text-[13px] text-[#f9fafb] cursor-pointer hover:opacity-90"
-              onClick={() => onRemoveProduct(season, product.id)}
-            >
-              삭제
-            </button>
-          </div>
+    productId: string,
+    field: keyof EditableProduct,
+    value: string | number,
+  ) => {
+    const seasonCode = season === 'winter' ? 'W' : 'S';
+    const updateFn = (prev: EditableProduct[]): EditableProduct[] =>
+      prev.map((p) => {
+        if (p.id !== productId) return p;
+        if (field === 'category') {
+          const newCategory = value as string;
+          if (p.gender) fetchProducts(seasonCode, newCategory, p.gender);
+          return { ...p, category: newCategory, displayName: '', productApiId: '', contractPrice: 0 };
+        }
+        if (field === 'gender') {
+          const newGender = value as string;
+          if (p.category) fetchProducts(seasonCode, p.category, newGender);
+          return { ...p, gender: newGender, displayName: '', productApiId: '', contractPrice: 0 };
+        }
+        if (field === 'displayName') {
+          const cacheKey = `${seasonCode}:${p.category}:${p.gender}`;
+          const matched = productsCache[cacheKey]?.find((item) => String(item.id) === value);
+          return {
+            ...p,
+            productApiId: value as string,
+            displayName: matched?.name ?? (value as string),
+            contractPrice: matched?.price ?? p.contractPrice,
+          };
+        }
+        return { ...p, [field]: value };
+      });
+
+    if (season === 'winter') setWinterProducts(updateFn);
+    else setSummerProducts(updateFn);
+  };
+
+  const handleAddProduct = (season: 'winter' | 'summer') => {
+    const newProduct: EditableProduct = {
+      id: `product-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      category: '',
+      gender: '',
+      displayName: '',
+      contractPrice: 0,
+      freeQuantity: 1,
+    };
+    if (season === 'winter') setWinterProducts((prev) => [...prev, newProduct]);
+    else setSummerProducts((prev) => [...prev, newProduct]);
+  };
+
+  const handleRemoveProduct = (season: 'winter' | 'summer', productId: string) => {
+    if (season === 'winter') setWinterProducts((prev) => prev.filter((p) => p.id !== productId));
+    else setSummerProducts((prev) => prev.filter((p) => p.id !== productId));
+  };
+
+  const getDisplayNameOptions = (season: 'winter' | 'summer', category: string, gender: string) => {
+    const seasonCode = season === 'winter' ? 'W' : 'S';
+    const cacheKey = `${seasonCode}:${category}:${gender}`;
+    return productsCache[cacheKey]?.map((p) => ({ value: String(p.id), label: p.name })) ?? [];
+  };
+
+  const handleAddYear = () => {
+    const newYear: EditableYear = {
+      _id: `sy-${Date.now()}`,
+      year: currentYear,
+      measurement_start_date: '',
+      measurement_end_date: '',
+    };
+    setYears((prev) => [...prev, newYear]);
+  };
+
+  const handleYearChange = (id: string, field: keyof EditableYear, value: string | number) => {
+    setYears((prev) => prev.map((y) => (y._id === id ? { ...y, [field]: value } : y)));
+  };
+
+  const handleRemoveYear = (id: string) => {
+    setYears((prev) => prev.filter((y) => y._id !== id));
+  };
+
+  const toUniformItem = (p: EditableProduct): UniformItem => ({
+    product_id: Number(p.productApiId),
+    contract_price: p.contractPrice,
+    free_support_count: p.freeQuantity,
+  });
+
+  const handleSave = async () => {
+    if (!school) return;
+    const winter = winterProducts.filter((p) => p.productApiId).map(toUniformItem);
+    const summer = summerProducts.filter((p) => p.productApiId).map(toUniformItem);
+
+    await onSubmit(school.school_name, {
+      school_name: schoolName,
+      is_permanent: isPermanent,
+      years: years.map((y) => ({
+        year: y.year,
+        expected_student_count: y.expected_student_count,
+        measurement_start_date: y.measurement_start_date || undefined,
+        measurement_end_date: y.measurement_end_date || undefined,
+      })),
+      uniforms:
+        winter.length > 0 || summer.length > 0
+          ? { winter: winter.length > 0 ? winter : undefined, summer: summer.length > 0 ? summer : undefined }
+          : undefined,
+    });
+    setIsEditMode(false);
+    onUpdate();
+  };
+
+  const renderProductRow = (product: EditableProduct, season: 'winter' | 'summer') => {
+    const seasonCode = season === 'winter' ? 'W' : 'S';
+    const options = getDisplayNameOptions(season, product.category, product.gender);
+    const cacheKey = `${seasonCode}:${product.category}:${product.gender}`;
+    const isLoaded = cacheKey in productsCache;
+
+    return (
+      <div key={product.id} className="flex gap-2 items-start">
+        {isEditMode && (
+          <button
+            className="shrink-0 flex items-center justify-center w-14 h-12.5 border border-[#c6a8a8] rounded-lg bg-[#9b7373] text-white cursor-pointer hover:bg-[#7a5555] text-sm font-medium"
+            onClick={() => handleRemoveProduct(season, product.id)}
+          >
+            삭제
+          </button>
         )}
-        <div className="flex-none w-30 min-w-0">
-          {isEditMode && onProductChange ? (
+        <div className="w-30 shrink-0">
+          {isEditMode ? (
             <Select
+              placeholder="카테고리"
               options={categoryOptions}
               value={product.category}
-              onChange={(value) => onProductChange(season, product.id, 'category', value)}
+              onChange={(v) => handleProductChange(season, product.id, 'category', v)}
               fullWidth
             />
           ) : (
-            <div className="flex items-center h-11 px-4 py-3 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
-              {getCategoryLabel(product.category)}
+            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
+              {categoryOptions.find((o) => o.value === product.category)?.label ?? product.category}
             </div>
           )}
         </div>
-        <div className="flex-none w-17.5 min-w-0">
-          {isEditMode && onProductChange ? (
+        <div className="w-17.5 shrink-0">
+          {isEditMode ? (
             <Select
+              placeholder="성별"
               options={genderOptions}
               value={product.gender}
-              onChange={(value) => onProductChange(season, product.id, 'gender', value)}
+              onChange={(v) => handleProductChange(season, product.id, 'gender', v)}
               fullWidth
             />
           ) : (
-            <div className="flex items-center h-11 px-4 py-3 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
-              {getGenderLabel(product.gender)}
+            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
+              {genderOptions.find((o) => o.value === product.gender)?.label ?? product.gender}
             </div>
           )}
         </div>
-        <div className="flex-1 min-w-0">
-          {isEditMode && onProductChange ? (
-            <Input
-              value={product.displayName}
-              onChange={(e) => onProductChange(season, product.id, 'displayName', e.target.value)}
-              fullWidth
-            />
+        <div className="flex-1 min-w-30">
+          {isEditMode ? (
+            product.category && product.gender ? (
+              <Select
+                placeholder={!isLoaded ? '불러오는 중...' : options.length === 0 ? '등록된 아이템이 없습니다' : '표시명'}
+                options={options}
+                value={product.productApiId ?? ''}
+                onChange={(v) => handleProductChange(season, product.id, 'displayName', v)}
+                disabled={isLoaded && options.length === 0}
+                fullWidth
+              />
+            ) : (
+              <Select placeholder="표시명" options={[]} value="" disabled fullWidth />
+            )
           ) : (
-            <div className="flex items-center h-11 px-4 py-3 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">{product.displayName}</div>
+            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
+              {product.displayName}
+            </div>
           )}
         </div>
-        <div className="flex-none w-27.5 min-w-0">
-          {isEditMode && onProductChange ? (
-            <div className="flex items-center h-11 px-4 py-3 border border-[#c6c6c6] rounded-lg bg-white">
+        <div className="w-35 shrink-0">
+          {isEditMode ? (
+            <div className="flex items-center h-12.5 px-3 border border-gray-200 rounded-lg bg-white gap-1">
               <input
                 type="number"
-                className="flex-1 border-none bg-transparent text-[15px] text-[#4c4c4c] text-right outline-none"
+                className="min-w-0 flex-1 border-none bg-transparent text-[15px] text-[#4c4c4c] text-right outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                placeholder="-"
                 value={product.contractPrice || ''}
-                onChange={(e) =>
-                  onProductChange(season, product.id, 'contractPrice', Number(e.target.value))
-                }
+                onChange={(e) => handleProductChange(season, product.id, 'contractPrice', Number(e.target.value))}
               />
-              <span className="text-[15px] text-[#4c4c4c] ml-1">원</span>
+              <span className="text-[15px] text-[#4c4c4c] shrink-0">원</span>
             </div>
           ) : (
-            <div className="flex items-center h-11 px-4 py-3 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
+            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
               {product.contractPrice.toLocaleString()}원
             </div>
           )}
         </div>
-        <div className="flex-none w-17.5 min-w-0">
-          {isEditMode && onProductChange ? (
+        <div className="w-17.5 shrink-0">
+          {isEditMode ? (
             <Input
+              placeholder=""
               type="number"
               value={String(product.freeQuantity || '')}
-              onChange={(e) =>
-                onProductChange(season, product.id, 'freeQuantity', Number(e.target.value))
-              }
+              onChange={(e) => handleProductChange(season, product.id, 'freeQuantity', Number(e.target.value))}
               fullWidth
             />
           ) : (
-            <div className="flex items-center h-11 px-4 py-3 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">{product.freeQuantity}</div>
+            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
+              {product.freeQuantity}
+            </div>
           )}
         </div>
       </div>
+    );
+  };
+
+  const renderProductHeader = () => (
+    <div className="flex gap-2 items-start">
+      {isEditMode && <div className="w-14 shrink-0" />}
+      <div className="w-30 shrink-0"><span className="px-2 text-base text-bg-800">카테고리</span></div>
+      <div className="w-17.5 shrink-0"><span className="px-2 text-base text-bg-800">성별</span></div>
+      <div className="flex-1 min-w-30"><span className="px-2 text-base text-bg-800">표시명</span></div>
+      <div className="w-35 shrink-0"><span className="px-2 text-base text-bg-800">계약가격</span></div>
+      <div className="w-17.5 shrink-0"><span className="px-2 text-base text-bg-800">무상</span></div>
     </div>
   );
+
+  if (!school) return null;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={school.schoolName}
+      title={school.school_name}
       width={850}
       actions={
         isEditMode ? (
@@ -267,7 +354,7 @@ export const SchoolDetailModal = ({
               취소
             </button>
             <button
-              className="px-6 py-2.5 bg-[#7a3c00] text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
               onClick={handleSave}
             >
               저장
@@ -277,7 +364,7 @@ export const SchoolDetailModal = ({
           <>
             <button
               className="px-6 py-2.5 bg-[#7a3c00] text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
-              onClick={handleEdit}
+              onClick={() => setIsEditMode(true)}
             >
               수정
             </button>
@@ -292,13 +379,15 @@ export const SchoolDetailModal = ({
       }
     >
       <div className="flex flex-col gap-4 w-full">
+        {/* 등록일 / 수정일 */}
         <div className="flex flex-col items-end gap-1 absolute top-3.75 right-30">
           <span className="text-xs text-bg-400">등록일</span>
-          <span className="text-xs text-bg-400">{school.registeredDate}</span>
+          <span className="text-xs text-bg-400">{school.created_at}</span>
           <span className="text-xs text-bg-400">최종 수정일</span>
-          <span className="text-xs text-bg-400">{school.lastModifiedDate}</span>
+          <span className="text-xs text-bg-400">{school.updated_at}</span>
         </div>
 
+        {/* 학교명 / 상시지원 */}
         <div className="flex gap-2 items-end">
           <div className="flex-1 min-w-0">
             {isEditMode ? (
@@ -311,49 +400,47 @@ export const SchoolDetailModal = ({
             ) : (
               <div className="flex flex-col gap-1">
                 <span className="px-2 text-base text-bg-800">학교명</span>
-                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">{school.schoolName}</div>
+                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
+                  {school.school_name}
+                </div>
               </div>
             )}
           </div>
+          <div className="flex items-center h-12.5 gap-2 px-2 pb-0.5">
+            <label className="flex items-center gap-1.5 text-[15px] text-gray-700 cursor-pointer">
+              {isEditMode ? (
+                <input
+                  type="checkbox"
+                  checked={isPermanent}
+                  onChange={(e) => setIsPermanent(e.target.checked)}
+                  className="w-4 h-4"
+                />
+              ) : (
+                <input type="checkbox" checked={isPermanent} readOnly className="w-4 h-4" />
+              )}
+              상시지원
+            </label>
+          </div>
         </div>
 
-        {purchases.map((purchase) => (
-          <div key={purchase.id} className="flex flex-col gap-3 py-2 border-b border-gray-200 last:border-b-0">
+        {/* 지원 년도별 정보 */}
+        {years.map((y) => (
+          <div key={y._id} className="flex flex-col gap-3 py-2 border-b border-gray-200 last:border-b-0">
             <div className="flex gap-2 items-end">
-              <div className="flex-none w-25 min-w-0">
-                {isEditMode ? (
-                  <Select
-                    label="주관구매"
-                    options={purchaseStatusOptions}
-                    value={purchase.purchaseStatus}
-                    onChange={(value) =>
-                      handlePurchaseChange(purchase.id, 'purchaseStatus', value)
-                    }
-                    fullWidth
-                  />
-                ) : (
-                  <div className="flex flex-col gap-1">
-                    <span className="px-2 text-base text-bg-800">주관구매</span>
-                    <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
-                      {getPurchaseStatusLabel(purchase.purchaseStatus)}
-                    </div>
-                  </div>
-                )}
-              </div>
               <div className="flex-none w-25 min-w-0">
                 {isEditMode ? (
                   <Select
                     label="진행년도"
                     options={yearOptions}
-                    value={purchase.purchaseYear}
-                    onChange={(value) => handlePurchaseChange(purchase.id, 'purchaseYear', value)}
+                    value={String(y.year)}
+                    onChange={(v) => handleYearChange(y._id, 'year', Number(v))}
                     fullWidth
                   />
                 ) : (
                   <div className="flex flex-col gap-1">
                     <span className="px-2 text-base text-bg-800">진행년도</span>
                     <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
-                      {purchase.purchaseYear}
+                      {y.year}
                     </div>
                   </div>
                 )}
@@ -361,21 +448,17 @@ export const SchoolDetailModal = ({
               <div className="flex-none w-25 min-w-0">
                 {isEditMode ? (
                   <Input
-                    label={`${purchase.purchaseYear} 예상인원`}
+                    label="예상인원"
                     type="number"
-                    value={String(purchase.expectedStudents)}
-                    onChange={(e) =>
-                      handlePurchaseChange(purchase.id, 'expectedStudents', Number(e.target.value))
-                    }
+                    value={String(y.expected_student_count ?? '')}
+                    onChange={(e) => handleYearChange(y._id, 'expected_student_count', Number(e.target.value))}
                     fullWidth
                   />
                 ) : (
                   <div className="flex flex-col gap-1">
-                    <span className="px-2 text-base text-bg-800">
-                      {purchase.purchaseYear} 예상인원
-                    </span>
+                    <span className="px-2 text-base text-bg-800">예상인원</span>
                     <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
-                      {purchase.expectedStudents}
+                      {y.expected_student_count ?? '-'}
                     </div>
                   </div>
                 )}
@@ -383,18 +466,17 @@ export const SchoolDetailModal = ({
               <div className="flex-1 min-w-0">
                 {isEditMode ? (
                   <Input
-                    label="주관구매 측정기간"
-                    value={purchase.measurementStartDate}
-                    onChange={(e) =>
-                      handlePurchaseChange(purchase.id, 'measurementStartDate', e.target.value)
-                    }
+                    label="측정기간"
+                    placeholder="2025-01-01"
+                    value={y.measurement_start_date}
+                    onChange={(e) => handleYearChange(y._id, 'measurement_start_date', e.target.value)}
                     fullWidth
                   />
                 ) : (
                   <div className="flex flex-col gap-1">
-                    <span className="px-2 text-base text-bg-800">주관구매 측정기간</span>
+                    <span className="px-2 text-base text-bg-800">측정기간</span>
                     <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
-                      {purchase.measurementStartDate}
+                      {y.measurement_start_date}
                     </div>
                   </div>
                 )}
@@ -404,21 +486,28 @@ export const SchoolDetailModal = ({
                 {isEditMode ? (
                   <Input
                     label=" "
-                    value={purchase.measurementEndDate}
-                    onChange={(e) =>
-                      handlePurchaseChange(purchase.id, 'measurementEndDate', e.target.value)
-                    }
+                    placeholder="2025-01-10"
+                    value={y.measurement_end_date}
+                    onChange={(e) => handleYearChange(y._id, 'measurement_end_date', e.target.value)}
                     fullWidth
                   />
                 ) : (
                   <div className="flex flex-col gap-1">
                     <span className="px-2 text-base text-bg-800"> </span>
                     <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
-                      {purchase.measurementEndDate}
+                      {y.measurement_end_date}
                     </div>
                   </div>
                 )}
               </div>
+              {isEditMode && (
+                <button
+                  className="shrink-0 flex items-center justify-center w-10 h-12.5 border-none bg-transparent cursor-pointer text-gray-400 text-lg hover:text-red-500"
+                  onClick={() => handleRemoveYear(y._id)}
+                >
+                  ×
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -426,36 +515,40 @@ export const SchoolDetailModal = ({
         {isEditMode && (
           <button
             className="flex items-center justify-center px-5 py-2.5 bg-[#374151] border-none rounded-lg text-[15px] text-[#f9fafb] cursor-pointer mx-auto mt-2 hover:opacity-90"
-            onClick={handleAddPurchase}
+            onClick={handleAddYear}
           >
-            주관구매 추가
+            년도 추가
           </button>
         )}
 
+        {/* 교복 */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-base font-medium text-bg-800">교복</span>
-            {isEditMode && onOpenProductModal && (
+            {isEditMode && onAddNewProduct && (
               <button
-                className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
-                onClick={() => onOpenProductModal('winter')}
+                className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 cursor-pointer hover:opacity-80"
+                onClick={onAddNewProduct}
               >
-                신규 품목 추가
+                신규품목 추가
               </button>
             )}
           </div>
 
           <div className="flex flex-col gap-2">
             <span className="text-sm text-[#4c4c4c]">동복</span>
-            <div className="flex flex-col gap-2">
-              {winterProducts.map((product, index) =>
-                renderProductRow(product, 'winter', index === 0)
-              )}
-            </div>
+            {winterProducts.length > 0 && (
+              <>
+                {renderProductHeader()}
+                <div className="flex flex-col gap-2">
+                  {winterProducts.map((p) => renderProductRow(p, 'winter'))}
+                </div>
+              </>
+            )}
             {isEditMode && (
               <button
                 className="flex items-center justify-center px-5 py-2.5 bg-primary-900 border-none rounded-lg text-[15px] text-[#f9fafb] cursor-pointer mx-auto hover:opacity-90"
-                onClick={() => onOpenProductModal?.('winter')}
+                onClick={() => handleAddProduct('winter')}
               >
                 동복 품목 추가
               </button>
@@ -464,15 +557,18 @@ export const SchoolDetailModal = ({
 
           <div className="flex flex-col gap-2">
             <span className="text-sm text-[#4c4c4c]">하복</span>
-            <div className="flex flex-col gap-2">
-              {summerProducts.map((product, index) =>
-                renderProductRow(product, 'summer', index === 0)
-              )}
-            </div>
+            {summerProducts.length > 0 && (
+              <>
+                {renderProductHeader()}
+                <div className="flex flex-col gap-2">
+                  {summerProducts.map((p) => renderProductRow(p, 'summer'))}
+                </div>
+              </>
+            )}
             {isEditMode && (
               <button
                 className="flex items-center justify-center px-5 py-2.5 bg-primary-900 border-none rounded-lg text-[15px] text-[#f9fafb] cursor-pointer mx-auto hover:opacity-90"
-                onClick={() => onOpenProductModal?.('summer')}
+                onClick={() => handleAddProduct('summer')}
               >
                 하복 품목 추가
               </button>
