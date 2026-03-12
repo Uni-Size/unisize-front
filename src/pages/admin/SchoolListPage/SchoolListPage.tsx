@@ -1,42 +1,53 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import { AdminHeader } from '@components/organisms/AdminHeader';
 import {
   SchoolAddModal,
   SchoolDetailModal,
+  ProductAddModal,
+  SchoolSelectModal,
 } from '@components/organisms';
+import type { SchoolPrice, ProductAddData } from '@components/organisms/ProductAddModal';
+import { createProduct } from '@/api/product';
 
-
-import type { SchoolDetailData } from '@components/organisms/SchoolDetailModal';
 import { Table } from '@components/atoms/Table';
 import { Input } from '@components/atoms/Input';
 import { Button } from '@components/atoms/Button';
 import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
-import { getSupportedSchoolsByYear, deleteSupportedSchool, type School as ApiSchool } from '@/api/school';
-import { getTargetYear } from '@/utils/schoolUtils';
+import {
+  getSchoolList,
+  updateSupportedSchool,
+  type SchoolListItem,
+  type SchoolType,
+  type SchoolListParams,
+} from '@/api/school';
 import { getApiErrorMessage } from '@/utils/errorUtils';
 import { downloadCSV } from '@/utils/csvUtils';
-import { DUMMY_SCHOOL_DETAIL } from '../SchoolDetailPage/schoolDetailDummyData';
 
 interface SchoolRow {
-  id: number;
+  school_name: string;
   no: number;
-  type: '초등학교' | '중학교' | '고등학교';
-  supportYear: string;
-  schoolName: string;
+  type: string;
+  supportYears: string;
   isActive: 'O' | '-';
+  isPermanent: boolean;
   measurementPeriod: string;
   registeredDate: string;
   modifiedDate: string;
+  _raw: SchoolListItem;
 }
 
-const getSchoolType = (name: string): '초등학교' | '중학교' | '고등학교' => {
-  if (name.includes('초등학교')) return '초등학교';
-  if (name.includes('고등학교')) return '고등학교';
-  return '중학교';
+const SCHOOL_TYPE_LABEL: Record<SchoolType, string> = {
+  '초': '초등학교',
+  '중': '중학교',
+  '고': '고등학교',
 };
+
+const CURRENT_YEAR = new Date().getFullYear();
+
+const YEAR_OPTIONS = [2023, 2024, 2025, 2026];
 
 const formatDate = (dateStr: string): string => {
   if (!dateStr) return '-';
@@ -47,45 +58,101 @@ const formatDate = (dateStr: string): string => {
   return `${yy}/${mm}/${dd}`;
 };
 
-const toSchoolRow = (item: ApiSchool, index: number): SchoolRow => ({
-  id: item.id,
+const getMeasurementPeriod = (item: SchoolListItem): string => {
+  const currentYearEntry = item.supported_years.find(
+    (sy) => sy.year === CURRENT_YEAR
+  ) ?? item.supported_years.at(-1);
+  if (!currentYearEntry) return '-';
+  return `${formatDate(currentYearEntry.measurement_start_date)} ~ ${formatDate(currentYearEntry.measurement_end_date)}`;
+};
+
+const toSchoolRow = (item: SchoolListItem, index: number): SchoolRow => ({
+  school_name: item.school_name,
   no: index + 1,
-  type: getSchoolType(item.name),
-  supportYear: String(item.year),
-  schoolName: item.name,
-  isActive: 'O',
-  measurementPeriod:
-    item.measurement_start_date && item.measurement_end_date
-      ? `${formatDate(item.measurement_start_date)} ~ ${formatDate(item.measurement_end_date)}`
-      : '-',
-  registeredDate: formatDate(item.created_at),
-  modifiedDate: formatDate(item.updated_at),
+  type: SCHOOL_TYPE_LABEL[item.school_type] ?? item.school_type,
+  supportYears: item.supported_years.map((sy) => `${sy.year}`).join(', ') || '-',
+  isActive: item.is_active ? 'O' : '-',
+  isPermanent: item.is_permanent,
+  measurementPeriod: getMeasurementPeriod(item),
+  registeredDate: item.created_at,
+  modifiedDate: item.updated_at,
+  _raw: item,
 });
 
 export const SchoolListPage = () => {
   const [schools, setSchools] = useState<SchoolRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ReactNode>(null);
+  const [searched, setSearched] = useState(false);
+
+  // 필터 상태
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('통합검색');
-  const [typeFilters, setTypeFilters] = useState({ all: true, elementary: false, middle: false, high: false });
-  const [activeFilters, setActiveFilters] = useState({ all: true, active: false, inactive: false });
-  const [yearFilters, setYearFilters] = useState({ all: true, noSupport: false, y23: false, y24: false, y25: false, y26: false });
+  const [typeFilter, setTypeFilter] = useState<SchoolType | 'all'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [yearFilter, setYearFilter] = useState<number | 'all' | 'noSupport'>(CURRENT_YEAR);
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedSchool, setSelectedSchool] = useState<SchoolDetailData | null>(null);
+  const [selectedSchool, setSelectedSchool] = useState<SchoolListItem | null>(null);
+  const [isProductAddModalOpen, setIsProductAddModalOpen] = useState(false);
+  const [isSchoolSelectModalOpen, setIsSchoolSelectModalOpen] = useState(false);
+  const [selectedSchoolsForProduct, setSelectedSchoolsForProduct] = useState<SchoolPrice[]>([]);
 
-  const fetchSchools = useCallback(async () => {
+  const sizeTypeToApiSizes = (sizeType: string) => {
+    if (!sizeType) return undefined;
+    if (sizeType === 'numeric_5') return [{ size: 'numeric', size_type: 'numeric' as const, size_step: 5 as const }];
+    if (sizeType === 'numeric_3') return [{ size: 'numeric', size_type: 'numeric' as const, size_step: 3 as const }];
+    if (sizeType === 'alpha') return [{ size: 'alpha', size_type: 'alpha' as const }];
+    if (sizeType === 'free') return [{ size: 'free', size_type: 'free' as const }];
+    return undefined;
+  };
+
+  const handleAddProduct = async (data: ProductAddData) => {
+    try {
+      await createProduct({
+        category: data.category,
+        gender: data.gender,
+        is_repair: data.isRepairable === 'yes' ? true : data.isRepairable === 'no' ? false : undefined,
+        is_repair_required: data.isRepairRequired === 'required' ? true : data.isRepairRequired === 'optional' ? false : undefined,
+        name: data.displayName,
+        price: data.originalPrice,
+        season: data.season || undefined,
+        sizes: sizeTypeToApiSizes(data.sizeType),
+      });
+      setIsProductAddModalOpen(false);
+      setSelectedSchoolsForProduct([]);
+    } catch (err: unknown) {
+      const errData = (err as { response?: { data?: { error?: { message?: string; details?: string | Record<string, string> } } } })?.response?.data?.error;
+      const message = errData?.message ?? '상품 추가에 실패했습니다.';
+      const details = errData?.details;
+      const detailStr = typeof details === 'object' && details !== null ? Object.values(details).join('\n') : (details ?? '');
+      alert(detailStr ? `${message}\n\n${detailStr}` : message);
+    }
+  };
+
+  const buildParams = useCallback((): SchoolListParams => {
+    const params: SchoolListParams = {};
+    if (typeFilter !== 'all') params.school_type = typeFilter;
+    if (activeFilter === 'active') params.is_active = true;
+    else if (activeFilter === 'inactive') params.is_active = false;
+    if (typeof yearFilter === 'number') params.year = yearFilter;
+    return params;
+  }, [typeFilter, activeFilter, yearFilter]);
+
+  const fetchSchools = useCallback(async (params?: SchoolListParams) => {
     setLoading(true);
     setError(null);
     try {
-      const year = getTargetYear();
-      const data = await getSupportedSchoolsByYear(year);
-      setSchools(data.map(toSchoolRow));
+      const data = await getSchoolList(params);
+      setSchools(data.schools.map(toSchoolRow));
+      setTotal(data.total);
+      setSearched(true);
     } catch (err) {
       console.error('학교 목록 조회 실패:', err);
       setError(getApiErrorMessage(err, '학교 목록을 불러오는 중 오류가 발생했습니다.'));
@@ -95,24 +162,31 @@ export const SchoolListPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchSchools();
+    fetchSchools({ year: CURRENT_YEAR });
   }, [fetchSchools]);
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchSchools(buildParams());
+  };
+
+  const handleReset = () => {
+    setSearchTerm('');
+    setSearchType('통합검색');
+    setTypeFilter('all');
+    setActiveFilter('all');
+    setYearFilter(CURRENT_YEAR);
+    setCurrentPage(1);
+    fetchSchools({ year: CURRENT_YEAR });
+  };
 
   const handleAddSchool = () => {
     setIsAddModalOpen(false);
-    fetchSchools();
+    fetchSchools(buildParams());
   };
 
   const handleOpenDetailModal = (school: SchoolRow) => {
-    // TODO: 학교 디테일 조회 API 연동 시 실제 데이터로 교체
-    const detailData: SchoolDetailData = {
-      ...DUMMY_SCHOOL_DETAIL,
-      id: String(school.id),
-      schoolName: school.schoolName,
-      registeredDate: school.registeredDate,
-      lastModifiedDate: school.modifiedDate,
-    };
-    setSelectedSchool(detailData);
+    setSelectedSchool(school._raw);
     setIsDetailModalOpen(true);
   };
 
@@ -121,26 +195,55 @@ export const SchoolListPage = () => {
     setSelectedSchool(null);
   };
 
-  const handleUpdateSchool = (data: SchoolDetailData) => {
-    console.log('Update school:', data);
-    handleCloseDetailModal();
-    fetchSchools();
+  const handleUpdateSchool = async (
+    originalName: string,
+    data: Parameters<typeof updateSupportedSchool>[1]
+  ) => {
+    try {
+      await updateSupportedSchool(originalName, data);
+      handleCloseDetailModal();
+      fetchSchools(buildParams());
+    } catch (err) {
+      alert(getApiErrorMessage(err, '학교 수정에 실패했습니다.'));
+    }
   };
+
+  // 클라이언트 측 검색어 필터 (서버 필터 후 추가 필터링)
+  const filteredSchools = schools.filter((school) => {
+    if (!searchTerm) return true;
+    if (searchType === '학교명') return school.school_name.includes(searchTerm);
+    return school.school_name.includes(searchTerm) || school.type.includes(searchTerm);
+  });
+
+  // 미지원 필터 (year=noSupport는 서버 미지원이므로 클라이언트에서 처리)
+  const displaySchools = yearFilter === 'noSupport'
+    ? filteredSchools.filter((s) => s._raw.supported_years.length === 0)
+    : filteredSchools;
 
   const handleExportCSV = () => {
     downloadCSV(
-      ['No.', '구분', '지원년도', '학교명', '활성', '측정기간', '등록일', '수정일'],
-      filteredSchools.map((s) => [s.no, s.type, s.supportYear, s.schoolName, s.isActive, s.measurementPeriod, s.registeredDate, s.modifiedDate]),
+      ['No.', '구분', '지원년도', '학교명', '지원여부', '상시지원', '측정기간', '등록일', '수정일'],
+      displaySchools.map((s) => [
+        s.no, s.type, s.supportYears, s.school_name,
+        s.isActive, s.isPermanent ? 'O' : '-',
+        s.measurementPeriod, s.registeredDate, s.modifiedDate,
+      ]),
       '학교목록',
     );
   };
 
+  const totalPages = Math.ceil(displaySchools.length / itemsPerPage);
+  const paginatedSchools = displaySchools.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   const columns: Column<SchoolRow>[] = [
     { key: 'no', header: 'No.', width: '40px', align: 'center' },
     { key: 'type', header: '구분', width: '80px', align: 'center' },
-    { key: 'supportYear', header: '지원년도', width: '80px', align: 'center' },
-    { key: 'schoolName', header: '학교명', align: 'center' },
-    { key: 'isActive', header: '활성', width: '50px', align: 'center' },
+    { key: 'supportYears', header: '지원년도', width: '120px', align: 'center' },
+    { key: 'school_name', header: '학교명', align: 'center' },
+    { key: 'isActive', header: '지원여부', width: '65px', align: 'center' },
     { key: 'measurementPeriod', header: '측정기간', width: '150px', align: 'center' },
     { key: 'registeredDate', header: '등록일', width: '80px', align: 'center' },
     { key: 'modifiedDate', header: '수정일', width: '80px', align: 'center' },
@@ -166,11 +269,11 @@ export const SchoolListPage = () => {
               e.stopPropagation();
               if (!confirm('정말 삭제하시겠습니까?')) return;
               try {
-                await deleteSupportedSchool(school.id);
-                window.dispatchEvent(new CustomEvent('school-deleted', { detail: { schoolId: school.id } }));
-                fetchSchools();
-              } catch (error) {
-                console.error('학교 삭제 실패:', error);
+                // TODO: 새 API에서 id 제공 시 연동
+                console.log('Delete school:', school.school_name);
+                fetchSchools(buildParams());
+              } catch (err) {
+                console.error('학교 삭제 실패:', err);
               }
             }}
           >
@@ -181,16 +284,11 @@ export const SchoolListPage = () => {
     },
   ];
 
-  const filteredSchools = schools.filter(
-    (school) =>
-      school.schoolName.includes(searchTerm) || school.type.includes(searchTerm)
-  );
-
-  const totalPages = Math.ceil(filteredSchools.length / itemsPerPage);
-  const paginatedSchools = filteredSchools.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const emptyMessage = loading
+    ? '로딩 중...'
+    : !searched
+    ? '검색 조건을 선택 후 검색해주세요.'
+    : error ?? '데이터가 없습니다.';
 
   return (
     <AdminLayout>
@@ -204,7 +302,7 @@ export const SchoolListPage = () => {
               type="button"
               className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={handleExportCSV}
-              disabled={filteredSchools.length === 0}
+              disabled={displaySchools.length === 0}
             >
               CSV 내보내기
             </button>
@@ -230,49 +328,46 @@ export const SchoolListPage = () => {
                 placeholder="검색어를 입력하세요."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
           </div>
 
-          {/* 구분 + 활성 (같은 행) */}
+          {/* 구분 + 지원여부 */}
           <div className="flex items-stretch border-b border-gray-200">
             <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
               구분
             </div>
             <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white border-r border-gray-200">
-              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={typeFilters.all} onChange={() => setTypeFilters({...typeFilters, all: !typeFilters.all})} className="w-4 h-4 accent-gray-500" />
-                전체
-              </label>
-              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={typeFilters.elementary} onChange={() => setTypeFilters({...typeFilters, elementary: !typeFilters.elementary})} className="w-4 h-4 accent-gray-500" />
-                초등학교
-              </label>
-              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={typeFilters.middle} onChange={() => setTypeFilters({...typeFilters, middle: !typeFilters.middle})} className="w-4 h-4 accent-gray-500" />
-                중학교
-              </label>
-              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={typeFilters.high} onChange={() => setTypeFilters({...typeFilters, high: !typeFilters.high})} className="w-4 h-4 accent-gray-500" />
-                고등학교
-              </label>
+              {(['all', '초', '중', '고'] as const).map((v) => (
+                <label key={v} className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="typeFilter"
+                    checked={typeFilter === v}
+                    onChange={() => setTypeFilter(v)}
+                    className="w-4 h-4 accent-gray-500"
+                  />
+                  {v === 'all' ? '전체' : SCHOOL_TYPE_LABEL[v]}
+                </label>
+              ))}
             </div>
             <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
-              활성
+              지원여부
             </div>
             <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white">
-              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={activeFilters.all} onChange={() => setActiveFilters({...activeFilters, all: !activeFilters.all})} className="w-4 h-4 accent-gray-500" />
-                전체
-              </label>
-              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={activeFilters.active} onChange={() => setActiveFilters({...activeFilters, active: !activeFilters.active})} className="w-4 h-4 accent-gray-500" />
-                활성
-              </label>
-              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={activeFilters.inactive} onChange={() => setActiveFilters({...activeFilters, inactive: !activeFilters.inactive})} className="w-4 h-4 accent-gray-500" />
-                비활성
-              </label>
+              {(['all', 'active', 'inactive'] as const).map((v) => (
+                <label key={v} className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="activeFilter"
+                    checked={activeFilter === v}
+                    onChange={() => setActiveFilter(v)}
+                    className="w-4 h-4 accent-gray-500"
+                  />
+                  {v === 'all' ? '전체' : v === 'active' ? '지원' : '미지원'}
+                </label>
+              ))}
             </div>
           </div>
 
@@ -283,45 +378,38 @@ export const SchoolListPage = () => {
             </div>
             <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white">
               <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={yearFilters.all} onChange={() => setYearFilters({...yearFilters, all: !yearFilters.all})} className="w-4 h-4 accent-gray-500" />
+                <input type="radio" name="yearFilter" checked={yearFilter === 'all'} onChange={() => setYearFilter('all')} className="w-4 h-4 accent-gray-500" />
                 전체
               </label>
               <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={yearFilters.noSupport} onChange={() => setYearFilters({...yearFilters, noSupport: !yearFilters.noSupport})} className="w-4 h-4 accent-gray-500" />
+                <input type="radio" name="yearFilter" checked={yearFilter === 'noSupport'} onChange={() => setYearFilter('noSupport')} className="w-4 h-4 accent-gray-500" />
                 미지원
               </label>
-              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={yearFilters.y23} onChange={() => setYearFilters({...yearFilters, y23: !yearFilters.y23})} className="w-4 h-4 accent-gray-500" />
-                23년
-              </label>
-              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={yearFilters.y24} onChange={() => setYearFilters({...yearFilters, y24: !yearFilters.y24})} className="w-4 h-4 accent-gray-500" />
-                24년
-              </label>
-              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={yearFilters.y25} onChange={() => setYearFilters({...yearFilters, y25: !yearFilters.y25})} className="w-4 h-4 accent-gray-500" />
-                25년
-              </label>
-              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={yearFilters.y26} onChange={() => setYearFilters({...yearFilters, y26: !yearFilters.y26})} className="w-4 h-4 accent-gray-500" />
-                26년
-              </label>
+              {YEAR_OPTIONS.map((y) => (
+                <label key={y} className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                  <input type="radio" name="yearFilter" checked={yearFilter === y} onChange={() => setYearFilter(y)} className="w-4 h-4 accent-gray-500" />
+                  {String(y).slice(2)}년
+                </label>
+              ))}
             </div>
           </div>
         </div>
 
         {/* 검색/초기화 버튼 */}
         <div className="flex justify-center gap-3">
-          <Button variant="primary" className="w-auto px-8 py-2.5">검색</Button>
-          <Button variant="outline" className="w-auto px-8 py-2.5 bg-gray-400! text-white! border-gray-400! hover:bg-gray-500!">초기화</Button>
+          <Button variant="primary" className="w-auto px-8 py-2.5" onClick={handleSearch}>검색</Button>
+          <Button variant="outline" className="w-auto px-8 py-2.5 bg-gray-400! text-white! border-gray-400! hover:bg-gray-500!" onClick={handleReset}>초기화</Button>
         </div>
 
         <div className="flex-1">
+          {searched && !loading && (
+            <div className="text-[13px] text-gray-500 mb-2">총 {total}건</div>
+          )}
           <Table
             columns={columns}
             data={loading ? [] : paginatedSchools}
             onRowClick={(school) => handleOpenDetailModal(school)}
-            emptyMessage={loading ? "로딩 중..." : error ?? "데이터가 없습니다."}
+            emptyMessage={emptyMessage}
           />
           <Pagination
             currentPage={currentPage}
@@ -335,13 +423,41 @@ export const SchoolListPage = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleAddSchool}
+        onAddNewProduct={() => setIsProductAddModalOpen(true)}
       />
 
       <SchoolDetailModal
         isOpen={isDetailModalOpen}
         onClose={handleCloseDetailModal}
         school={selectedSchool}
-        onUpdate={handleUpdateSchool}
+        onUpdate={handleCloseDetailModal}
+        onSubmit={handleUpdateSchool}
+        onAddNewProduct={() => setIsProductAddModalOpen(true)}
+      />
+
+      <ProductAddModal
+        isOpen={isProductAddModalOpen}
+        onClose={() => { setIsProductAddModalOpen(false); setSelectedSchoolsForProduct([]); }}
+        onSubmit={handleAddProduct}
+        onOpenSchoolModal={() => setIsSchoolSelectModalOpen(true)}
+        selectedSchools={selectedSchoolsForProduct}
+        onRemoveSchool={(id) => setSelectedSchoolsForProduct((prev) => prev.filter((s) => s.schoolId !== id))}
+        onSchoolPriceChange={(id, price) => setSelectedSchoolsForProduct((prev) => prev.map((s) => s.schoolId === id ? { ...s, price } : s))}
+        zIndex={1100}
+      />
+
+      <SchoolSelectModal
+        isOpen={isSchoolSelectModalOpen}
+        onClose={() => setIsSchoolSelectModalOpen(false)}
+        onSubmit={(schoolId, schoolName, price, year) => {
+          setSelectedSchoolsForProduct((prev) =>
+            prev.find((s) => s.schoolId === schoolId)
+              ? prev
+              : [...prev, { schoolId, schoolName, price, year }]
+          );
+          setIsSchoolSelectModalOpen(false);
+        }}
+        zIndex={1200}
       />
     </AdminLayout>
   );

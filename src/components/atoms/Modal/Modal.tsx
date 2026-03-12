@@ -8,6 +8,7 @@ export interface ModalProps {
   actions?: ReactNode;
   titleExtra?: ReactNode;
   width?: number;
+  zIndex?: number;
 }
 
 export const Modal = ({
@@ -18,6 +19,7 @@ export const Modal = ({
   actions,
   titleExtra,
   width = 800,
+  zIndex = 1000,
 }: ModalProps) => {
   useEffect(() => {
     if (isOpen) {
@@ -50,7 +52,7 @@ export const Modal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[1000]" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center" style={{ zIndex }} onClick={onClose}>
       <div
         className="bg-white border border-primary-900 rounded-[20px] px-5 py-4 flex flex-col gap-2.5 max-h-[90vh] overflow-hidden w-full mx-4"
         style={{ maxWidth: `${width}px` }}

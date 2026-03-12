@@ -358,6 +358,44 @@ export async function completeMeasurement(
 // 학생 목록 조회 (관리자) API
 // ============================================================================
 
+export interface AdminOrderItemProduct {
+  id: number;
+  name: string;
+  category: string;
+  gender: string;
+  season: string;
+  price: number;
+}
+
+export interface AdminOrderItem {
+  id: number;
+  orderId: number;
+  productId: number;
+  size: string;
+  quantity: number;
+  supportedQuantity: number;
+  unitPrice: number;
+  subtotal: number;
+  customization: string;
+  deliveryStatus: string;
+  receivedAt: string | null;
+  product?: AdminOrderItemProduct;
+}
+
+export interface AdminStudentOrder {
+  id: number;
+  orderNumber: string;
+  studentId: number;
+  totalAmount: number;
+  status: string;
+  orderType: string;
+  orderDate: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+  orderItems?: AdminOrderItem[];
+}
+
 export interface AdminStudent {
   id: number;
   name: string;
@@ -379,6 +417,7 @@ export interface AdminStudent {
   government_purchase: boolean;
   created_at: string;
   updated_at: string;
+  orders?: AdminStudentOrder[];
 }
 
 export interface GetStudentsParams {
@@ -436,6 +475,251 @@ export async function getStudentDetail(id: number): Promise<AdminStudent> {
  */
 export async function deleteStudent(id: number): Promise<void> {
   await apiClient.delete<ApiResponse<void>>(`/api/v1/students/${id}`);
+}
+
+// ============================================================================
+// 학생 주문 조회 관련 타입 및 API
+// ============================================================================
+
+export interface OrderItemProduct {
+  id: number;
+  name: string;
+  season: string;
+  price: number;
+}
+
+export interface StudentOrderItem {
+  id: number;
+  orderId: number;
+  productId: number;
+  size: string;
+  quantity: number;
+  supportedQuantity: number;
+  unitPrice: number;
+  subtotal: number;
+  customization: string;
+  deliveryStatus: string;
+  receivedAt: string | null;
+  product: OrderItemProduct;
+}
+
+export interface StudentOrder {
+  id: number;
+  orderNumber: string;
+  studentId: number;
+  totalAmount: number;
+  status: string;
+  orderType: string;
+  orderDate: string;
+  notes: string;
+  signature: string;
+  createdAt: string;
+  updatedAt: string;
+  orderItems: StudentOrderItem[];
+}
+
+export interface StudentOrdersData {
+  id: number;
+  name: string;
+  birth_date: string;
+  gender: string;
+  student_phone: string;
+  guardian_phone: string;
+  address: string;
+  delivery: boolean;
+  privacy_consent: boolean;
+  previous_school: string;
+  admission_year: number;
+  admission_grade: number;
+  school_name: string;
+  class_name: string;
+  student_number: string;
+  student_type: string;
+  is_eligible_for_public_purchase: boolean;
+  has_order: boolean;
+  recommended_uniforms: {
+    winter: RecommendedUniformItem[];
+    summer: RecommendedUniformItem[];
+  };
+  orders: StudentOrder[];
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * 학생 주문 정보 조회
+ * GET /api/v1/students/:id/orders
+ */
+export async function getStudentOrders(
+  studentId: number,
+): Promise<StudentOrdersData> {
+  const response = await apiClient.get<ApiResponse<StudentOrdersData>>(
+    `/api/v1/students/${studentId}/orders`,
+  );
+  return response.data.data;
+}
+
+// ============================================================================
+// 주문 히스토리 관련 타입 및 API
+// ============================================================================
+
+export interface OrderHistory {
+  changed_at: string;
+  description: string;
+}
+
+export interface OrderHistoriesData {
+  histories: OrderHistory[];
+}
+
+/**
+ * 주문 히스토리 조회
+ * GET /api/v1/orders/:id/history
+ */
+export async function getOrderHistory(
+  orderId: number,
+): Promise<OrderHistoriesData> {
+  const response = await apiClient.get<ApiResponse<OrderHistoriesData>>(
+    `/api/v1/orders/${orderId}/history`,
+  );
+  return response.data.data;
+}
+
+// ============================================================================
+// 주문 아이템 수령 처리 API
+// ============================================================================
+
+/**
+ * 주문 아이템 수령 여부 업데이트
+ * PATCH /api/v1/orders/:id/items/:item_id/receive
+ */
+export async function updateOrderItemReceive(
+  orderId: number,
+  itemId: number,
+  received: boolean,
+): Promise<void> {
+  await apiClient.patch(`/api/v1/orders/${orderId}/items/${itemId}/receive`, { received });
+}
+
+// ============================================================================
+// 주문 수정 (관리자) 관련 타입 및 API
+// ============================================================================
+
+export interface UpdateOrderUniformItem {
+  item_id: string;
+  name: string;
+  season: string;
+  selected_size: number;
+  purchase_count: number;
+  customization: string;
+}
+
+export interface UpdateOrderSupplyItem {
+  item_id: string;
+  name: string;
+  selected_size: string;
+  purchase_count: number;
+}
+
+export interface UpdateOrderRequest {
+  uniform_items: UpdateOrderUniformItem[];
+  supply_items: UpdateOrderSupplyItem[];
+  notes: string;
+}
+
+/**
+ * 주문 수정 (관리자)
+ * PUT /api/v1/admin/orders/:id
+ */
+export async function updateAdminOrder(
+  orderId: number,
+  data: UpdateOrderRequest,
+): Promise<void> {
+  await apiClient.put(`/api/v1/admin/orders/${orderId}`, data);
+}
+
+
+// ============================================================================
+// 전화 주문 관련 타입
+// ============================================================================
+
+export interface PhoneOrderItem {
+  product_id: number;
+  size: string;
+  supported_quantity: number;
+  extra_quantity: number;
+  is_repair: boolean;
+  is_reserved: boolean;
+  has_name_tag: boolean;
+}
+
+export interface PhoneOrderSupplyItem {
+  item_id: number;
+  name: string;
+  selected_size: string;
+  purchase_count: number;
+}
+
+export interface PhoneOrderRequest {
+  name: string;
+  gender: string;
+  student_phone: string;
+  guardian_phone: string;
+  delivery: boolean;
+  address: string;
+  privacy_consent: boolean;
+  admission_school: string;
+  previous_school: string;
+  admission_year: number;
+  admission_grade: number;
+  class_name: string;
+  notes: string;
+  order_items: PhoneOrderItem[];
+  supply_items: PhoneOrderSupplyItem[];
+}
+
+export interface PhoneOrderStudentResult {
+  id: number;
+  name: string;
+  gender: string;
+  school_name: string;
+  student_type: string;
+  is_eligible_for_public_purchase: boolean;
+  has_order: boolean;
+  orders: unknown[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PhoneOrderResult {
+  id: number;
+  order_number: string;
+  total_amount: number;
+  status: string;
+  item_count: number;
+}
+
+export interface PhoneOrderResponse {
+  student: PhoneOrderStudentResult;
+  order: PhoneOrderResult;
+}
+
+// ============================================================================
+// 전화 주문 API
+// ============================================================================
+
+/**
+ * 전화 주문 등록
+ * POST /api/v1/students/phone-order
+ */
+export async function createPhoneOrder(
+  data: PhoneOrderRequest,
+): Promise<PhoneOrderResponse> {
+  const response = await apiClient.post<ApiResponse<PhoneOrderResponse>>(
+    "/api/v1/students/phone-order",
+    data,
+  );
+  return response.data.data;
 }
 
 // ============================================================================

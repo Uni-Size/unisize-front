@@ -6,7 +6,7 @@ import {
   SEASON_OPTIONS,
   REPAIRABLE_OPTIONS,
   REPAIR_REQUIRED_OPTIONS,
-  SIZE_UNIT_OPTIONS,
+  SIZE_TYPE_OPTIONS,
 } from "@/constants/product";
 
 export interface SchoolPrice {
@@ -24,7 +24,7 @@ export interface ProductAddData {
   originalPrice: number;
   isRepairable: string;
   isRepairRequired: string;
-  sizeUnit: string;
+  sizeType: string;
   schools: SchoolPrice[];
 }
 
@@ -36,6 +36,7 @@ export interface ProductAddModalProps {
   selectedSchools: SchoolPrice[];
   onRemoveSchool: (schoolId: string) => void;
   onSchoolPriceChange: (schoolId: string, price: number) => void;
+  zIndex?: number;
 }
 
 export const ProductAddModal = ({
@@ -46,6 +47,7 @@ export const ProductAddModal = ({
   selectedSchools,
   onRemoveSchool,
   onSchoolPriceChange,
+  zIndex,
 }: ProductAddModalProps) => {
   const [season, setSeason] = useState("");
   const [category, setCategory] = useState("");
@@ -54,7 +56,7 @@ export const ProductAddModal = ({
   const [originalPrice, setOriginalPrice] = useState("");
   const [isRepairable, setIsRepairable] = useState("");
   const [isRepairRequired, setIsRepairRequired] = useState("");
-  const [sizeUnit, setSizeUnit] = useState("");
+  const [sizeType, setSizeType] = useState("");
 
   const handleSubmit = () => {
     const missing: string[] = [];
@@ -77,7 +79,7 @@ export const ProductAddModal = ({
       originalPrice: Number(originalPrice),
       isRepairable,
       isRepairRequired,
-      sizeUnit,
+      sizeType,
       schools: selectedSchools,
     });
   };
@@ -90,7 +92,7 @@ export const ProductAddModal = ({
     setOriginalPrice("");
     setIsRepairable("");
     setIsRepairRequired("");
-    setSizeUnit("");
+    setSizeType("");
     onClose();
   };
 
@@ -99,6 +101,7 @@ export const ProductAddModal = ({
       isOpen={isOpen}
       onClose={handleClose}
       title="품목추가"
+      zIndex={zIndex}
       width={800}
       actions={
         <>
@@ -206,10 +209,10 @@ export const ProductAddModal = ({
           <div className="flex-1 min-w-0">
             <Select
               label="사이즈"
-              placeholder="5단위"
-              options={SIZE_UNIT_OPTIONS}
-              value={sizeUnit}
-              onChange={setSizeUnit}
+              placeholder="사이즈 유형 선택"
+              options={SIZE_TYPE_OPTIONS}
+              value={sizeType}
+              onChange={setSizeType}
               fullWidth
             />
           </div>

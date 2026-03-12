@@ -13,6 +13,7 @@ export interface SchoolSelectModalProps {
   onSubmit: (schoolId: string, schoolName: string, price: number, year: string) => void;
   schools?: School[];
   title?: string;
+  zIndex?: number;
 }
 
 const currentYear = new Date().getFullYear();
@@ -26,6 +27,7 @@ export const SchoolSelectModal = ({
   onClose,
   onSubmit,
   title = '학교 추가',
+  zIndex,
 }: SchoolSelectModalProps) => {
   const [year, setYear] = useState(String(currentYear));
   const [selectedSchoolId, setSelectedSchoolId] = useState('');
@@ -84,6 +86,7 @@ export const SchoolSelectModal = ({
       onClose={handleClose}
       title={title}
       width={580}
+      zIndex={zIndex}
       actions={
         <>
           <button

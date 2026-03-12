@@ -30,8 +30,12 @@ export const REPAIR_REQUIRED_OPTIONS: SelectOption[] = [
   { value: "optional", label: "선택사항" },
 ];
 
-export const SIZE_UNIT_OPTIONS: SelectOption[] = [
-  { value: "5", label: "5단위" },
-  { value: "10", label: "10단위" },
-  { value: "free", label: "프리" },
+export const SIZE_TYPE_OPTIONS: SelectOption[] = [
+  { value: "numeric_5", label: "5단위" },
+  { value: "numeric_3", label: "3단위" },
+  { value: "alpha", label: "S/M/L단위" },
+  { value: "free", label: "프리사이즈" },
 ];
+
+/** @deprecated SIZE_TYPE_OPTIONS 사용 */
+export const SIZE_UNIT_OPTIONS = SIZE_TYPE_OPTIONS;

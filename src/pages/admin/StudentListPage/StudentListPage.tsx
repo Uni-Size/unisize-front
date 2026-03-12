@@ -9,7 +9,7 @@ import { Input } from '@components/atoms/Input';
 import { Button } from '@components/atoms/Button';
 import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
-import { getStudents, getStudentDetail, deleteStudent } from '@/api/student';
+import { getStudents, getStudentDetail, deleteStudent, getOrderHistory, updateAdminOrder } from '@/api/student';
 import type { AdminStudent } from '@/api/student';
 import { getApiErrorMessage } from '@/utils/errorUtils';
 import { downloadCSV } from '@/utils/csvUtils';
@@ -104,28 +104,146 @@ export const StudentListPage = () => {
     fetchStudents(currentPage);
   };
 
+  const parseAdminOrderItems = (
+    orderItems: import('@/api/student').AdminOrderItem[],
+  ): {
+    winterUniforms: import('@components/organisms/StudentModal').UniformItem[];
+    summerUniforms: import('@components/organisms/StudentModal').UniformItem[];
+  } => {
+    const winterUniforms: import('@components/organisms/StudentModal').UniformItem[] = [];
+    const summerUniforms: import('@components/organisms/StudentModal').UniformItem[] = [];
+
+    for (const item of orderItems) {
+      const season = item.product?.season?.toUpperCase() ?? '';
+      const uniform: import('@components/organisms/StudentModal').UniformItem = {
+        id: String(item.id),
+        name: item.product?.name ?? '',
+        size: item.size,
+        supportedQuantity: item.supportedQuantity,
+        additionalQuantity: item.quantity - item.supportedQuantity,
+        repair: item.customization ?? '',
+        reservation: false,
+        received: item.receivedAt !== null,
+        nameTag: null,
+      };
+      // season: "W" = 동복, "S" = 하복
+      if (season === 'W' || season === 'WINTER' || season === '동복') {
+        winterUniforms.push(uniform);
+      } else {
+        summerUniforms.push(uniform);
+      }
+    }
+
+    return { winterUniforms, summerUniforms };
+  };
+
+  const fetchStudentDetail = async (studentId: number): Promise<StudentDetailData> => {
+    const detail = await getStudentDetail(studentId);
+    const adminOrders = detail.orders ?? [];
+
+    const orderSnapshots: import('@components/organisms/StudentModal').OrderSnapshot[] = adminOrders.map(
+      (order: import('@/api/student').AdminStudentOrder) => {
+        const { winterUniforms, summerUniforms } = parseAdminOrderItems(order.orderItems ?? []);
+        return {
+          orderId: order.id,
+          date: order.orderDate ?? order.createdAt,
+          winterUniforms,
+          summerUniforms,
+          history: [],
+          modifiedDate: order.updatedAt,
+        };
+      },
+    );
+
+    const firstSnapshot = orderSnapshots[0];
+
+    const historyData = firstSnapshot
+      ? await getOrderHistory(firstSnapshot.orderId).catch(() => null)
+      : null;
+    const firstHistory = historyData?.histories.map((h) => ({
+      date: h.changed_at,
+      content: h.description,
+    })) ?? [];
+
+    if (firstSnapshot) {
+      firstSnapshot.history = firstHistory;
+    }
+
+    return {
+      id: String(detail.id),
+      orderId: firstSnapshot?.orderId,
+      admissionSchool: detail.school_name,
+      previousSchool: detail.previous_school,
+      classNumber: detail.class_name || '',
+      name: detail.name,
+      gender: detail.gender,
+      studentPhone: detail.student_phone,
+      guardianPhone: detail.guardian_phone,
+      registeredDate: detail.created_at ?? undefined,
+      modifiedDate: firstSnapshot?.modifiedDate,
+      orderSnapshots,
+      winterUniforms: firstSnapshot?.winterUniforms ?? [],
+      summerUniforms: firstSnapshot?.summerUniforms ?? [],
+      supplies: [],
+      nameTag: { orderQuantity: 0, attachQuantity: 0 },
+      history: firstHistory,
+    };
+  };
+
   const handleRowClick = async (student: StudentRow) => {
     try {
-      const detail = await getStudentDetail(student.id);
-      const detailData: StudentDetailData = {
-        id: String(detail.id),
-        admissionSchool: detail.school_name,
-        previousSchool: detail.previous_school,
-        classNumber: detail.class_name || '',
-        name: detail.name,
-        gender: detail.gender,
-        studentPhone: detail.student_phone,
-        guardianPhone: detail.guardian_phone,
-        registeredDate: detail.created_at ?? undefined,
-        winterUniforms: [],
-        summerUniforms: [],
-        supplies: [],
-        nameTag: { orderQuantity: 0, attachQuantity: 0 },
-      };
+      const detailData = await fetchStudentDetail(student.id);
       setSelectedStudent(detailData);
       setIsViewModalOpen(true);
     } catch (error) {
       console.error('학생 상세 조회 실패:', error);
+    }
+  };
+
+  const handleEditSave = async (orderId: number, data: StudentFormInput) => {
+    try {
+      const uniformItems = [
+        ...data.winterUniforms.filter((u) => !u.isDeleted).map((u) => ({
+          item_id: u.name,
+          name: u.name,
+          season: '동복',
+          selected_size: Number(u.size),
+          purchase_count: u.supportedQuantity + u.additionalQuantity,
+          customization: u.repair,
+        })),
+        ...data.summerUniforms.filter((u) => !u.isDeleted).map((u) => ({
+          item_id: u.name,
+          name: u.name,
+          season: '하복',
+          selected_size: Number(u.size),
+          purchase_count: u.supportedQuantity + u.additionalQuantity,
+          customization: u.repair,
+        })),
+      ];
+      const supplyItems = data.supplies
+        .filter((s) => s.quantity > 0)
+        .map((s) => ({
+          item_id: s.name,
+          name: s.name,
+          selected_size: s.size,
+          purchase_count: s.quantity,
+        }));
+      await updateAdminOrder(orderId, {
+        uniform_items: uniformItems,
+        supply_items: supplyItems,
+        notes: '',
+      });
+
+      // 저장 후 해당 학생 데이터 재조회해서 view 모드로 전환
+      const studentId = Number(selectedStudent?.id);
+      if (studentId) {
+        const refreshed = await fetchStudentDetail(studentId);
+        setSelectedStudent(refreshed);
+        setIsViewModalOpen(true);
+      }
+      fetchStudents(currentPage);
+    } catch (error) {
+      console.error('주문 수정 실패:', error);
     }
   };
 
@@ -317,6 +435,7 @@ export const StudentListPage = () => {
           onClose={() => setIsViewModalOpen(false)}
           mode="view"
           student={selectedStudent}
+          onEditSave={handleEditSave}
         />
       </div>
     </AdminLayout>

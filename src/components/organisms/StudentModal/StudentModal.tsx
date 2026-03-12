@@ -14,6 +14,7 @@ export interface UniformItem {
   additionalQuantity: number;
   repair: string;
   reservation: boolean;
+  received: boolean;
   nameTag: number | null;
   isDeleted?: boolean;
 }
@@ -36,8 +37,18 @@ export interface HistoryItem {
   content: string;
 }
 
+export interface OrderSnapshot {
+  orderId: number;
+  date: string;
+  winterUniforms: UniformItem[];
+  summerUniforms: UniformItem[];
+  history: HistoryItem[];
+  modifiedDate?: string;
+}
+
 export interface StudentDetailData {
   id: string;
+  orderId?: number;          // 선택된 주문 ID (수정 API 호출용)
   admissionSchool: string;
   previousSchool: string;
   classNumber: string;
@@ -47,7 +58,7 @@ export interface StudentDetailData {
   guardianPhone: string;
   registeredDate?: string;   // 학생 created_at
   modifiedDate?: string;     // 주문 last_modified_date
-  orderDates?: string[];     // 주문 탭 날짜 목록 (order.created_at)
+  orderSnapshots?: OrderSnapshot[];  // 전체 주문 탭 데이터
   winterUniforms: UniformItem[];
   summerUniforms: UniformItem[];
   supplies: SupplyItem[];
@@ -75,6 +86,7 @@ export interface StudentModalProps {
   mode: 'add' | 'edit' | 'view';
   student?: StudentDetailData | null;
   onSubmit?: (data: StudentFormInput) => void;
+  onEditSave?: (orderId: number, data: StudentFormInput) => void;
 }
 
 // ============================================================================
@@ -122,8 +134,11 @@ export const StudentModal = ({
   mode,
   student,
   onSubmit,
+  onEditSave,
 }: StudentModalProps) => {
-  const isView = mode === 'view';
+  // view 모드에서 수정 버튼 클릭 시 편집 상태
+  const [isEditing, setIsEditing] = useState(false);
+  const isView = mode === 'view' && !isEditing;
 
   // 학생 정보 폼 state
   const [admissionSchool, setAdmissionSchool] = useState('');
@@ -146,6 +161,26 @@ export const StudentModal = ({
 
   // view 모드: 활성 날짜 탭
   const [activeDateIndex, setActiveDateIndex] = useState(0);
+  // 현재 선택된 주문 ID (탭 전환 시 변경)
+  const [activeOrderId, setActiveOrderId] = useState<number | undefined>(undefined);
+  // 현재 선택된 주문의 히스토리
+  const [activeHistory, setActiveHistory] = useState<HistoryItem[]>([]);
+
+  const applyOrderSnapshot = (snapshot: OrderSnapshot) => {
+    setWinterUniforms(snapshot.winterUniforms);
+    setSummerUniforms(snapshot.summerUniforms);
+    setActiveOrderId(snapshot.orderId);
+    setActiveHistory(snapshot.history);
+  };
+
+  const handleDateTabClick = (index: number) => {
+    if (index === activeDateIndex) return;
+    setActiveDateIndex(index);
+    const snapshot = student?.orderSnapshots?.[index];
+    if (snapshot) {
+      applyOrderSnapshot(snapshot);
+    }
+  };
 
   // edit/view 모드에서 기존 데이터로 초기화
   useEffect(() => {
@@ -162,6 +197,9 @@ export const StudentModal = ({
       setSupplies(student.supplies.length > 0 ? student.supplies : defaultSupplies);
       setNameTag(student.nameTag);
       setActiveDateIndex(0);
+      setActiveOrderId(student.orderId);
+      setActiveHistory(student.history ?? []);
+      setIsEditing(false);
     }
   }, [mode, student]);
 
@@ -178,6 +216,8 @@ export const StudentModal = ({
     setSupplies(defaultSupplies.map((s) => ({ ...s, size: '', quantity: 0 })));
     setNameTag({ orderQuantity: 0, attachQuantity: 0 });
     setActiveDateIndex(0);
+    setActiveHistory([]);
+    setIsEditing(false);
   };
 
   const handleClose = () => {
@@ -186,7 +226,7 @@ export const StudentModal = ({
   };
 
   const handleSubmit = () => {
-    onSubmit?.({
+    const formData: StudentFormInput = {
       admissionSchool,
       previousSchool,
       classNumber,
@@ -198,8 +238,18 @@ export const StudentModal = ({
       summerUniforms,
       supplies,
       nameTag,
-    });
-    handleClose();
+    };
+
+    if (isEditing) {
+      const targetOrderId = activeOrderId ?? student?.orderId;
+      if (targetOrderId) {
+        onEditSave?.(targetOrderId, formData);
+      }
+      // isEditing 모드에서는 저장 후 모달을 닫지 않음 (onEditSave 콜백이 처리)
+    } else {
+      onSubmit?.(formData);
+      handleClose();
+    }
   };
 
   // 교복 아이템 변경
@@ -259,19 +309,20 @@ export const StudentModal = ({
             <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[70px]">추가수량</th>
             <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[80px]">수선</th>
             <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[60px]">예약</th>
+            <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[60px]">수령</th>
             <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[60px]">명찰</th>
           </tr>
         </thead>
         <tbody>
           {!hasSchool && mode === 'add' ? (
             <tr>
-              <td colSpan={7} className="text-center p-5 text-sm text-[#959595]">
+              <td colSpan={8} className="text-center p-5 text-sm text-[#959595]">
                 학교를 먼저 선택해주세요
               </td>
             </tr>
           ) : items.length === 0 ? (
             <tr>
-              <td colSpan={7} className="text-center p-5 text-sm text-[#959595]">
+              <td colSpan={8} className="text-center p-5 text-sm text-[#959595]">
                 {mode === 'add' ? '학교를 먼저 선택해주세요' : '데이터가 없습니다'}
               </td>
             </tr>
@@ -335,18 +386,26 @@ export const StudentModal = ({
                   {item.repair}
                 </td>
                 <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
-                  {isView ? (
-                    <span>{item.reservation ? '✓' : ''}</span>
-                  ) : (
-                    <input
-                      type="checkbox"
-                      className="w-[18px] h-[18px] accent-[#1f234f] cursor-pointer"
-                      checked={item.reservation}
-                      onChange={(e) =>
-                        handleUniformChange(season, item.id, 'reservation', e.target.checked)
-                      }
-                    />
-                  )}
+                  <input
+                    type="checkbox"
+                    className="w-[18px] h-[18px] accent-[#1f234f] cursor-pointer"
+                    checked={item.reservation}
+                    disabled={isView}
+                    onChange={(e) =>
+                      handleUniformChange(season, item.id, 'reservation', e.target.checked)
+                    }
+                  />
+                </td>
+                <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
+                  <input
+                    type="checkbox"
+                    className="w-[18px] h-[18px] accent-[#1f234f] cursor-pointer"
+                    checked={item.received}
+                    disabled={isView}
+                    onChange={(e) =>
+                      handleUniformChange(season, item.id, 'received', e.target.checked)
+                    }
+                  />
                 </td>
                 <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
                   {item.nameTag !== null ? item.nameTag : '-'}
@@ -510,14 +569,17 @@ export const StudentModal = ({
       title={title}
       width={1000}
       titleExtra={
-        isView ? (
-          <button className="px-5 py-2 bg-[#b07a50] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90">
+        mode === 'view' && !isEditing ? (
+          <button
+            className="px-5 py-2 bg-[#b07a50] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+            onClick={() => setIsEditing(true)}
+          >
             수정
           </button>
         ) : undefined
       }
       actions={
-        isView ? (
+        mode === 'view' && !isEditing ? (
           <button
             className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
             onClick={handleClose}
@@ -526,7 +588,10 @@ export const StudentModal = ({
           </button>
         ) : (
           <>
-            <button className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90" onClick={handleClose}>
+            <button
+              className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              onClick={isEditing ? () => setIsEditing(false) : handleClose}
+            >
               취소
             </button>
             <button className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90" onClick={handleSubmit}>
@@ -541,7 +606,7 @@ export const StudentModal = ({
         <div className="flex flex-col border border-[#c6c6c6] rounded-lg overflow-hidden [&_.input-wrapper]:flex-row [&_.input-wrapper]:items-center [&_.input-wrapper]:w-full [&_.input-wrapper]:gap-0 [&_.input-label]:flex-[0_0_120px] [&_.input-label]:px-4 [&_.input-label]:py-3 [&_.input-label]:text-[15px] [&_.input-label]:font-medium [&_.input-label]:text-[#393939] [&_.input-label]:bg-[#f9fafb] [&_.input-label]:border-r [&_.input-label]:border-[#c6c6c6] [&_.input-label]:mb-0 [&_.input-label]:h-full [&_.input-label]:flex [&_.input-label]:items-center [&_.input]:border-none [&_.input]:rounded-none [&_.input]:h-12 [&_.input:focus]:shadow-none [&_.input:focus]:border-none [&_.select-wrapper]:flex-row [&_.select-wrapper]:items-center [&_.select-wrapper]:w-full [&_.select-wrapper]:gap-0 [&_.select-label]:flex-[0_0_120px] [&_.select-label]:px-4 [&_.select-label]:py-3 [&_.select-label]:text-[15px] [&_.select-label]:font-medium [&_.select-label]:text-[#393939] [&_.select-label]:bg-[#f9fafb] [&_.select-label]:border-r [&_.select-label]:border-[#c6c6c6] [&_.select-label]:mb-0 [&_.select-label]:h-full [&_.select-label]:flex [&_.select-label]:items-center [&_.select]:border-none [&_.select]:rounded-none [&_.select]:h-12">
           <div className="flex items-stretch border-b border-[#c6c6c6]">
             <div className="flex-1 min-w-0 flex items-center border-r border-[#c6c6c6]">
-              {isView ? (
+              {isView || isEditing ? (
                 <ViewField label="입학학교" value={admissionSchool} />
               ) : (
                 <Input
@@ -554,7 +619,7 @@ export const StudentModal = ({
               )}
             </div>
             <div className="flex-1 min-w-0 flex items-center border-r border-[#c6c6c6]">
-              {isView ? (
+              {isView || isEditing ? (
                 <ViewField label="출신학교" value={previousSchool} />
               ) : (
                 <Input
@@ -567,7 +632,7 @@ export const StudentModal = ({
               )}
             </div>
             <div className="flex-[0_0_80px] flex items-center">
-              {isView ? (
+              {isView || isEditing ? (
                 <span className="flex-1 px-4 py-3 text-sm text-[#4c4c4c] h-12 flex items-center">
                   {classNumber || '-'}
                 </span>
@@ -585,7 +650,7 @@ export const StudentModal = ({
 
           <div className="flex items-stretch border-b border-[#c6c6c6]">
             <div className="flex-1 min-w-0 flex items-center border-r border-[#c6c6c6]">
-              {isView ? (
+              {isView || isEditing ? (
                 <ViewField label="이름" value={name} />
               ) : (
                 <Input
@@ -598,7 +663,7 @@ export const StudentModal = ({
               )}
             </div>
             <div className="flex-[1_1_0%] min-w-0 flex items-center" style={{ marginRight: '80px' }}>
-              {isView ? (
+              {isView || isEditing ? (
                 <ViewField label="성별" value={genderLabel} />
               ) : (
                 <Select
@@ -615,7 +680,7 @@ export const StudentModal = ({
 
           <div className="flex items-stretch border-b border-[#c6c6c6]">
             <div className="flex-1 min-w-0 flex items-center">
-              {isView ? (
+              {isView || isEditing ? (
                 <ViewField label="학생 연락처" value={studentPhone} />
               ) : (
                 <Input
@@ -631,7 +696,7 @@ export const StudentModal = ({
 
           <div className="flex items-stretch">
             <div className="flex-1 min-w-0 flex items-center">
-              {isView ? (
+              {isView || isEditing ? (
                 <ViewField label="보호자 연락처" value={guardianPhone} />
               ) : (
                 <Input
@@ -646,42 +711,21 @@ export const StudentModal = ({
           </div>
         </div>
 
-        {/* 날짜 정보 (edit 모드) */}
-        {mode === 'edit' && student?.registeredDate && (
-          <div className="flex gap-4 items-center">
-            <span className="text-sm text-[#393939]">{student.registeredDate}</span>
-            {student.modifiedDate && (
-              <span className="text-sm text-[#959595]">
-                {student.modifiedDate}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* 다른 사이즈 추가 버튼 (edit 모드) */}
-        {mode === 'edit' && (
-          <div className="flex justify-end">
-            <button className="flex items-center justify-center px-5 py-2 bg-[#1f234f] border border-[#1f234f] rounded-lg text-sm text-[#f9fafb] cursor-pointer transition-opacity duration-200 hover:opacity-80">
-              다른 사이즈 추가
-            </button>
-          </div>
-        )}
-
         {/* 날짜 탭 + 동복 테이블 */}
         <div className="flex flex-col gap-1">
-          {isView && student?.orderDates && student.orderDates.length > 0 && (
+          {(mode === 'view' || isEditing) && student?.orderSnapshots && student.orderSnapshots.length > 0 && (
             <div className="flex gap-3">
-              {student.orderDates.map((date, i) => (
+              {student.orderSnapshots.map((snapshot, i) => (
                 <button
-                  key={date}
+                  key={snapshot.orderId}
                   className={`text-sm px-1 py-0.5 border-none bg-transparent cursor-pointer ${
                     i === activeDateIndex
                       ? 'font-bold text-[#393939]'
                       : 'text-[#959595]'
                   }`}
-                  onClick={() => setActiveDateIndex(i)}
+                  onClick={() => handleDateTabClick(i)}
                 >
-                  {date}
+                  {snapshot.date}
                 </button>
               ))}
             </div>
@@ -698,35 +742,42 @@ export const StudentModal = ({
           {renderNameTagTable()}
         </div>
 
-        {/* 이력 (view 모드) */}
-        {isView && student?.history && student.history.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <div className="flex border-b border-[#c6c6c6] pb-1">
-              <span className="text-sm font-medium text-[#393939] w-[160px]">날짜</span>
-              <span className="text-sm font-medium text-[#393939]">내용</span>
+        {/* 이력 + 등록일/최종수정일 (view/edit 모드) */}
+        {(mode === 'view' || isEditing) && (
+          <div className="flex justify-between items-end gap-4">
+            {/* 이력 */}
+            <div className="flex flex-col gap-2 flex-1">
+              <div className="flex border-b border-[#c6c6c6] pb-1">
+                <span className="text-sm font-medium text-[#393939] w-[160px]">날짜</span>
+                <span className="text-sm font-medium text-[#393939]">내용</span>
+              </div>
+              {activeHistory.length > 0 ? (
+                activeHistory.map((h, i) => (
+                  <div key={i} className="flex">
+                    <span className="text-sm text-[#4c4c4c] w-[160px]">{h.date}</span>
+                    <span className="text-sm text-[#4c4c4c]">{h.content}</span>
+                  </div>
+                ))
+              ) : (
+                <span className="text-sm text-[#959595]">히스토리 없음</span>
+              )}
             </div>
-            {student.history.map((h, i) => (
-              <div key={i} className="flex">
-                <span className="text-sm text-[#4c4c4c] w-[160px]">{h.date}</span>
-                <span className="text-sm text-[#4c4c4c]">{h.content}</span>
-              </div>
-            ))}
-          </div>
-        )}
 
-        {/* 등록일/최종수정일 (view 모드) */}
-        {isView && (student?.registeredDate || student?.modifiedDate) && (
-          <div className="flex justify-end gap-6">
-            {student.registeredDate && (
-              <div className="flex flex-col items-end">
-                <span className="text-xs text-[#959595]">등록일</span>
-                <span className="text-xs text-[#4c4c4c]">{student.registeredDate}</span>
-              </div>
-            )}
-            {student.modifiedDate && (
-              <div className="flex flex-col items-end">
-                <span className="text-xs text-[#959595]">최종 수정일</span>
-                <span className="text-xs text-[#4c4c4c]">{student.modifiedDate}</span>
+            {/* 등록일/최종수정일 */}
+            {(student?.registeredDate || student?.modifiedDate) && (
+              <div className="flex flex-col items-end gap-2 flex-none">
+                {student.registeredDate && (
+                  <div className="flex flex-col items-end">
+                    <span className="text-xs text-[#959595]">등록일</span>
+                    <span className="text-xs text-[#4c4c4c]">{student.registeredDate}</span>
+                  </div>
+                )}
+                {student.modifiedDate && (
+                  <div className="flex flex-col items-end">
+                    <span className="text-xs text-[#959595]">최종 수정일</span>
+                    <span className="text-xs text-[#4c4c4c]">{student.modifiedDate}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -5,6 +5,20 @@ import type { ApiResponse } from "./auth";
 // 상품 정보 타입
 // ============================================================================
 
+export interface ProductSize {
+  size: string;
+  size_type: "numeric" | "alpha" | "free";
+  size_step?: 3 | 5;
+  display_order?: number;
+}
+
+export interface ProductSchool {
+  school_name: string;
+  display_name: string;
+  price: number;
+  quantity: number;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -14,6 +28,8 @@ export interface Product {
   price: number;
   is_repair: boolean;
   is_repair_required: boolean;
+  sizes?: ProductSize[];
+  schools?: ProductSchool[];
   created_at: string;
   updated_at: string;
 }
@@ -36,11 +52,24 @@ export interface GetProductsParams {
 export interface CreateProductRequest {
   category: string;
   gender: string;
-  is_repair: boolean;
-  is_repair_required: boolean;
+  is_repair?: boolean;
+  is_repair_required?: boolean;
   name: string;
   price: number;
-  season: string;
+  season?: string;
+  sizes?: ProductSize[];
+}
+
+export interface UpdateProductRequest {
+  name?: string;
+  category?: string;
+  gender?: string;
+  season?: string;
+  price?: number;
+  is_repair?: boolean;
+  is_repair_required?: boolean;
+  sizes?: ProductSize[];
+  schools?: { school_id: number; price: number }[];
 }
 
 // ============================================================================
@@ -49,7 +78,7 @@ export interface CreateProductRequest {
 
 /**
  * 전체 상품 조회 (학교 품목 추가용)
- * GET /api/v1/products/all
+ * GET /api/v1/products
  */
 export async function getAllProducts(params?: GetProductsParams): Promise<ProductsData> {
   const queryParams = new URLSearchParams();
@@ -63,7 +92,7 @@ export async function getAllProducts(params?: GetProductsParams): Promise<Produc
   if (params?.active_only !== undefined) queryParams.append("active_only", params.active_only.toString());
 
   const queryString = queryParams.toString();
-  const url = queryString ? `/api/v1/products/all?${queryString}` : "/api/v1/products/all";
+  const url = queryString ? `/api/v1/products?${queryString}` : "/api/v1/products";
 
   const response = await apiClient.get<ApiResponse<ProductsData>>(url);
   return response.data.data;
@@ -96,6 +125,17 @@ export async function getProducts(params?: GetProductsParams): Promise<ProductsD
 // ============================================================================
 
 /**
+ * 상품 단건 조회
+ * GET /api/v1/products/:id
+ */
+export async function getProduct(id: number): Promise<Product> {
+  const response = await apiClient.get<ApiResponse<Product>>(
+    `/api/v1/products/${id}`
+  );
+  return response.data.data;
+}
+
+/**
  * 상품 추가
  * POST /api/v1/products
  */
@@ -111,7 +151,7 @@ export async function createProduct(data: CreateProductRequest): Promise<Product
  * 상품 수정
  * PUT /api/v1/products/:id
  */
-export async function updateProduct(id: number, data: CreateProductRequest): Promise<Product> {
+export async function updateProduct(id: number, data: UpdateProductRequest): Promise<Product> {
   const response = await apiClient.put<ApiResponse<Product>>(
     `/api/v1/products/${id}`,
     data

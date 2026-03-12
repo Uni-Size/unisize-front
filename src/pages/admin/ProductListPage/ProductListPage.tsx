@@ -19,6 +19,7 @@ import { Pagination } from "@components/atoms/Pagination";
 import type { Column } from "@components/atoms/Table";
 import {
   getProducts,
+  getProduct,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -44,6 +45,9 @@ interface ProductRow {
   rawGender: string;
   createdDate: string;
   modifiedDate: string;
+  // TODO: API 응답에 추가되면 실제 값으로 교체
+  schoolCount: number;
+  stockStatus: "정상" | "부족재고 있음";
 }
 
 const seasonLabel: Record<string, string> = {
@@ -55,14 +59,6 @@ const seasonLabel: Record<string, string> = {
 
 const genderLabel = GENDER_LABEL_MAP;
 
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  const yy = String(d.getFullYear()).slice(2);
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yy}/${mm}/${dd}`;
-};
 
 const toProductRow = (
   item: ApiProduct,
@@ -82,8 +78,10 @@ const toProductRow = (
   rawSeason: item.season ?? "",
   rawCategory: item.category,
   rawGender: item.gender,
-  createdDate: formatDate(item.created_at),
-  modifiedDate: formatDate(item.updated_at),
+  createdDate: item.created_at ?? "",
+  modifiedDate: item.updated_at ?? "",
+  schoolCount: 0, // HARDCODED: API 응답에 추가되면 실제 값으로 교체
+  stockStatus: "정상", // HARDCODED: API 응답에 추가되면 실제 값으로 교체
 });
 
 export const ProductListPage = () => {
@@ -177,16 +175,35 @@ export const ProductListPage = () => {
     setSelectedSchools([]);
   };
 
+  const apiSizesToSizeType = (sizes?: { size_type: string; size_step?: number }[]): string => {
+    const first = sizes?.[0];
+    if (!first) return "";
+    if (first.size_type === "numeric") return first.size_step === 3 ? "numeric_3" : "numeric_5";
+    if (first.size_type === "alpha") return "alpha";
+    if (first.size_type === "free") return "free";
+    return "";
+  };
+
+  const sizeTypeToApiSizes = (sizeType: string) => {
+    if (!sizeType) return undefined;
+    if (sizeType === "numeric_5") return [{ size: "numeric", size_type: "numeric" as const, size_step: 5 as const }];
+    if (sizeType === "numeric_3") return [{ size: "numeric", size_type: "numeric" as const, size_step: 3 as const }];
+    if (sizeType === "alpha") return [{ size: "alpha", size_type: "alpha" as const }];
+    if (sizeType === "free") return [{ size: "free", size_type: "free" as const }];
+    return undefined;
+  };
+
   const handleAddProduct = async (data: ProductAddData) => {
     try {
       await createProduct({
         category: data.category,
         gender: data.gender,
-        is_repair: data.isRepairable === "yes",
-        is_repair_required: data.isRepairRequired === "required",
+        is_repair: data.isRepairable === "yes" ? true : data.isRepairable === "no" ? false : undefined,
+        is_repair_required: data.isRepairRequired === "required" ? true : data.isRepairRequired === "optional" ? false : undefined,
         name: data.displayName,
         price: data.originalPrice,
-        season: data.season,
+        season: data.season || undefined,
+        sizes: sizeTypeToApiSizes(data.sizeType),
       });
       handleCloseAddModal();
       fetchProducts(currentPage, categoryFilter, genderFilter, seasonFilter, searchTerm);
@@ -213,22 +230,27 @@ export const ProductListPage = () => {
     }
   };
 
-  const handleOpenDetailModal = (product: ProductRow) => {
-    const detailData: ProductDetailData = {
-      id: product.id,
-      season: product.rawSeason,
-      category: product.rawCategory,
-      gender: product.rawGender,
-      displayName: product.productName,
-      originalPrice: product.price,
-      isRepairable: product.isRepair ? "yes" : "no",
-      isRepairRequired: product.isRepairRequired ? "required" : "optional",
-      sizeUnit: "5",
-      schools: [],
-    };
-    setSelectedProduct(detailData);
-    setSelectedSchools(detailData.schools);
-    setIsDetailModalOpen(true);
+  const handleOpenDetailModal = async (product: ProductRow) => {
+    try {
+      const detail = await getProduct(Number(product.id));
+      const detailData: ProductDetailData = {
+        id: product.id,
+        season: detail.season ?? "",
+        category: detail.category,
+        gender: detail.gender,
+        displayName: detail.name,
+        originalPrice: detail.price,
+        isRepairable: detail.is_repair ? "yes" : "no",
+        isRepairRequired: detail.is_repair_required ? "required" : "optional",
+        sizeType: apiSizesToSizeType(detail.sizes),
+        schools: [],
+      };
+      setSelectedProduct(detailData);
+      setSelectedSchools([]);
+      setIsDetailModalOpen(true);
+    } catch (err) {
+      console.error("상품 상세 조회 실패:", err);
+    }
   };
 
   const handleCloseDetailModal = () => {
@@ -242,11 +264,12 @@ export const ProductListPage = () => {
       await updateProduct(Number(data.id), {
         category: data.category,
         gender: data.gender,
-        is_repair: data.isRepairable === "yes",
-        is_repair_required: data.isRepairRequired === "required",
+        is_repair: data.isRepairable === "yes" ? true : data.isRepairable === "no" ? false : undefined,
+        is_repair_required: data.isRepairRequired === "required" ? true : data.isRepairRequired === "optional" ? false : undefined,
         name: data.displayName,
         price: data.originalPrice,
-        season: data.season,
+        season: data.season || undefined,
+        sizes: sizeTypeToApiSizes(data.sizeType),
       });
       handleCloseDetailModal();
       fetchProducts(currentPage, categoryFilter, genderFilter, seasonFilter, searchTerm);
@@ -306,8 +329,8 @@ export const ProductListPage = () => {
           genderLabel[p.gender] ?? p.gender,
           p.name,
           `${p.price.toLocaleString()}원`,
-          formatDate(p.created_at),
-          formatDate(p.updated_at),
+          p.created_at ?? "",
+          p.updated_at ?? "",
         ]),
         '교복용품목록',
       );
@@ -323,11 +346,28 @@ export const ProductListPage = () => {
     { key: "gender", header: "성별", width: "40px", align: "center" },
     { key: "productName", header: "상품명", align: "center" },
     {
-      key: "price",
-      header: "가격",
+      key: "schoolCount",
+      header: "사용학교",
+      width: "80px",
+      align: "center",
+      render: (product) => <span>{product.schoolCount}</span>, // HARDCODED
+    },
+    {
+      key: "stockStatus",
+      header: "재고상태",
       width: "100px",
       align: "center",
-      render: (product) => <span>{product.price.toLocaleString()}원</span>,
+      render: (product) => (
+        <span
+          className={
+            product.stockStatus === "정상"
+              ? "text-green-600"
+              : "text-red-500"
+          }
+        >
+          {product.stockStatus} {/* HARDCODED */}
+        </span>
+      ),
     },
     { key: "createdDate", header: "생성일", width: "80px", align: "center" },
     { key: "modifiedDate", header: "수정일", width: "80px", align: "center" },

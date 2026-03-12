@@ -10,7 +10,7 @@ import {
   SEASON_OPTIONS,
   REPAIRABLE_OPTIONS,
   REPAIR_REQUIRED_OPTIONS,
-  SIZE_UNIT_OPTIONS,
+  SIZE_TYPE_OPTIONS,
   getSeasonLabel,
 } from "@/constants/product";
 
@@ -23,7 +23,7 @@ export interface ProductDetailData {
   originalPrice: number;
   isRepairable: string;
   isRepairRequired: string;
-  sizeUnit: string;
+  sizeType: string;
   schools: SchoolPrice[];
 }
 
@@ -87,7 +87,7 @@ const ProductDetailModalContent = ({
   const [isRepairRequired, setIsRepairRequired] = useState(
     product.isRepairRequired,
   );
-  const [sizeUnit, setSizeUnit] = useState(product.sizeUnit);
+  const [sizeType, setSizeUnit] = useState(product.sizeType);
 
   const handleClose = () => {
     setIsEditMode(false);
@@ -104,7 +104,7 @@ const ProductDetailModalContent = ({
       originalPrice: Number(originalPrice),
       isRepairable,
       isRepairRequired,
-      sizeUnit,
+      sizeType,
       schools: selectedSchools || product.schools,
     });
     setIsEditMode(false);
@@ -292,15 +292,15 @@ const ProductDetailModalContent = ({
               <Select
                 label="사이즈"
                 placeholder="5단위"
-                options={SIZE_UNIT_OPTIONS}
-                value={sizeUnit}
+                options={SIZE_TYPE_OPTIONS}
+                value={sizeType}
                 onChange={setSizeUnit}
                 fullWidth
               />
             ) : (
               <FieldView
                 label="사이즈"
-                value={getOptionLabel(SIZE_UNIT_OPTIONS, product.sizeUnit)}
+                value={getOptionLabel(SIZE_TYPE_OPTIONS, product.sizeType)}
               />
             )}
           </div>

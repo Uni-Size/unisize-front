@@ -4,8 +4,7 @@ import { getAllProducts, type Product } from "@/api/product";
 import { GENDER_OPTIONS } from "@/constants/gender";
 import {
   addSupportedSchool,
-  addSchoolProducts,
-  type SchoolProduct,
+  type UniformItem,
 } from "@/api/school";
 
 export interface SchoolProductItem {
@@ -33,6 +32,7 @@ export interface SchoolAddModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: () => void;
+  onAddNewProduct?: () => void;
 }
 
 const purchaseStatusOptions = [
@@ -60,6 +60,7 @@ export const SchoolAddModal = ({
   isOpen,
   onClose,
   onSubmit,
+  onAddNewProduct,
 }: SchoolAddModalProps) => {
   const [schoolName, setSchoolName] = useState("");
   const [purchaseStatus, setPurchaseStatus] = useState("");
@@ -74,11 +75,11 @@ export const SchoolAddModal = ({
   );
 
   const fetchProducts = useCallback(
-    async (category: string, gender: string) => {
-      const cacheKey = `${category}:${gender}`;
+    async (season: string, category: string, gender: string) => {
+      const cacheKey = `${season}:${category}:${gender}`;
       if (productsCache[cacheKey]) return;
       try {
-        const data = await getAllProducts({ category, gender });
+        const data = await getAllProducts({ season, category, gender });
         setProductsCache((prev) => ({ ...prev, [cacheKey]: data.products }));
       } catch (error) {
         console.error("상품 조회 실패:", error);
@@ -120,12 +121,13 @@ export const SchoolAddModal = ({
     field: keyof SchoolProductItem,
     value: string | number,
   ) => {
+    const seasonCode = season === "winter" ? "W" : "S";
     const updateFn = (prev: SchoolProductItem[]) =>
       prev.map((p) => {
         if (p.id !== productId) return p;
         if (field === "category") {
           const newCategory = value as string;
-          if (p.gender) fetchProducts(newCategory, p.gender);
+          if (p.gender) fetchProducts(seasonCode, newCategory, p.gender);
           return {
             ...p,
             category: newCategory,
@@ -136,11 +138,11 @@ export const SchoolAddModal = ({
         }
         if (field === "gender") {
           const newGender = value as string;
-          if (p.category) fetchProducts(p.category, newGender);
+          if (p.category) fetchProducts(seasonCode, p.category, newGender);
           return { ...p, gender: newGender, displayName: "", productApiId: "", contractPrice: 0 };
         }
         if (field === "displayName") {
-          const cacheKey = `${p.category}:${p.gender}`;
+          const cacheKey = `${seasonCode}:${p.category}:${p.gender}`;
           const cached = productsCache[cacheKey];
           const matched = cached?.find((item) => String(item.id) === value);
           return {
@@ -160,39 +162,27 @@ export const SchoolAddModal = ({
     }
   };
 
+  const toUniformItem = (p: SchoolProductItem): UniformItem => ({
+    product_id: Number(p.productApiId),
+    contract_price: p.contractPrice,
+    free_support_count: p.freeQuantity,
+  });
+
   const handleSubmit = async () => {
     try {
+      const winter = winterProducts.filter((p) => p.productApiId).map(toUniformItem);
+      const summer = summerProducts.filter((p) => p.productApiId).map(toUniformItem);
+
       await addSupportedSchool({
         school_name: schoolName,
         year: Number(purchaseYear),
+        expected_student_count: expectedStudents ? Number(expectedStudents) : undefined,
         measurement_start_date: measurementStartDate || undefined,
         measurement_end_date: measurementEndDate || undefined,
-        notes: undefined,
+        uniforms: (winter.length > 0 || summer.length > 0)
+          ? { winter: winter.length > 0 ? winter : undefined, summer: summer.length > 0 ? summer : undefined }
+          : undefined,
       });
-
-      const allProducts = [
-        ...winterProducts.map((p) => ({ ...p, season: "winter" as const })),
-        ...summerProducts.map((p) => ({ ...p, season: "summer" as const })),
-      ];
-
-      if (allProducts.length > 0) {
-        await addSchoolProducts({
-          school_name: schoolName,
-          year: Number(purchaseYear),
-          products: allProducts.map(
-            (p): SchoolProduct => ({
-              name: p.displayName,
-              category: p.category,
-              gender: p.gender,
-              season: p.season,
-              price: p.contractPrice,
-              display_name: p.displayName,
-              quantity: p.freeQuantity,
-              is_selectable: true,
-            }),
-          ),
-        });
-      }
 
       onSubmit();
       handleClose();
@@ -214,8 +204,9 @@ export const SchoolAddModal = ({
     onClose();
   };
 
-  const getDisplayNameOptions = (category: string, gender: string) => {
-    const cacheKey = `${category}:${gender}`;
+  const getDisplayNameOptions = (season: "winter" | "summer", category: string, gender: string) => {
+    const seasonCode = season === "winter" ? "W" : "S";
+    const cacheKey = `${seasonCode}:${category}:${gender}`;
     const products = productsCache[cacheKey];
     if (!products) return [];
     return products.map((p) => ({ value: String(p.id), label: p.name }));
@@ -257,11 +248,13 @@ export const SchoolAddModal = ({
       <div className="flex-1 min-w-30">
         {product.category && product.gender ? (
           (() => {
+            const seasonCode = season === "winter" ? "W" : "S";
             const options = getDisplayNameOptions(
+              season,
               product.category,
               product.gender,
             );
-            const cacheKey = `${product.category}:${product.gender}`;
+            const cacheKey = `${seasonCode}:${product.category}:${product.gender}`;
             const isLoaded = cacheKey in productsCache;
             return (
               <Select
@@ -442,7 +435,15 @@ export const SchoolAddModal = ({
         </div>
 
         <div className="flex flex-col gap-2">
-          <span className="text-base font-medium text-bg-800">교복</span>
+          <div className="flex items-center justify-between">
+            <span className="text-base font-medium text-bg-800">교복</span>
+            <button
+              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 cursor-pointer hover:opacity-80"
+              onClick={onAddNewProduct}
+            >
+              신규품목 추가
+            </button>
+          </div>
 
           <div className="flex flex-col gap-2">
             <span className="text-sm text-[#4c4c4c]">동복</span>
