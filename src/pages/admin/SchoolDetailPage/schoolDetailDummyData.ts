@@ -1,7 +1,5 @@
-import type { SchoolDetailData } from '@components/organisms/SchoolDetailModal';
-
 // TODO: 학교 디테일 조회 API 연동 시 이 더미 데이터를 교체
-export const DUMMY_SCHOOL_DETAIL: SchoolDetailData = {
+export const DUMMY_SCHOOL_DETAIL = {
   id: '1',
   schoolName: '용성중학교',
   registeredDate: '2026.01.09 15:23',

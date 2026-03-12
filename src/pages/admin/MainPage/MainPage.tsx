@@ -90,6 +90,7 @@ export const MainPage = () => {
         additionalQuantity: item.additional_quantity,
         repair: item.customization || "불가능",
         reservation: item.reservation,
+        received: false,
         nameTag: item.name_tag,
       });
 
@@ -104,7 +105,6 @@ export const MainPage = () => {
         guardianPhone: student.guardian_phone,
         registeredDate: student.created_at ?? undefined,
         modifiedDate: order.last_modified_date ?? undefined,
-        orderDates: order.created_at ? [order.created_at] : [],
         winterUniforms: (order.winter_uniforms ?? []).map(toUniformItem),
         summerUniforms: (order.summer_uniforms ?? []).map(toUniformItem),
         supplies: (order.supplies ?? []).map((s) => ({
