@@ -19,6 +19,7 @@ import type { Column } from '@components/atoms/Table';
 import {
   getSchoolList,
   updateSupportedSchool,
+  deleteSupportedSchool,
   type SchoolListItem,
   type SchoolType,
   type SchoolListParams,
@@ -268,12 +269,16 @@ export const SchoolListPage = () => {
             onClick={async (e) => {
               e.stopPropagation();
               if (!confirm('정말 삭제하시겠습니까?')) return;
+              const id = school._raw.supported_years[0]?.id;
+              if (id === undefined) {
+                alert('학교 ID를 확인할 수 없습니다.');
+                return;
+              }
               try {
-                // TODO: 새 API에서 id 제공 시 연동
-                console.log('Delete school:', school.school_name);
+                await deleteSupportedSchool(id);
                 fetchSchools(buildParams());
               } catch (err) {
-                console.error('학교 삭제 실패:', err);
+                alert(getApiErrorMessage(err, '학교 삭제에 실패했습니다.'));
               }
             }}
           >

@@ -24,12 +24,14 @@ export interface SupportedSchoolsData {
 export type SchoolType = '초' | '중' | '고';
 
 export interface SupportedYear {
+  id?: number;
   year: number;
   measurement_start_date: string;
   measurement_end_date: string;
 }
 
 export interface SchoolListItem {
+  id?: number;
   school_name: string;
   school_type: SchoolType;
   supported_years: SupportedYear[];
