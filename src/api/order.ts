@@ -98,3 +98,79 @@ export async function getOrderDetail(orderId: number): Promise<OrderDetail> {
   );
   return response.data.data;
 }
+
+// ============================================================================
+// 주문/재고 현황 타입
+// ============================================================================
+
+export type OrderInventoryStatus = 'pending' | 'out_of_stock' | 'reserved' | 'receipt' | 'delivered' | 'shipped';
+
+export interface InventoryOrder {
+  name: string;
+  status: OrderInventoryStatus;
+}
+
+export interface InventorySizeStat {
+  size: string;
+  stock: number;
+  ordered: number;
+  remaining: number;
+  orders: InventoryOrder[];
+}
+
+export interface InventoryProduct {
+  product_id: number;
+  display_name: string;
+  category: string;
+  size_stats: InventorySizeStat[];
+}
+
+export interface OrderInventoryResponse {
+  school_name: string;
+  products: InventoryProduct[];
+}
+
+/**
+ * 학교별 주문/재고 현황 조회
+ * GET /api/v1/schools/:school_name/order-inventory
+ */
+export async function getOrderInventory(
+  schoolName: string,
+  categories?: string[],
+): Promise<OrderInventoryResponse> {
+  const params = new URLSearchParams();
+  categories?.forEach((c) => params.append('category', c));
+  const query = params.toString();
+  const response = await apiClient.get<ApiResponse<OrderInventoryResponse>>(
+    `/api/v1/schools/${encodeURIComponent(schoolName)}/order-inventory${query ? `?${query}` : ''}`,
+  );
+  return response.data.data;
+}
+
+// ============================================================================
+// 재고 추가 타입
+// ============================================================================
+
+export interface StockUpdateItem {
+  product_id: number;
+  size: string;
+  stock: number;
+}
+
+export interface UpdateStockRequest {
+  items: StockUpdateItem[];
+}
+
+/**
+ * 학교별 품목 재고 업데이트
+ * POST /api/v1/schools/:school_name/order-inventory/stock
+ */
+export async function updateInventoryStock(
+  schoolName: string,
+  data: UpdateStockRequest,
+): Promise<void> {
+  await apiClient.post(
+    `/api/v1/schools/${encodeURIComponent(schoolName)}/order-inventory/stock`,
+    data,
+  );
+}

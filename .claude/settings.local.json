@@ -23,7 +23,8 @@
       "Bash(tree -d -L 3:*)",
       "Bash(git ls-tree:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(echo \"export * from ''./StockAddModal'';\")"
     ]
   }
 }

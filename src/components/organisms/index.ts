@@ -6,3 +6,4 @@ export * from './SchoolSelectModal';
 export * from './SchoolAddModal';
 export * from './SchoolDetailModal';
 export * from './OrderSizeTable';
+export * from './StockAddModal';

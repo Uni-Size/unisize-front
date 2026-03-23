@@ -20,9 +20,9 @@ import { getSupportedSchoolsByYear } from "@/api/school";
 import { getTargetYear } from "@/utils/schoolUtils";
 import { getApiErrorMessage } from "@/utils/errorUtils";
 import { downloadCSV } from "@/utils/csvUtils";
-import { DUMMY_SECTIONS } from "./orderDummyData";
-import type { ProductSection } from "./orderDummyData";
-import { SIZES } from "@components/organisms/OrderSizeTable/constants";
+import { getOrderInventory, updateInventoryStock } from "@/api/order";
+import type { InventoryProduct } from "@/api/order";
+import { StockAddModal } from "@components/organisms/StockAddModal";
 
 interface StudentRow {
   id: number;
@@ -422,20 +422,33 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
 // 주문/예약 탭
 // ============================================================================
 
+const EXCLUDED_STATUSES = new Set(['receipt', 'delivered', 'shipped']);
+
 const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
+  const [allProducts, setAllProducts] = useState<InventoryProduct[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>(["전체"]);
-  const productOptions = [
-    "전체",
-    "후드",
-    "셔츠",
-    "바지",
-    "생활복 상의",
-    "라운드티",
-  ];
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
 
-  // TODO: 실제 API 연동 시 학교별 주문/재고 데이터를 가져오도록 교체
-  const [sections] = useState<ProductSection[]>(DUMMY_SECTIONS);
+  const fetchInventory = () => {
+    if (!schoolName) return;
+    setLoading(true);
+    setError(null);
+    getOrderInventory(schoolName)
+      .then((data) => setAllProducts(data.products))
+      .catch((err) => {
+        console.error("주문/재고 조회 실패:", err);
+        setError("데이터를 불러오는 중 오류가 발생했습니다.");
+      })
+      .finally(() => setLoading(false));
+  };
 
+  useEffect(() => {
+    fetchInventory();
+  }, [schoolName]);
+
+  const productOptions = ["전체", ...allProducts.map((p) => p.display_name)];
   const individualOptions = productOptions.filter((o) => o !== "전체");
 
   const toggleProduct = (product: string) => {
@@ -456,46 +469,43 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
     }
   };
 
-  const visibleSections = selectedProducts.includes("전체")
-    ? sections
-    : sections.filter((s) => selectedProducts.includes(s.name));
+  const visibleProducts = selectedProducts.includes("전체")
+    ? allProducts
+    : allProducts.filter((p) => selectedProducts.includes(p.display_name));
 
-  const handleReset = () => {
-    setSelectedProducts(["전체"]);
-  };
+  const handleReset = () => setSelectedProducts(["전체"]);
 
   const handleExportCSV = () => {
-    // 열 구조: [구분레이블, 학생이름, 사이즈1, 사이즈2, ...]
-    // - 헤더/집계 행: 구분레이블에 품목명/재고/주문/잔여, 학생이름 열은 빈칸
-    // - 학생 행: 구분레이블 빈칸, 학생이름 열에 이름
+    const sectionBlocks = visibleProducts.map((product) => {
+      const sizes = product.size_stats.map((s) => s.size);
+      const headerRow = [`[${product.display_name}]`, ...sizes];
+      const stockRow = ['재고', ...product.size_stats.map((s) => s.stock)];
+      const orderedRow = ['주문', ...product.size_stats.map((s) => s.ordered)];
+      const remainRow = ['잔여', ...product.size_stats.map((s) => s.remaining)];
 
-    const sectionBlocks = visibleSections.map((section) => {
-      const sizes = section.sizes ?? SIZES;
-      const cols = ['', '', ...sizes]; // 첫 열: 구분 레이블, 두 번째 열: 학생이름, 나머지: 사이즈
-      const headerRow = [`[${section.name}]`, '', ...sizes];
-      const stockRow = ['재고', '', ...sizes.map((s) => section.sizeStocks[s]?.stock ?? 0)];
-      const orderedRow = ['주문', '', ...sizes.map((s) => section.sizeStocks[s]?.ordered ?? 0)];
-      const remainRow = ['잔여', '', ...sizes.map((s) => { const d = section.sizeStocks[s]; return d ? d.stock - d.ordered : 0; })];
-      const studentRows = section.rows.map((row) => [
+      // 사이즈별 visibleOrders 모으기
+      const sizeOrders = product.size_stats.map((s) =>
+        s.orders.filter((o) => !EXCLUDED_STATUSES.has(o.status))
+      );
+      const maxRows = Math.max(0, ...sizeOrders.map((o) => o.length));
+
+      const studentRows = Array.from({ length: maxRows }).map((_, rowIdx) => [
         '',
-        row.studentName,
-        ...sizes.map((s) => (row.sizes[s] ? row.sizes[s].name : '')),
+        ...sizeOrders.map((orders) => orders[rowIdx]?.name ?? ''),
       ]);
-      return { cols, rows: [headerRow, stockRow, orderedRow, remainRow, ...studentRows] };
+
+      return { cols: sizes.length + 1, rows: [headerRow, stockRow, orderedRow, remainRow, ...studentRows] };
     });
 
     if (sectionBlocks.length === 0) return;
 
-    // 전체 행 수 = 가장 행이 많은 섹션 기준
     const maxRowCount = Math.max(...sectionBlocks.map((b) => b.rows.length));
-
-    // 가로 병합: 각 행 인덱스에서 모든 섹션의 열을 옆으로 이어 붙임 (섹션 사이 빈 열 1개)
     const csvRows: (string | number)[][] = [];
     for (let i = 0; i < maxRowCount; i++) {
       const row: (string | number)[] = [];
       sectionBlocks.forEach((block, bi) => {
-        if (bi > 0) row.push(''); // 섹션 구분 빈 열
-        const cells = block.rows[i] ?? Array(block.cols.length).fill('');
+        if (bi > 0) row.push('');
+        const cells = block.rows[i] ?? Array(block.cols).fill('');
         row.push(...cells);
       });
       csvRows.push(row);
@@ -504,19 +514,32 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
     downloadCSV([], csvRows, `${schoolName}_주문예약`);
   };
 
+  const handleStockSubmit = async (items: { product_id: number; size: string; stock: number }[]) => {
+    await updateInventoryStock(schoolName, { items });
+    fetchInventory();
+  };
+
   return (
     <>
       <AdminHeader
         title={`${schoolName} 주문/예약`}
         actions={
-          <button
-            type="button"
-            className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
-            onClick={handleExportCSV}
-            disabled={visibleSections.length === 0}
-          >
-            CSV 내보내기
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap"
+              onClick={() => setIsStockModalOpen(true)}
+            >
+              재고 추가
+            </button>
+            <button
+              type="button"
+              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap"
+              onClick={handleExportCSV}
+            >
+              CSV 내보내기
+            </button>
+          </div>
         }
       />
 
@@ -525,7 +548,7 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
           <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
             품목
           </div>
-          <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white">
+          <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white flex-wrap">
             {productOptions.map((opt) => (
               <label
                 key={opt}
@@ -548,9 +571,6 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
       </div>
 
       <div className="flex justify-center gap-3">
-        <Button variant="primary" className="w-auto px-8 py-2.5">
-          검색
-        </Button>
         <Button
           variant="outline"
           className="w-auto px-8 py-2.5 bg-gray-400! text-white! border-gray-400! hover:bg-gray-500!"
@@ -560,15 +580,30 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
         </Button>
       </div>
 
-      {visibleSections.length > 0 ? (
-        visibleSections.map((section) => (
-          <OrderSizeTable key={section.name} section={section} />
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-gray-400 text-[14px]">
+          로딩 중...
+        </div>
+      ) : error ? (
+        <div className="flex items-center justify-center py-20 text-red-400 text-[14px]">
+          {error}
+        </div>
+      ) : visibleProducts.length > 0 ? (
+        visibleProducts.map((product) => (
+          <OrderSizeTable key={product.product_id} product={product} />
         ))
       ) : (
         <div className="flex items-center justify-center py-20 text-gray-400 text-[14px]">
           주문/예약 데이터가 없습니다.
         </div>
       )}
+
+      <StockAddModal
+        isOpen={isStockModalOpen}
+        onClose={() => setIsStockModalOpen(false)}
+        products={allProducts}
+        onSubmit={handleStockSubmit}
+      />
     </>
   );
 };
