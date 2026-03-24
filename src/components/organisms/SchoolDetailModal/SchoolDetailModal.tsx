@@ -232,7 +232,7 @@ export const SchoolDetailModal = ({
       <div key={product.id} className="flex gap-2 items-start">
         {isEditMode && (
           <button
-            className="shrink-0 flex items-center justify-center w-14 h-12.5 border border-[#c6a8a8] rounded-lg bg-[#9b7373] text-white cursor-pointer hover:bg-[#7a5555] text-sm font-medium"
+            className="shrink-0 flex items-center justify-center w-14 h-12.5 border border-delete-border rounded-lg bg-delete-bg text-white cursor-pointer hover:bg-delete-bg-hover text-sm font-medium"
             onClick={() => handleRemoveProduct(season, product.id)}
           >
             삭제
@@ -248,7 +248,7 @@ export const SchoolDetailModal = ({
               fullWidth
             />
           ) : (
-            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
+            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
               {categoryOptions.find((o) => o.value === product.category)?.label ?? product.category}
             </div>
           )}
@@ -263,7 +263,7 @@ export const SchoolDetailModal = ({
               fullWidth
             />
           ) : (
-            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
+            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
               {genderOptions.find((o) => o.value === product.gender)?.label ?? product.gender}
             </div>
           )}
@@ -283,7 +283,7 @@ export const SchoolDetailModal = ({
               <Select placeholder="표시명" options={[]} value="" disabled fullWidth />
             )
           ) : (
-            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
+            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
               {product.displayName}
             </div>
           )}
@@ -293,15 +293,15 @@ export const SchoolDetailModal = ({
             <div className="flex items-center h-12.5 px-3 border border-gray-200 rounded-lg bg-white gap-1">
               <input
                 type="number"
-                className="min-w-0 flex-1 border-none bg-transparent text-[15px] text-[#4c4c4c] text-right outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="min-w-0 flex-1 border-none bg-transparent text-15 text-gray-700 text-right outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 placeholder="-"
                 value={product.contractPrice || ''}
                 onChange={(e) => handleProductChange(season, product.id, 'contractPrice', Number(e.target.value))}
               />
-              <span className="text-[15px] text-[#4c4c4c] shrink-0">원</span>
+              <span className="text-15 text-gray-700 shrink-0">원</span>
             </div>
           ) : (
-            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
+            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
               {product.contractPrice.toLocaleString()}원
             </div>
           )}
@@ -316,7 +316,7 @@ export const SchoolDetailModal = ({
               fullWidth
             />
           ) : (
-            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
+            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
               {product.freeQuantity}
             </div>
           )}
@@ -348,13 +348,13 @@ export const SchoolDetailModal = ({
         isEditMode ? (
           <>
             <button
-              className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              className="px-6 py-2.5 bg-neutral-500 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
               onClick={() => setIsEditMode(false)}
             >
               취소
             </button>
             <button
-              className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              className="px-6 py-2.5 bg-primary-900 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
               onClick={handleSave}
             >
               저장
@@ -363,7 +363,7 @@ export const SchoolDetailModal = ({
         ) : (
           <>
             <button
-              className="px-6 py-2.5 bg-[#7a3c00] text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              className="px-6 py-2.5 bg-yellow-700 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
               onClick={() => setIsEditMode(true)}
             >
               수정
@@ -400,14 +400,14 @@ export const SchoolDetailModal = ({
             ) : (
               <div className="flex flex-col gap-1">
                 <span className="px-2 text-base text-bg-800">학교명</span>
-                <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
+                <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
                   {school.school_name}
                 </div>
               </div>
             )}
           </div>
           <div className="flex items-center h-12.5 gap-2 px-2 pb-0.5">
-            <label className="flex items-center gap-1.5 text-[15px] text-gray-700 cursor-pointer">
+            <label className="flex items-center gap-1.5 text-15 text-gray-700 cursor-pointer">
               {isEditMode ? (
                 <input
                   type="checkbox"
@@ -439,7 +439,7 @@ export const SchoolDetailModal = ({
                 ) : (
                   <div className="flex flex-col gap-1">
                     <span className="px-2 text-base text-bg-800">진행년도</span>
-                    <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
+                    <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
                       {y.year}
                     </div>
                   </div>
@@ -457,7 +457,7 @@ export const SchoolDetailModal = ({
                 ) : (
                   <div className="flex flex-col gap-1">
                     <span className="px-2 text-base text-bg-800">예상인원</span>
-                    <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
+                    <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
                       {y.expected_student_count ?? '-'}
                     </div>
                   </div>
@@ -475,13 +475,13 @@ export const SchoolDetailModal = ({
                 ) : (
                   <div className="flex flex-col gap-1">
                     <span className="px-2 text-base text-bg-800">측정기간</span>
-                    <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
+                    <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
                       {y.measurement_start_date}
                     </div>
                   </div>
                 )}
               </div>
-              <span className="text-[15px] text-[#4c4c4c] pb-4">~</span>
+              <span className="text-15 text-gray-700 pb-4">~</span>
               <div className="flex-none w-35 min-w-0">
                 {isEditMode ? (
                   <Input
@@ -494,7 +494,7 @@ export const SchoolDetailModal = ({
                 ) : (
                   <div className="flex flex-col gap-1">
                     <span className="px-2 text-base text-bg-800"> </span>
-                    <div className="flex items-center h-12.5 px-4 border border-[#c6c6c6] rounded-lg bg-white text-[15px] text-[#4c4c4c]">
+                    <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
                       {y.measurement_end_date}
                     </div>
                   </div>
@@ -514,7 +514,7 @@ export const SchoolDetailModal = ({
 
         {isEditMode && (
           <button
-            className="flex items-center justify-center px-5 py-2.5 bg-[#374151] border-none rounded-lg text-[15px] text-[#f9fafb] cursor-pointer mx-auto mt-2 hover:opacity-90"
+            className="flex items-center justify-center px-5 py-2.5 bg-bg-800 border-none rounded-lg text-15 text-bg-050 cursor-pointer mx-auto mt-2 hover:opacity-90"
             onClick={handleAddYear}
           >
             년도 추가
@@ -536,7 +536,7 @@ export const SchoolDetailModal = ({
           </div>
 
           <div className="flex flex-col gap-2">
-            <span className="text-sm text-[#4c4c4c]">동복</span>
+            <span className="text-sm text-gray-700">동복</span>
             {winterProducts.length > 0 && (
               <>
                 {renderProductHeader()}
@@ -547,7 +547,7 @@ export const SchoolDetailModal = ({
             )}
             {isEditMode && (
               <button
-                className="flex items-center justify-center px-5 py-2.5 bg-primary-900 border-none rounded-lg text-[15px] text-[#f9fafb] cursor-pointer mx-auto hover:opacity-90"
+                className="flex items-center justify-center px-5 py-2.5 bg-primary-900 border-none rounded-lg text-15 text-bg-050 cursor-pointer mx-auto hover:opacity-90"
                 onClick={() => handleAddProduct('winter')}
               >
                 동복 품목 추가
@@ -556,7 +556,7 @@ export const SchoolDetailModal = ({
           </div>
 
           <div className="flex flex-col gap-2">
-            <span className="text-sm text-[#4c4c4c]">하복</span>
+            <span className="text-sm text-gray-700">하복</span>
             {summerProducts.length > 0 && (
               <>
                 {renderProductHeader()}
@@ -567,7 +567,7 @@ export const SchoolDetailModal = ({
             )}
             {isEditMode && (
               <button
-                className="flex items-center justify-center px-5 py-2.5 bg-primary-900 border-none rounded-lg text-[15px] text-[#f9fafb] cursor-pointer mx-auto hover:opacity-90"
+                className="flex items-center justify-center px-5 py-2.5 bg-primary-900 border-none rounded-lg text-15 text-bg-050 cursor-pointer mx-auto hover:opacity-90"
                 onClick={() => handleAddProduct('summer')}
               >
                 하복 품목 추가

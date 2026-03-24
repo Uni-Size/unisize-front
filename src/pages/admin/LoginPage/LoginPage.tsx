@@ -34,7 +34,7 @@ export const LoginPage = () => {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-white p-6 gap-21.5">
-      <div className="w-176 px-4.75 py-6 bg-black/2 border border-[#2563eb] rounded-[20px] relative">
+      <div className="w-176 px-4.75 py-6 bg-black/2 border border-primary-600 rounded-2xl relative">
         <div className="flex items-center justify-center gap-[4.89px] mb-4">
           <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M22 4L4 12V20C4 31.1 11.88 41.38 22 44C32.12 41.38 40 31.1 40 20V12L22 4Z" stroke="#FCD34D" strokeWidth="2" fill="none"/>
@@ -50,17 +50,17 @@ export const LoginPage = () => {
         </div>
 
         <div className="text-center mb-4">
-          <p className="text-xl font-normal text-[#111827] leading-[1.2] mb-2">
+          <p className="text-xl font-normal text-bg-900 leading-[1.2] mb-2">
             본 시스템은 스마트학생복 청주점만을 위해 개발된
             <br />
             내부 전용 고객/재고 관리 시스템입니다.
           </p>
-          <p className="text-xl font-normal text-[#111827]">
+          <p className="text-xl font-normal text-bg-900">
             모든 스태프는 아래 사항을 반드시 준수해야 합니다.
           </p>
         </div>
 
-        <div className="text-center [&_p]:text-[17px] [&_p]:font-medium [&_p]:text-[#374151] [&_p]:leading-[1.4] [&_p]:mb-0">
+        <div className="text-center [&_p]:text-17 [&_p]:font-medium [&_p]:text-bg-800 [&_p]:leading-[1.4] [&_p]:mb-0">
           <p>본 시스템에서 취급되는 모든 데이터는 기밀입니다.</p>
           <p>
             어떠한 경우에도 외부(타 지점, 협력업체, 지인, 온라인 등)로 유출하거나
@@ -92,7 +92,7 @@ export const LoginPage = () => {
             onChange={(e) => setPassword(e.target.value)}
             fullWidth
           />
-          {error && <p className="text-[15px] text-[#991b1b] text-center m-0">{error}</p>}
+          {error && <p className="text-15 text-red-700 text-center m-0">{error}</p>}
         </div>
 
         <Button

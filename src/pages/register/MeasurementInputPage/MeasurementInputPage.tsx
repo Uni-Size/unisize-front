@@ -69,7 +69,7 @@ export const MeasurementInputPage = () => {
         <button
           type="button"
           onClick={handleBack}
-          className="flex items-center gap-1 bg-none border-none cursor-pointer text-[#4b5563] font-medium p-0 transition-colors duration-200 ease-in-out hover:text-[#262626]"
+          className="flex items-center gap-1 bg-none border-none cursor-pointer text-slate-600 font-medium p-0 transition-colors duration-200 ease-in-out hover:text-bg-900"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -87,10 +87,10 @@ export const MeasurementInputPage = () => {
         </button>
       </div>
 
-      <h2 className="text-2xl font-bold text-center mb-2 text-[#262626]">
+      <h2 className="text-2xl font-bold text-center mb-2 text-bg-900">
         학생의 신체 사이즈를 측정해주세요
       </h2>
-      <p className="text-lg font-medium text-center mb-14 text-[#1f2937] leading-relaxed">
+      <p className="text-lg font-medium text-center mb-14 text-slate-800 leading-relaxed">
         두꺼운 옷을 입으신 경우,
         <br />
         교복 반팔을 매장에서 구매 후 착용하시면 <br /> 더 편리하게 측정할 수
@@ -99,7 +99,7 @@ export const MeasurementInputPage = () => {
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <label htmlFor="height" className="text-sm font-medium text-[#4c4c4c]">
+          <label htmlFor="height" className="text-sm font-medium text-gray-700">
             키 (cm)
           </label>
           <Input
@@ -115,7 +115,7 @@ export const MeasurementInputPage = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="weight" className="text-sm font-medium text-[#4c4c4c]">
+          <label htmlFor="weight" className="text-sm font-medium text-gray-700">
             몸무게 (kg)
           </label>
           <Input
@@ -131,7 +131,7 @@ export const MeasurementInputPage = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="shoulder" className="text-sm font-medium text-[#4c4c4c]">
+          <label htmlFor="shoulder" className="text-sm font-medium text-gray-700">
             어깨넓이 (cm)
           </label>
           <Input
@@ -147,7 +147,7 @@ export const MeasurementInputPage = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="waist" className="text-sm font-medium text-[#4c4c4c]">
+          <label htmlFor="waist" className="text-sm font-medium text-gray-700">
             허리둘레 (cm)
           </label>
           <Input
@@ -162,7 +162,7 @@ export const MeasurementInputPage = () => {
           />
         </div>
 
-        {error && <p className="text-[#ef4444] text-sm text-center">{error}</p>}
+        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
         <div className="flex gap-4 mt-6">
           <Button

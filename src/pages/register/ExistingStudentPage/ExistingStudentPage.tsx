@@ -18,7 +18,7 @@ export const ExistingStudentPage = () => {
   if (!studentData) {
     return (
       <section className="max-w-[24rem] mx-auto p-4 min-h-screen flex items-center justify-center">
-        <div className="flex justify-center items-center text-[#4b5563]">
+        <div className="flex justify-center items-center text-slate-600">
           <p>데이터를 불러오는 중...</p>
         </div>
       </section>
@@ -33,7 +33,7 @@ export const ExistingStudentPage = () => {
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
             fill="currentColor"
-            className="w-16 h-16 text-[#6a73a7]"
+            className="w-16 h-16 text-primary-500"
           >
             <path
               fillRule="evenodd"
@@ -43,38 +43,38 @@ export const ExistingStudentPage = () => {
           </svg>
         </div>
 
-        <h2 className="text-2xl font-bold text-[#262626] mb-6">
+        <h2 className="text-2xl font-bold text-bg-900 mb-6">
           이미 등록된 학생입니다
         </h2>
 
-        <div className="bg-[#f9fafb] rounded-lg p-4 mb-6">
-          <div className="flex justify-between py-2 border-b border-[#c6c6c6]">
-            <span className="text-sm text-[#4b5563]">이름</span>
-            <span className="text-sm font-medium text-[#262626]">
+        <div className="bg-bg-050 rounded-lg p-4 mb-6">
+          <div className="flex justify-between py-2 border-b border-gray-200">
+            <span className="text-sm text-slate-600">이름</span>
+            <span className="text-sm font-medium text-bg-900">
               {studentData.name}
             </span>
           </div>
-          <div className="flex justify-between py-2 border-b border-[#c6c6c6]">
-            <span className="text-sm text-[#4b5563]">학교</span>
-            <span className="text-sm font-medium text-[#262626]">
+          <div className="flex justify-between py-2 border-b border-gray-200">
+            <span className="text-sm text-slate-600">학교</span>
+            <span className="text-sm font-medium text-bg-900">
               {studentData.school_name}
             </span>
           </div>
-          <div className="flex justify-between py-2 border-b border-[#c6c6c6]">
-            <span className="text-sm text-[#4b5563]">생년월일</span>
-            <span className="text-sm font-medium text-[#262626]">
+          <div className="flex justify-between py-2 border-b border-gray-200">
+            <span className="text-sm text-slate-600">생년월일</span>
+            <span className="text-sm font-medium text-bg-900">
               {studentData.birth_date}
             </span>
           </div>
           <div className="flex justify-between py-2">
-            <span className="text-sm text-[#4b5563]">등록일</span>
-            <span className="text-sm font-medium text-[#262626]">
+            <span className="text-sm text-slate-600">등록일</span>
+            <span className="text-sm font-medium text-bg-900">
               {new Date(studentData.created_at).toLocaleDateString('ko-KR')}
             </span>
           </div>
         </div>
 
-        <p className="text-sm text-[#4b5563] leading-relaxed mb-6">
+        <p className="text-sm text-slate-600 leading-relaxed mb-6">
           이미 등록된 정보가 있습니다. <br />
           새로 등록하시겠습니까?
         </p>

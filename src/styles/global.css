@@ -20,6 +20,7 @@
 
   /* Background Colors */
   --color-bg-canvas: #ffffff;
+  --color-bg-050: #f9fafb;
   --color-bg-100: #e1e1e1;
   --color-bg-200: #c6c6c6;
   --color-bg-400: #959595;
@@ -30,12 +31,49 @@
   --color-bg-900: #262626;
 
   /* Semantic Colors */
+  --color-red-050: #fee2e2;
   --color-red-100: #ffd8d7;
+  --color-red-200: #fecaca;
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+  --color-red-700: #991b1b;
   --color-red-900: #570000;
+
+  --color-yellow-050: #fef3c7;
   --color-yellow-700: #7a3c00;
+
+  --color-green-050: #dcfce7;
+  --color-green-700: #166534;
+
+  --color-blue-050: #dbeafe;
+  --color-blue-700: #1e40af;
+
+  --color-neutral-050: #e5e7eb;
+  --color-neutral-500: #6c757d;
+  --color-neutral-600: #545b62;
+
+  /* Tailwind-compatible grays (for register pages) */
+  --color-slate-800: #1f2937;
+  --color-slate-600: #4b5563;
+  --color-slate-500: #6b7280;
+
+  /* Delete button colors */
+  --color-delete-bg: #9b7373;
+  --color-delete-bg-hover: #7a5555;
+  --color-delete-border: #c6a8a8;
+
+  /* Primary dark hover */
+  --color-primary-800: #2a2f5a;
 
   --color-error: #ef4444;
   --color-success: #22c55e;
+
+  /* Font Size */
+  --text-11: 11px;
+  --text-13: 13px;
+  --text-14: 14px;
+  --text-15: 15px;
+  --text-17: 17px;
 
   /* Font Family */
   --font-family-pretendard: 'Pretendard Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;

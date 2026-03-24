@@ -94,11 +94,11 @@ export const StockAddModal = ({ isOpen, onClose, products, onSubmit }: StockAddM
         ) : (
           products.map((product) => (
             <div key={product.product_id} className="flex flex-col gap-2">
-              <div className="text-[14px] font-medium text-gray-700 px-1">
+              <div className="text-14 font-medium text-gray-700 px-1">
                 {product.display_name}
               </div>
               <div className="overflow-x-auto">
-                <table className="border-collapse text-[13px]">
+                <table className="border-collapse text-13">
                   <thead>
                     <tr className="bg-gray-100">
                       <th className="border border-gray-200 px-3 py-2 text-center font-medium text-gray-600 whitespace-nowrap w-16">
@@ -173,7 +173,7 @@ export const StockAddModal = ({ isOpen, onClose, products, onSubmit }: StockAddM
                             onChange={(e) =>
                               handleChange(product.product_id, stat.size, e.target.value)
                             }
-                            className="w-full text-center text-[13px] border border-gray-300 rounded px-1 py-1 focus:outline-none focus:border-blue-400 bg-white"
+                            className="w-full text-center text-13 border border-gray-300 rounded px-1 py-1 focus:outline-none focus:border-blue-400 bg-white"
                           />
                         </td>
                       ))}

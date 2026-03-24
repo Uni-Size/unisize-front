@@ -107,7 +107,7 @@ export const StaffListPage = () => {
       render: (item) => (
         <div className="flex gap-1">
           <button
-            className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-[#e5e7eb] text-[#374151]"
+            className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-neutral-050 text-bg-800"
             onClick={(e) => {
               e.stopPropagation();
               handleEditClick(item);
@@ -115,7 +115,7 @@ export const StaffListPage = () => {
           >
             수정
           </button>
-          <button className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-[#fecaca] text-[#991b1b]">삭제</button>
+          <button className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-red-200 text-red-700">삭제</button>
         </div>
       ),
     },
@@ -137,7 +137,7 @@ export const StaffListPage = () => {
           actions={
             <button
               type="button"
-              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-15 font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={handleExportCSV}
               disabled={staffList.length === 0}
             >

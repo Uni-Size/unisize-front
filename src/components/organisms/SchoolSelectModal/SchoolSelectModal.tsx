@@ -90,13 +90,13 @@ export const SchoolSelectModal = ({
       actions={
         <>
           <button
-            className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+            className="px-6 py-2.5 bg-neutral-500 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
             onClick={handleClose}
           >
             취소
           </button>
           <button
-            className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+            className="px-6 py-2.5 bg-primary-900 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
             onClick={handleSubmit}
             disabled={!selectedSchoolId}
           >
@@ -129,16 +129,16 @@ export const SchoolSelectModal = ({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex flex-col gap-2">
-              <span className="text-[15px] font-normal text-gray-700">계약금액</span>
+              <span className="text-15 font-normal text-gray-700">계약금액</span>
               <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white gap-1">
                 <input
                   type="number"
                   placeholder=""
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  className="min-w-0 flex-1 border-none bg-transparent text-[15px] text-[#4c4c4c] text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  className="min-w-0 flex-1 border-none bg-transparent text-15 text-gray-700 text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
-                <span className="text-[15px] text-[#4c4c4c] shrink-0">원</span>
+                <span className="text-15 text-gray-700 shrink-0">원</span>
               </div>
             </div>
           </div>

@@ -300,29 +300,29 @@ export const StudentModal = ({
     season: 'winter' | 'summer',
   ) => (
     <div>
-      <table className="w-full border-collapse border border-[#c6c6c6] text-sm">
+      <table className="w-full border-collapse border border-gray-200 text-sm">
         <thead>
           <tr>
-            <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[130px]">{title}</th>
-            <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[100px]">사이즈</th>
-            <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[70px]">지원수량</th>
-            <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[70px]">추가수량</th>
-            <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[80px]">수선</th>
-            <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[60px]">예약</th>
-            <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[60px]">수령</th>
-            <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[60px]">명찰</th>
+            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-32.5">{title}</th>
+            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-25">사이즈</th>
+            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">지원수량</th>
+            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">추가수량</th>
+            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">수선</th>
+            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-15">예약</th>
+            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-15">수령</th>
+            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-15">명찰</th>
           </tr>
         </thead>
         <tbody>
           {!hasSchool && mode === 'add' ? (
             <tr>
-              <td colSpan={8} className="text-center p-5 text-sm text-[#959595]">
+              <td colSpan={8} className="text-center p-5 text-sm text-bg-400">
                 학교를 먼저 선택해주세요
               </td>
             </tr>
           ) : items.length === 0 ? (
             <tr>
-              <td colSpan={8} className="text-center p-5 text-sm text-[#959595]">
+              <td colSpan={8} className="text-center p-5 text-sm text-bg-400">
                 {mode === 'add' ? '학교를 먼저 선택해주세요' : '데이터가 없습니다'}
               </td>
             </tr>
@@ -330,12 +330,12 @@ export const StudentModal = ({
             items.map((item) => (
               <tr
                 key={item.id}
-                className={item.isDeleted ? 'bg-[#fee2e2] [&_td]:text-[#9b4d4d]' : ''}
+                className={item.isDeleted ? 'bg-red-050 [&_td]:text-red-700' : ''}
               >
-                <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle relative">
+                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle relative">
                   {!isView && item.isDeleted && (
                     <button
-                      className="inline-flex items-center justify-center px-2.5 py-1 bg-[#ef4444] border-none rounded text-xs font-medium text-white cursor-pointer mr-2 hover:bg-[#dc2626]"
+                      className="inline-flex items-center justify-center px-2.5 py-1 bg-red-500 border-none rounded text-xs font-medium text-white cursor-pointer mr-2 hover:bg-red-600"
                       onClick={() => handleUniformDelete(season, item.id)}
                     >
                       삭제
@@ -343,7 +343,7 @@ export const StudentModal = ({
                   )}
                   {!isView && !item.isDeleted && mode === 'edit' && (
                     <button
-                      className="absolute left-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center bg-transparent border border-[#c6c6c6] rounded text-sm text-[#9b4d4d] cursor-pointer p-0 hover:bg-[#fee2e2] hover:border-[#9b4d4d]"
+                      className="absolute left-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center bg-transparent border border-gray-200 rounded text-sm text-red-700 cursor-pointer p-0 hover:bg-red-050 hover:border-red-700"
                       onClick={() => handleUniformDelete(season, item.id)}
                       title="삭제"
                     >
@@ -352,7 +352,7 @@ export const StudentModal = ({
                   )}
                   {item.name}
                 </td>
-                <td className="p-1 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
+                <td className="p-1 border border-gray-200 text-center text-gray-700 align-middle">
                   {isView ? (
                     <span>{item.size || '-'}</span>
                   ) : (
@@ -364,16 +364,16 @@ export const StudentModal = ({
                     />
                   )}
                 </td>
-                <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
+                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                   {item.supportedQuantity}
                 </td>
-                <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
+                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                   {isView ? (
                     <span>{item.additionalQuantity}</span>
                   ) : (
                     <input
                       type="number"
-                      className="w-[50px] px-2 py-1 border border-[#c6c6c6] rounded text-sm text-center text-[#4c4c4c] bg-white outline-none focus:border-[#1f234f] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-12.5 px-2 py-1 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       value={item.additionalQuantity}
                       onChange={(e) =>
                         handleUniformChange(season, item.id, 'additionalQuantity', Number(e.target.value))
@@ -382,13 +382,13 @@ export const StudentModal = ({
                     />
                   )}
                 </td>
-                <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
+                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                   {item.repair}
                 </td>
-                <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
+                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                   <input
                     type="checkbox"
-                    className="w-[18px] h-[18px] accent-[#1f234f] cursor-pointer"
+                    className="w-4.5 h-4.5 accent-primary-900 cursor-pointer"
                     checked={item.reservation}
                     disabled={isView}
                     onChange={(e) =>
@@ -396,10 +396,10 @@ export const StudentModal = ({
                     }
                   />
                 </td>
-                <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
+                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                   <input
                     type="checkbox"
-                    className="w-[18px] h-[18px] accent-[#1f234f] cursor-pointer"
+                    className="w-4.5 h-4.5 accent-primary-900 cursor-pointer"
                     checked={item.received}
                     disabled={isView}
                     onChange={(e) =>
@@ -407,7 +407,7 @@ export const StudentModal = ({
                     }
                   />
                 </td>
-                <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
+                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                   {item.nameTag !== null ? item.nameTag : '-'}
                 </td>
               </tr>
@@ -435,12 +435,12 @@ export const StudentModal = ({
 
     return (
       <div className="flex-1">
-        <table className="w-full border-collapse border border-[#c6c6c6] text-sm">
+        <table className="w-full border-collapse border border-gray-200 text-sm">
           <thead>
             <tr>
-              <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap" colSpan={2}>용품</th>
-              <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[100px]">사이즈</th>
-              <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[70px]">수량</th>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap" colSpan={2}>용품</th>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-25">사이즈</th>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">수량</th>
             </tr>
           </thead>
           <tbody>
@@ -449,16 +449,16 @@ export const StudentModal = ({
                 <tr key={item.id}>
                   {idx === 0 && group.category && (
                     <td
-                      className="p-2 border border-[#c6c6c6] text-center align-middle bg-[#f9fafb] font-medium text-[#4c4c4c]"
+                      className="p-2 border border-gray-200 text-center align-middle bg-bg-050 font-medium text-gray-700"
                       rowSpan={group.items.length}
                     >
                       {group.category}
                     </td>
                   )}
-                  <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
+                  <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                     {item.name}
                   </td>
-                  <td className="p-1 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
+                  <td className="p-1 border border-gray-200 text-center text-gray-700 align-middle">
                     {isView ? (
                       <span>{item.size || '-'}</span>
                     ) : item.category === '스타킹' ? (
@@ -473,13 +473,13 @@ export const StudentModal = ({
                       />
                     )}
                   </td>
-                  <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
+                  <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                     {isView ? (
                       <span>{item.quantity}</span>
                     ) : (
                       <input
                         type="number"
-                        className="w-[50px] px-2 py-1 border border-[#c6c6c6] rounded text-sm text-center text-[#4c4c4c] bg-white outline-none focus:border-[#1f234f] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-12.5 px-2 py-1 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         value={item.quantity}
                         onChange={(e) =>
                           handleSupplyChange(item.id, 'quantity', Number(e.target.value))
@@ -503,24 +503,24 @@ export const StudentModal = ({
 
   const renderNameTagTable = () => (
     <div className="flex-none">
-      <table className="w-full border-collapse border border-[#c6c6c6] text-sm">
+      <table className="w-full border-collapse border border-gray-200 text-sm">
         <thead>
           <tr>
-            <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap">명찰</th>
-            <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[70px]">주문수량</th>
-            <th className="px-2 py-2.5 font-medium text-[#393939] bg-[#f9fafb] border border-[#c6c6c6] text-center whitespace-nowrap w-[70px]">부착수량</th>
+            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap">명찰</th>
+            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">주문수량</th>
+            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">부착수량</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">명찰</td>
-            <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
+            <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">명찰</td>
+            <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
               {isView ? (
                 <span>{nameTag.orderQuantity}</span>
               ) : (
                 <input
                   type="number"
-                  className="w-[50px] px-2 py-1 border border-[#c6c6c6] rounded text-sm text-center text-[#4c4c4c] bg-white outline-none focus:border-[#1f234f] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-12.5 px-2 py-1 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   value={nameTag.orderQuantity}
                   onChange={(e) =>
                     setNameTag((prev) => ({ ...prev, orderQuantity: Number(e.target.value) }))
@@ -529,13 +529,13 @@ export const StudentModal = ({
                 />
               )}
             </td>
-            <td className="p-2 border border-[#c6c6c6] text-center text-[#4c4c4c] align-middle">
+            <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
               {isView ? (
                 <span>{nameTag.attachQuantity}</span>
               ) : (
                 <input
                   type="number"
-                  className="w-[50px] px-2 py-1 border border-[#c6c6c6] rounded text-sm text-center text-[#4c4c4c] bg-white outline-none focus:border-[#1f234f] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-12.5 px-2 py-1 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   value={nameTag.attachQuantity}
                   onChange={(e) =>
                     setNameTag((prev) => ({ ...prev, attachQuantity: Number(e.target.value) }))
@@ -571,7 +571,7 @@ export const StudentModal = ({
       titleExtra={
         mode === 'view' && !isEditing ? (
           <button
-            className="px-5 py-2 bg-[#b07a50] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+            className="px-5 py-2 bg-yellow-700 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
             onClick={() => setIsEditing(true)}
           >
             수정
@@ -581,7 +581,7 @@ export const StudentModal = ({
       actions={
         mode === 'view' && !isEditing ? (
           <button
-            className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+            className="px-6 py-2.5 bg-neutral-500 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
             onClick={handleClose}
           >
             닫기
@@ -589,12 +589,12 @@ export const StudentModal = ({
         ) : (
           <>
             <button
-              className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              className="px-6 py-2.5 bg-neutral-500 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
               onClick={isEditing ? () => setIsEditing(false) : handleClose}
             >
               취소
             </button>
-            <button className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90" onClick={handleSubmit}>
+            <button className="px-6 py-2.5 bg-primary-900 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90" onClick={handleSubmit}>
               {mode === 'add' ? '추가' : '저장'}
             </button>
           </>
@@ -603,9 +603,9 @@ export const StudentModal = ({
     >
       <div className="flex flex-col gap-4 w-full">
         {/* 학생 정보 */}
-        <div className="flex flex-col border border-[#c6c6c6] rounded-lg overflow-hidden [&_.input-wrapper]:flex-row [&_.input-wrapper]:items-center [&_.input-wrapper]:w-full [&_.input-wrapper]:gap-0 [&_.input-label]:flex-[0_0_120px] [&_.input-label]:px-4 [&_.input-label]:py-3 [&_.input-label]:text-[15px] [&_.input-label]:font-medium [&_.input-label]:text-[#393939] [&_.input-label]:bg-[#f9fafb] [&_.input-label]:border-r [&_.input-label]:border-[#c6c6c6] [&_.input-label]:mb-0 [&_.input-label]:h-full [&_.input-label]:flex [&_.input-label]:items-center [&_.input]:border-none [&_.input]:rounded-none [&_.input]:h-12 [&_.input:focus]:shadow-none [&_.input:focus]:border-none [&_.select-wrapper]:flex-row [&_.select-wrapper]:items-center [&_.select-wrapper]:w-full [&_.select-wrapper]:gap-0 [&_.select-label]:flex-[0_0_120px] [&_.select-label]:px-4 [&_.select-label]:py-3 [&_.select-label]:text-[15px] [&_.select-label]:font-medium [&_.select-label]:text-[#393939] [&_.select-label]:bg-[#f9fafb] [&_.select-label]:border-r [&_.select-label]:border-[#c6c6c6] [&_.select-label]:mb-0 [&_.select-label]:h-full [&_.select-label]:flex [&_.select-label]:items-center [&_.select]:border-none [&_.select]:rounded-none [&_.select]:h-12">
-          <div className="flex items-stretch border-b border-[#c6c6c6]">
-            <div className="flex-1 min-w-0 flex items-center border-r border-[#c6c6c6]">
+        <div className="flex flex-col border border-gray-200 rounded-lg overflow-hidden [&_.input-wrapper]:flex-row [&_.input-wrapper]:items-center [&_.input-wrapper]:w-full [&_.input-wrapper]:gap-0 [&_.input-label]:flex-[0_0_120px] [&_.input-label]:px-4 [&_.input-label]:py-3 [&_.input-label]:text-15 [&_.input-label]:font-medium [&_.input-label]:text-bg-800 [&_.input-label]:bg-bg-050 [&_.input-label]:border-r [&_.input-label]:border-gray-200 [&_.input-label]:mb-0 [&_.input-label]:h-full [&_.input-label]:flex [&_.input-label]:items-center [&_.input]:border-none [&_.input]:rounded-none [&_.input]:h-12 [&_.input:focus]:shadow-none [&_.input:focus]:border-none [&_.select-wrapper]:flex-row [&_.select-wrapper]:items-center [&_.select-wrapper]:w-full [&_.select-wrapper]:gap-0 [&_.select-label]:flex-[0_0_120px] [&_.select-label]:px-4 [&_.select-label]:py-3 [&_.select-label]:text-15 [&_.select-label]:font-medium [&_.select-label]:text-bg-800 [&_.select-label]:bg-bg-050 [&_.select-label]:border-r [&_.select-label]:border-gray-200 [&_.select-label]:mb-0 [&_.select-label]:h-full [&_.select-label]:flex [&_.select-label]:items-center [&_.select]:border-none [&_.select]:rounded-none [&_.select]:h-12">
+          <div className="flex items-stretch border-b border-gray-200">
+            <div className="flex-1 min-w-0 flex items-center border-r border-gray-200">
               {isView || isEditing ? (
                 <ViewField label="입학학교" value={admissionSchool} />
               ) : (
@@ -618,7 +618,7 @@ export const StudentModal = ({
                 />
               )}
             </div>
-            <div className="flex-1 min-w-0 flex items-center border-r border-[#c6c6c6]">
+            <div className="flex-1 min-w-0 flex items-center border-r border-gray-200">
               {isView || isEditing ? (
                 <ViewField label="출신학교" value={previousSchool} />
               ) : (
@@ -633,7 +633,7 @@ export const StudentModal = ({
             </div>
             <div className="flex-[0_0_80px] flex items-center">
               {isView || isEditing ? (
-                <span className="flex-1 px-4 py-3 text-sm text-[#4c4c4c] h-12 flex items-center">
+                <span className="flex-1 px-4 py-3 text-sm text-gray-700 h-12 flex items-center">
                   {classNumber || '-'}
                 </span>
               ) : (
@@ -648,8 +648,8 @@ export const StudentModal = ({
             </div>
           </div>
 
-          <div className="flex items-stretch border-b border-[#c6c6c6]">
-            <div className="flex-1 min-w-0 flex items-center border-r border-[#c6c6c6]">
+          <div className="flex items-stretch border-b border-gray-200">
+            <div className="flex-1 min-w-0 flex items-center border-r border-gray-200">
               {isView || isEditing ? (
                 <ViewField label="이름" value={name} />
               ) : (
@@ -678,7 +678,7 @@ export const StudentModal = ({
             </div>
           </div>
 
-          <div className="flex items-stretch border-b border-[#c6c6c6]">
+          <div className="flex items-stretch border-b border-gray-200">
             <div className="flex-1 min-w-0 flex items-center">
               {isView || isEditing ? (
                 <ViewField label="학생 연락처" value={studentPhone} />
@@ -720,8 +720,8 @@ export const StudentModal = ({
                   key={snapshot.orderId}
                   className={`text-sm px-1 py-0.5 border-none bg-transparent cursor-pointer ${
                     i === activeDateIndex
-                      ? 'font-bold text-[#393939]'
-                      : 'text-[#959595]'
+                      ? 'font-bold text-bg-800'
+                      : 'text-bg-400'
                   }`}
                   onClick={() => handleDateTabClick(i)}
                 >
@@ -747,19 +747,19 @@ export const StudentModal = ({
           <div className="flex justify-between items-end gap-4">
             {/* 이력 */}
             <div className="flex flex-col gap-2 flex-1">
-              <div className="flex border-b border-[#c6c6c6] pb-1">
-                <span className="text-sm font-medium text-[#393939] w-[160px]">날짜</span>
-                <span className="text-sm font-medium text-[#393939]">내용</span>
+              <div className="flex border-b border-gray-200 pb-1">
+                <span className="text-sm font-medium text-bg-800 w-40">날짜</span>
+                <span className="text-sm font-medium text-bg-800">내용</span>
               </div>
               {activeHistory.length > 0 ? (
                 activeHistory.map((h, i) => (
                   <div key={i} className="flex">
-                    <span className="text-sm text-[#4c4c4c] w-[160px]">{h.date}</span>
-                    <span className="text-sm text-[#4c4c4c]">{h.content}</span>
+                    <span className="text-sm text-gray-700 w-40">{h.date}</span>
+                    <span className="text-sm text-gray-700">{h.content}</span>
                   </div>
                 ))
               ) : (
-                <span className="text-sm text-[#959595]">히스토리 없음</span>
+                <span className="text-sm text-bg-400">히스토리 없음</span>
               )}
             </div>
 
@@ -768,14 +768,14 @@ export const StudentModal = ({
               <div className="flex flex-col items-end gap-2 flex-none">
                 {student.registeredDate && (
                   <div className="flex flex-col items-end">
-                    <span className="text-xs text-[#959595]">등록일</span>
-                    <span className="text-xs text-[#4c4c4c]">{student.registeredDate}</span>
+                    <span className="text-xs text-bg-400">등록일</span>
+                    <span className="text-xs text-gray-700">{student.registeredDate}</span>
                   </div>
                 )}
                 {student.modifiedDate && (
                   <div className="flex flex-col items-end">
-                    <span className="text-xs text-[#959595]">최종 수정일</span>
-                    <span className="text-xs text-[#4c4c4c]">{student.modifiedDate}</span>
+                    <span className="text-xs text-bg-400">최종 수정일</span>
+                    <span className="text-xs text-gray-700">{student.modifiedDate}</span>
                   </div>
                 )}
               </div>
@@ -793,10 +793,10 @@ export const StudentModal = ({
 
 const ViewField = ({ label, value }: { label: string; value: string }) => (
   <div className="input-wrapper flex flex-row items-center w-full gap-0">
-    <span className="input-label flex-[0_0_120px] px-4 py-3 text-[15px] font-medium text-[#393939] bg-[#f9fafb] border-r border-[#c6c6c6] h-12 flex items-center">
+    <span className="input-label flex-[0_0_120px] px-4 py-3 text-15 font-medium text-bg-800 bg-bg-050 border-r border-gray-200 h-12 flex items-center">
       {label}
     </span>
-    <span className="flex-1 px-4 py-3 text-sm text-[#4c4c4c] h-12 flex items-center">
+    <span className="flex-1 px-4 py-3 text-sm text-gray-700 h-12 flex items-center">
       {value || '-'}
     </span>
   </div>

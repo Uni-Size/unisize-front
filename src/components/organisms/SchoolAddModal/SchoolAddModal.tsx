@@ -218,7 +218,7 @@ export const SchoolAddModal = ({
   ) => (
     <div key={product.id} className="flex gap-2 items-start">
       <button
-        className="shrink-0 flex items-center justify-center w-14 h-12.5 border border-[#c6a8a8] rounded-lg bg-[#9b7373] text-white cursor-pointer hover:bg-[#7a5555] text-sm font-medium"
+        className="shrink-0 flex items-center justify-center w-14 h-12.5 border border-delete-border rounded-lg bg-delete-bg text-white cursor-pointer hover:bg-delete-bg-hover text-sm font-medium"
         onClick={() => handleRemoveProduct(season, product.id)}
       >
         삭제
@@ -289,7 +289,7 @@ export const SchoolAddModal = ({
         <div className="flex items-center h-12.5 px-3 border border-gray-200 rounded-lg bg-white gap-1">
           <input
             type="number"
-            className="min-w-0 flex-1 border-none bg-transparent text-[15px] text-[#4c4c4c] text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="min-w-0 flex-1 border-none bg-transparent text-15 text-gray-700 text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             placeholder="-"
             value={product.contractPrice || ""}
             onChange={(e) =>
@@ -301,7 +301,7 @@ export const SchoolAddModal = ({
               )
             }
           />
-          <span className="text-[15px] text-[#4c4c4c] shrink-0">원</span>
+          <span className="text-15 text-gray-700 shrink-0">원</span>
         </div>
       </div>
       <div className="w-17.5 shrink-0">
@@ -353,13 +353,13 @@ export const SchoolAddModal = ({
       actions={
         <>
           <button
-            className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+            className="px-6 py-2.5 bg-neutral-500 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
             onClick={handleClose}
           >
             취소
           </button>
           <button
-            className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+            className="px-6 py-2.5 bg-primary-900 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
             onClick={handleSubmit}
           >
             추가
@@ -420,7 +420,7 @@ export const SchoolAddModal = ({
               fullWidth
             />
           </div>
-          <span className="text-[15px] text-[#4c4c4c] h-12.5 flex items-center">
+          <span className="text-15 text-gray-700 h-12.5 flex items-center">
             ~
           </span>
           <div className="flex-none w-45 min-w-0">
@@ -446,9 +446,9 @@ export const SchoolAddModal = ({
           </div>
 
           <div className="flex flex-col gap-2">
-            <span className="text-sm text-[#4c4c4c]">동복</span>
+            <span className="text-sm text-gray-700">동복</span>
             {winterProducts.length === 0 ? (
-              <p className="text-[15px] text-bg-400 text-center py-4 m-0">
+              <p className="text-15 text-bg-400 text-center py-4 m-0">
                 동복이 구성되지 않았습니다
               </p>
             ) : (
@@ -462,7 +462,7 @@ export const SchoolAddModal = ({
               </>
             )}
             <button
-              className="flex items-center justify-center px-5 py-2.5 bg-primary-900 border-none rounded-lg text-[15px] text-[#f9fafb] cursor-pointer mx-auto hover:opacity-90"
+              className="flex items-center justify-center px-5 py-2.5 bg-primary-900 border-none rounded-lg text-15 text-bg-050 cursor-pointer mx-auto hover:opacity-90"
               onClick={() => handleAddProduct("winter")}
             >
               동복 품목 추가
@@ -470,9 +470,9 @@ export const SchoolAddModal = ({
           </div>
 
           <div className="flex flex-col gap-2">
-            <span className="text-sm text-[#4c4c4c]">하복</span>
+            <span className="text-sm text-gray-700">하복</span>
             {summerProducts.length === 0 ? (
-              <p className="text-[15px] text-bg-400 text-center py-4 m-0">
+              <p className="text-15 text-bg-400 text-center py-4 m-0">
                 하복이 구성되지 않았습니다
               </p>
             ) : (
@@ -486,7 +486,7 @@ export const SchoolAddModal = ({
               </>
             )}
             <button
-              className="flex items-center justify-center px-5 py-2.5 bg-primary-900 border-none rounded-lg text-[15px] text-[#f9fafb] cursor-pointer mx-auto hover:opacity-90"
+              className="flex items-center justify-center px-5 py-2.5 bg-primary-900 border-none rounded-lg text-15 text-bg-050 cursor-pointer mx-auto hover:opacity-90"
               onClick={() => handleAddProduct("summer")}
             >
               하복 품목 추가

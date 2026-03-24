@@ -157,8 +157,8 @@ export const AdminSidebar = () => {
         <div key={school.id} className="flex flex-col">
           <button
             type="button"
-            className={`flex items-center w-full h-[30px] px-5 font-medium no-underline leading-none transition-colors duration-200 bg-transparent border-none cursor-pointer text-left hover:text-[#111827] ${
-              isSchoolActive(school) ? 'text-[#111827]' : 'text-gray-300'
+            className={`flex items-center w-full h-7.5 px-5 font-medium no-underline leading-none transition-colors duration-200 bg-transparent border-none cursor-pointer text-left hover:text-bg-900 ${
+              isSchoolActive(school) ? 'text-bg-900' : 'text-gray-300'
             }`}
             onClick={() => toggleSchool(school.id)}
           >
@@ -170,8 +170,8 @@ export const AdminSidebar = () => {
                 <Link
                   key={sp.id}
                   to={sp.path}
-                  className={`flex items-center w-full h-[26px] pl-10 pr-2 text-[13px] font-medium no-underline leading-none transition-colors duration-200 hover:text-[#111827] ${
-                    isActive(sp.path) ? 'text-[#111827]' : 'text-gray-300'
+                  className={`flex items-center w-full h-6.5 pl-10 pr-2 text-13 font-medium no-underline leading-none transition-colors duration-200 hover:text-bg-900 ${
+                    isActive(sp.path) ? 'text-bg-900' : 'text-gray-300'
                   }`}
                 >
                   {sp.name}
@@ -185,9 +185,9 @@ export const AdminSidebar = () => {
   );
 
   return (
-    <aside className="w-[200px] min-h-[calc(100vh-16px)] my-2 ml-0 pl-5 pt-5 pb-5 bg-primary-050 border border-primary-100 rounded-r-lg shadow-[4px_0px_7px_0px_rgba(0,0,0,0.06)] flex flex-col gap-6">
+    <aside className="w-50 min-h-[calc(100vh-16px)] my-2 ml-0 pl-5 pt-5 pb-5 bg-primary-050 border border-primary-100 rounded-r-lg shadow-sm flex flex-col gap-6">
       <div className="p-0">
-        <Link to="/admin" className="text-[17px] font-medium text-[#111827] no-underline leading-none hover:text-[#111827]">
+        <Link to="/admin" className="text-17 font-medium text-bg-900 no-underline leading-none hover:text-bg-900">
           스마트학생복 청주점
         </Link>
       </div>
@@ -198,8 +198,8 @@ export const AdminSidebar = () => {
               <>
                 <button
                   type="button"
-                  className={`flex items-center w-[180px] h-[34px] pt-3.5 pr-2.5 pb-1.5 pl-2.5 text-[17px] font-medium no-underline leading-none transition-colors duration-200 bg-none border-none cursor-pointer text-left hover:text-[#111827] ${
-                    isMenuActive(menu) ? 'text-[#111827]' : 'text-gray-300'
+                  className={`flex items-center w-45 h-8.5 pt-3.5 pr-2.5 pb-1.5 pl-2.5 text-17 font-medium no-underline leading-none transition-colors duration-200 bg-none border-none cursor-pointer text-left hover:text-bg-900 ${
+                    isMenuActive(menu) ? 'text-bg-900' : 'text-gray-300'
                   }`}
                   onClick={() => toggleMenu(menu)}
                 >
@@ -213,8 +213,8 @@ export const AdminSidebar = () => {
                           <Link
                             key={sub.id}
                             to={sub.path}
-                            className={`flex items-center w-full h-[30px] px-5 font-medium no-underline leading-none transition-colors duration-200 hover:text-[#111827] ${
-                              isActive(sub.path) ? 'text-[#111827]' : 'text-gray-300'
+                            className={`flex items-center w-full h-7.5 px-5 font-medium no-underline leading-none transition-colors duration-200 hover:text-bg-900 ${
+                              isActive(sub.path) ? 'text-bg-900' : 'text-gray-300'
                             }`}
                           >
                             {sub.name}
@@ -229,8 +229,8 @@ export const AdminSidebar = () => {
             ) : (
               <Link
                 to={menu.path}
-                className={`flex items-center w-[180px] h-[34px] pt-3.5 pr-2.5 pb-1.5 pl-2.5 text-[17px] font-medium no-underline leading-none transition-colors duration-200 hover:text-[#111827] ${
-                  isActive(menu.path) ? 'text-[#111827]' : 'text-gray-300'
+                className={`flex items-center w-45 h-8.5 pt-3.5 pr-2.5 pb-1.5 pl-2.5 text-17 font-medium no-underline leading-none transition-colors duration-200 hover:text-bg-900 ${
+                  isActive(menu.path) ? 'text-bg-900' : 'text-gray-300'
                 }`}
               >
                 {menu.label}

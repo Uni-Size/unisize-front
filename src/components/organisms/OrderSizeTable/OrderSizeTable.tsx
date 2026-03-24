@@ -31,11 +31,11 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
           onClick={() => setIsOpen((v) => !v)}
         >
           <div className="flex items-center gap-2">
-            <span className="text-[14px] font-medium text-gray-700">
+            <span className="text-14 font-medium text-gray-700">
               {product.display_name}
             </span>
             {hasOverflow && (
-              <span className="text-[11px] text-red-500 font-medium bg-red-50 border border-red-200 rounded px-1.5 py-0.5">
+              <span className="text-11 text-red-500 font-medium bg-red-50 border border-red-200 rounded px-1.5 py-0.5">
                 재고 부족
               </span>
             )}
@@ -57,7 +57,7 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-[13px]">
+        <table className="w-full border-collapse text-13">
           <tbody>
             {isOpen && (
               <>
@@ -100,7 +100,7 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
                         <td
                           key={stat.size}
                           className={[
-                            "px-2 py-1.5 text-center text-[13px] border",
+                            "px-2 py-1.5 text-center text-13 border",
                             isOutOfStock
                               ? "border-red-400 bg-red-50"
                               : "border-gray-200",
@@ -115,7 +115,7 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
                           >
                             {order.name}
                             {isReserved && (
-                              <span className="ml-1 text-[11px] text-blue-500 font-medium">
+                              <span className="ml-1 text-11 text-blue-500 font-medium">
                                 예약
                               </span>
                             )}
@@ -140,7 +140,7 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
               {sizesWithOrders.map((stat) => (
                 <td
                   key={stat.size}
-                  className="border border-gray-200 px-2 py-1.5 text-center text-[13px]"
+                  className="border border-gray-200 px-2 py-1.5 text-center text-13"
                 >
                   <div>
                     {stat.size} ({stat.ordered}/{stat.stock})

@@ -7,15 +7,15 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles = {
-  primary: 'bg-primary-900 text-[#f9fafb] hover:not-disabled:bg-[#2a2f5a]',
-  secondary: 'bg-[#6c757d] text-white hover:not-disabled:bg-[#545b62]',
-  outline: 'bg-transparent border border-primary-500 text-[#1e40af] hover:not-disabled:bg-primary-500/10',
+  primary: 'bg-primary-900 text-bg-050 hover:not-disabled:bg-primary-700',
+  secondary: 'bg-neutral-500 text-white hover:not-disabled:bg-neutral-600',
+  outline: 'bg-transparent border border-primary-500 text-blue-700 hover:not-disabled:bg-primary-500/10',
 };
 
 const sizeStyles = {
   small: 'w-auto h-auto px-3 py-1.5 text-xs',
-  medium: 'w-[343px] h-[54px] p-3 text-[17px]',
-  large: 'w-full h-[54px] px-7 py-3.5 text-[17px]',
+  medium: 'w-86 h-13.5 p-3 text-17',
+  large: 'w-full h-13.5 px-7 py-3.5 text-17',
 };
 
 export const Button = ({

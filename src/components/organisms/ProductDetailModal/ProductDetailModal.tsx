@@ -52,9 +52,9 @@ const FieldView = ({
   align?: "left" | "right";
 }) => (
   <div className="flex flex-col gap-2">
-    <span className="text-[15px] font-normal text-gray-700">{label}</span>
+    <span className="text-15 font-normal text-gray-700">{label}</span>
     <div
-      className={`flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-transparent text-[15px] font-normal leading-none text-gray-700 ${align === "right" ? "justify-end" : ""}`}
+      className={`flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-transparent text-15 font-normal leading-none text-gray-700 ${align === "right" ? "justify-end" : ""}`}
     >
       {value}
     </div>
@@ -127,13 +127,13 @@ const ProductDetailModalContent = ({
         isEditMode ? (
           <>
             <button
-              className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              className="px-6 py-2.5 bg-neutral-500 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
               onClick={() => setIsEditMode(false)}
             >
               취소
             </button>
             <button
-              className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              className="px-6 py-2.5 bg-primary-900 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
               onClick={handleSave}
             >
               저장
@@ -142,7 +142,7 @@ const ProductDetailModalContent = ({
         ) : (
           <>
             <button
-              className="px-6 py-2.5 bg-[#7a3c00] text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              className="px-6 py-2.5 bg-yellow-700 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
               onClick={() => setIsEditMode(true)}
             >
               수정
@@ -310,12 +310,12 @@ const ProductDetailModalContent = ({
         {/* 사용 학교 */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-[15px] font-normal text-gray-700">
+            <span className="text-15 font-normal text-gray-700">
               사용 학교
             </span>
             {isEditMode && onOpenSchoolModal && (
               <button
-                className="px-4 py-1.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+                className="px-4 py-1.5 bg-primary-900 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
                 onClick={onOpenSchoolModal}
               >
                 학교 추가
@@ -348,22 +348,22 @@ const ProductDetailModalContent = ({
                         >
                           {isEditMode && onRemoveSchool && (
                             <button
-                              className="shrink-0 flex items-center justify-center px-4 bg-[#9b7373] text-white text-sm font-medium cursor-pointer hover:bg-[#7a5555] border border-[#c6a8a8] rounded-lg"
+                              className="shrink-0 flex items-center justify-center px-4 bg-delete-bg text-white text-sm font-medium cursor-pointer hover:bg-delete-bg-hover border border-delete-border rounded-lg"
                               onClick={() => onRemoveSchool(school.schoolId)}
                             >
                               삭제
                             </button>
                           )}
                           <div className="flex-1 flex items-stretch border border-gray-200 rounded-lg bg-white overflow-hidden">
-                            <span className="flex-1 flex items-center px-4 py-3 text-[15px] text-gray-700 border-r border-gray-200">
+                            <span className="flex-1 flex items-center px-4 py-3 text-15 text-gray-700 border-r border-gray-200">
                               {school.schoolName}
                             </span>
-                            <div className="flex items-center px-4 py-3 text-[15px] text-gray-700 justify-end min-w-0 flex-1">
+                            <div className="flex items-center px-4 py-3 text-15 text-gray-700 justify-end min-w-0 flex-1">
                               {isEditMode && onSchoolPriceChange ? (
                                 <>
                                   <input
                                     type="number"
-                                    className="min-w-0 flex-1 border-none bg-transparent text-[15px] text-gray-700 text-right outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                    className="min-w-0 flex-1 border-none bg-transparent text-15 text-gray-700 text-right outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                     value={school.price}
                                     onChange={(e) =>
                                       onSchoolPriceChange(
@@ -386,7 +386,7 @@ const ProductDetailModalContent = ({
                 ))}
             </div>
           ) : (
-            <p className="text-[15px] text-gray-400 text-center py-2">
+            <p className="text-15 text-gray-400 text-center py-2">
               사용하는 학교가 없습니다
             </p>
           )}

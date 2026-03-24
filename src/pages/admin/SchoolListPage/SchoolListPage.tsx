@@ -256,7 +256,7 @@ export const SchoolListPage = () => {
       render: (school) => (
         <div className="flex gap-1">
           <button
-            className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-[#e5e7eb] text-[#374151]"
+            className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-neutral-050 text-bg-800"
             onClick={(e) => {
               e.stopPropagation();
               handleOpenDetailModal(school);
@@ -265,7 +265,7 @@ export const SchoolListPage = () => {
             수정
           </button>
           <button
-            className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-[#fecaca] text-[#991b1b]"
+            className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-red-200 text-red-700"
             onClick={async (e) => {
               e.stopPropagation();
               if (!confirm('정말 삭제하시겠습니까?')) return;
@@ -305,7 +305,7 @@ export const SchoolListPage = () => {
           actions={
             <button
               type="button"
-              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-15 font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={handleExportCSV}
               disabled={displaySchools.length === 0}
             >
@@ -317,12 +317,12 @@ export const SchoolListPage = () => {
         <div className="border-y border-gray-200 overflow-hidden">
           {/* 검색어 */}
           <div className="flex items-stretch border-b border-gray-200">
-            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
               검색어
             </div>
             <div className="flex items-center gap-3 flex-1 px-4 py-3 bg-white">
               <select
-                className="h-9 px-3 py-1.5 border border-gray-200 rounded text-[14px] text-gray-700 bg-white"
+                className="h-9 px-3 py-1.5 border border-gray-200 rounded text-14 text-gray-700 bg-white"
                 value={searchType}
                 onChange={(e) => setSearchType(e.target.value)}
               >
@@ -340,12 +340,12 @@ export const SchoolListPage = () => {
 
           {/* 구분 + 지원여부 */}
           <div className="flex items-stretch border-b border-gray-200">
-            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
               구분
             </div>
             <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white border-r border-gray-200">
               {(['all', '초', '중', '고'] as const).map((v) => (
-                <label key={v} className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <label key={v} className="flex items-center gap-1.5 text-14 text-gray-700 cursor-pointer">
                   <input
                     type="radio"
                     name="typeFilter"
@@ -357,12 +357,12 @@ export const SchoolListPage = () => {
                 </label>
               ))}
             </div>
-            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
               지원여부
             </div>
             <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white">
               {(['all', 'active', 'inactive'] as const).map((v) => (
-                <label key={v} className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <label key={v} className="flex items-center gap-1.5 text-14 text-gray-700 cursor-pointer">
                   <input
                     type="radio"
                     name="activeFilter"
@@ -378,20 +378,20 @@ export const SchoolListPage = () => {
 
           {/* 지원년도 */}
           <div className="flex items-stretch">
-            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
               지원년도
             </div>
             <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white">
-              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+              <label className="flex items-center gap-1.5 text-14 text-gray-700 cursor-pointer">
                 <input type="radio" name="yearFilter" checked={yearFilter === 'all'} onChange={() => setYearFilter('all')} className="w-4 h-4 accent-gray-500" />
                 전체
               </label>
-              <label className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+              <label className="flex items-center gap-1.5 text-14 text-gray-700 cursor-pointer">
                 <input type="radio" name="yearFilter" checked={yearFilter === 'noSupport'} onChange={() => setYearFilter('noSupport')} className="w-4 h-4 accent-gray-500" />
                 미지원
               </label>
               {YEAR_OPTIONS.map((y) => (
-                <label key={y} className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <label key={y} className="flex items-center gap-1.5 text-14 text-gray-700 cursor-pointer">
                   <input type="radio" name="yearFilter" checked={yearFilter === y} onChange={() => setYearFilter(y)} className="w-4 h-4 accent-gray-500" />
                   {String(y).slice(2)}년
                 </label>
@@ -408,7 +408,7 @@ export const SchoolListPage = () => {
 
         <div className="flex-1">
           {searched && !loading && (
-            <div className="text-[13px] text-gray-500 mb-2">총 {total}건</div>
+            <div className="text-13 text-gray-500 mb-2">총 {total}건</div>
           )}
           <Table
             columns={columns}

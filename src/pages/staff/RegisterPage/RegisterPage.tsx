@@ -76,9 +76,9 @@ export const RegisterPage = () => {
           />
 
           <div className="flex items-center gap-4 px-4 py-3 border border-gray-200 rounded-lg bg-white">
-            <span className="text-[15px] text-gray-500 min-w-7.5">성별</span>
+            <span className="text-15 text-gray-500 min-w-7.5">성별</span>
             <div className="flex gap-4">
-              <label className="flex items-center gap-1 text-[15px] text-gray-700 cursor-pointer">
+              <label className="flex items-center gap-1 text-15 text-gray-700 cursor-pointer">
                 <input
                   type="radio"
                   name="page-gender"
@@ -89,7 +89,7 @@ export const RegisterPage = () => {
                 />
                 남
               </label>
-              <label className="flex items-center gap-1 text-[15px] text-gray-700 cursor-pointer">
+              <label className="flex items-center gap-1 text-15 text-gray-700 cursor-pointer">
                 <input
                   type="radio"
                   name="page-gender"

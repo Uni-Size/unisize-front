@@ -18,7 +18,7 @@ export const MeasurementGuidePage = () => {
         <button
           type="button"
           onClick={handleBack}
-          className="flex items-center gap-1 bg-none border-none cursor-pointer text-[#4b5563] font-medium p-0 transition-colors duration-200 ease-in-out hover:text-[#262626]"
+          className="flex items-center gap-1 bg-none border-none cursor-pointer text-slate-600 font-medium p-0 transition-colors duration-200 ease-in-out hover:text-bg-900"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -36,10 +36,10 @@ export const MeasurementGuidePage = () => {
         </button>
       </div>
 
-      <h2 className="text-2xl font-bold text-center mb-4 text-[#262626]">
+      <h2 className="text-2xl font-bold text-center mb-4 text-bg-900">
         학생의 신체 사이즈를 측정해주세요
       </h2>
-      <p className="text-lg font-medium text-center mb-8 text-[#1f2937] leading-relaxed">
+      <p className="text-lg font-medium text-center mb-8 text-slate-800 leading-relaxed">
         정확한 교복 사이즈를 위해, <br /> 두꺼운 옷은 벗고 측정해주세요.
       </p>
 
@@ -47,11 +47,11 @@ export const MeasurementGuidePage = () => {
         <img
           src="/student/body.svg"
           alt="신체 측정 안내"
-          className="w-[200px] h-auto"
+          className="w-50 h-auto"
         />
       </div>
 
-      <p className="my-2 text-center text-[#6b7280] text-sm leading-relaxed">
+      <p className="my-2 text-center text-slate-500 text-sm leading-relaxed">
         시착 시, 얇은 반팔이 필요하신 경우 <br /> 교복용 반팔을 구매하실 수
         있습니다.
       </p>

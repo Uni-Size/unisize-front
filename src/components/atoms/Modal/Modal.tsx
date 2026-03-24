@@ -52,14 +52,14 @@ export const Modal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center" style={{ zIndex }} onClick={onClose}>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center" style={{ zIndex }} onClick={onClose}>
       <div
-        className="bg-white border border-primary-900 rounded-[20px] px-5 py-4 flex flex-col gap-2.5 max-h-[90vh] overflow-hidden w-full mx-4"
+        className="bg-white border border-primary-900 rounded-2xl px-5 py-4 flex flex-col gap-2.5 max-h-[90vh] overflow-hidden w-full mx-4"
         style={{ maxWidth: `${width}px` }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between w-full">
-          <h2 className="text-xl font-normal text-[#111827] m-0">{title}</h2>
+          <h2 className="text-xl font-normal text-bg-900 m-0">{title}</h2>
           {titleExtra && <div>{titleExtra}</div>}
         </div>
         <div className="flex-1 overflow-y-auto scrollbar-hide">{children}</div>

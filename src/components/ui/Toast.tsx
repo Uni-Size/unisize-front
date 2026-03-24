@@ -20,7 +20,7 @@ export default function Toast({
   }, [duration, onClose]);
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-fade-in">
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-100 animate-fade-in">
       <div className="bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg text-center">
         {message}
       </div>

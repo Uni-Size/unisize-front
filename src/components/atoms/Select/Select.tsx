@@ -71,13 +71,13 @@ export const Select = ({
 
   return (
     <div className={`flex flex-col gap-2 ${fullWidth ? 'w-full' : ''}`}>
-      {label && <span className="text-[15px] font-normal text-gray-700">{label}</span>}
+      {label && <span className="text-15 font-normal text-gray-700">{label}</span>}
       <div
         ref={triggerRef}
-        className={`relative flex items-center justify-between h-[50px] px-4 border border-gray-200 rounded-lg bg-white cursor-pointer transition-[border-color] duration-200 ease-in-out hover:border-bg-400 ${isOpen ? 'border-bg-400' : ''} ${disabled ? 'bg-[#f5f5f5] cursor-not-allowed' : ''}`}
+        className={`relative flex items-center justify-between h-12.5 px-4 border border-gray-200 rounded-lg bg-white cursor-pointer transition-colors duration-200 ease-in-out hover:border-bg-400 ${isOpen ? 'border-bg-400' : ''} ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
         onClick={handleOpen}
       >
-        <span className={`flex-1 text-[15px] font-normal whitespace-nowrap overflow-hidden text-ellipsis ${!selectedOption ? 'text-bg-400' : 'text-gray-700'}`}>
+        <span className={`flex-1 text-15 font-normal whitespace-nowrap overflow-hidden text-ellipsis ${!selectedOption ? 'text-bg-400' : 'text-gray-700'}`}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <svg
@@ -93,7 +93,7 @@ export const Select = ({
       </div>
       {isOpen && createPortal(
         <div
-          className="fixed max-h-[200px] overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-md z-[9999]"
+          className="fixed max-h-50 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-md z-9999"
           style={{ top: dropdownStyle.top, left: dropdownStyle.left, width: dropdownStyle.width }}
         >
           <ul className="m-0 p-0 list-none">
@@ -107,7 +107,7 @@ export const Select = ({
                       {group.options.map((option) => (
                         <li
                           key={option.value}
-                          className={`px-4 py-3 text-[15px] font-normal cursor-pointer transition-colors duration-200 ease-in-out hover:bg-primary-050 ${option.value === value ? 'bg-primary-050 text-primary-900 font-medium' : 'text-gray-700'}`}
+                          className={`px-4 py-3 text-15 font-normal cursor-pointer transition-colors duration-200 ease-in-out hover:bg-primary-050 ${option.value === value ? 'bg-primary-050 text-primary-900 font-medium' : 'text-gray-700'}`}
                           onMouseDown={(e) => {
                             e.preventDefault();
                             handleSelect(option.value);
@@ -122,7 +122,7 @@ export const Select = ({
               : options.map((option) => (
                   <li
                     key={option.value}
-                    className={`px-4 py-3 text-[15px] font-normal cursor-pointer transition-colors duration-200 ease-in-out hover:bg-primary-050 ${option.value === value ? 'bg-primary-050 text-primary-900 font-medium' : 'text-gray-700'}`}
+                    className={`px-4 py-3 text-15 font-normal cursor-pointer transition-colors duration-200 ease-in-out hover:bg-primary-050 ${option.value === value ? 'bg-primary-050 text-primary-900 font-medium' : 'text-gray-700'}`}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       handleSelect(option.value);

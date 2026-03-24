@@ -405,7 +405,7 @@ export const ProductListPage = () => {
       render: (product) => (
         <div className="flex flex-col gap-1">
           <button
-            className="px-3 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-[#e5e7eb] text-[#374151]"
+            className="px-3 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-neutral-050 text-bg-800"
             onClick={(e) => {
               e.stopPropagation();
               handleOpenDetailModal(product);
@@ -414,7 +414,7 @@ export const ProductListPage = () => {
             수정
           </button>
           <button
-            className="px-3 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-[#fecaca] text-[#991b1b]"
+            className="px-3 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-red-200 text-red-700"
             onClick={async (e) => {
               e.stopPropagation();
               if (!confirm("정말 삭제하시겠습니까?")) return;
@@ -448,7 +448,7 @@ export const ProductListPage = () => {
           actions={
             <button
               type="button"
-              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-15 font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={handleExportCSV}
               disabled={products.length === 0}
             >
@@ -460,12 +460,12 @@ export const ProductListPage = () => {
         <div className="border-y border-gray-200 overflow-hidden">
           {/* 검색어 */}
           <div className="flex items-stretch border-b border-gray-200">
-            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
               검색어
             </div>
             <div className="flex items-center gap-3 flex-1 px-4 py-3 bg-white">
               <select
-                className="h-9 px-3 py-1.5 border border-gray-200 rounded text-[14px] text-gray-700 bg-white"
+                className="h-9 px-3 py-1.5 border border-gray-200 rounded text-14 text-gray-700 bg-white"
                 value={searchType}
                 onChange={(e) => setSearchType(e.target.value)}
               >
@@ -482,7 +482,7 @@ export const ProductListPage = () => {
 
           {/* 시즌 + 성별 (같은 행) */}
           <div className="flex items-stretch border-b border-gray-200">
-            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
               시즌
             </div>
             <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white border-r border-gray-200">
@@ -492,7 +492,7 @@ export const ProductListPage = () => {
                 { value: "S", label: "하복(S)" },
                 { value: "A", label: "사계절(A)" },
               ].map((opt) => (
-                <label key={opt.value} className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <label key={opt.value} className="flex items-center gap-1.5 text-14 text-gray-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={seasonFilter === opt.value}
@@ -503,12 +503,12 @@ export const ProductListPage = () => {
                 </label>
               ))}
             </div>
-            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
               성별
             </div>
             <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white">
               {[{ value: "", label: "전체" }, ...GENDER_OPTIONS].map((opt) => (
-                <label key={opt.value} className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <label key={opt.value} className="flex items-center gap-1.5 text-14 text-gray-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={genderFilter === opt.value}
@@ -523,7 +523,7 @@ export const ProductListPage = () => {
 
           {/* 카테고리 */}
           <div className="flex items-stretch">
-            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
               카테고리
             </div>
             <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white">
@@ -533,7 +533,7 @@ export const ProductListPage = () => {
                 { value: "pants", label: "하의" },
                 { value: "skirt", label: "용품" },
               ].map((opt) => (
-                <label key={opt.value} className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer">
+                <label key={opt.value} className="flex items-center gap-1.5 text-14 text-gray-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={categoryFilter === opt.value}

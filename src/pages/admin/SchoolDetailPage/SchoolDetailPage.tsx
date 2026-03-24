@@ -254,11 +254,11 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
             추가
           </Button>
           <div className="flex gap-1">
-            <button className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-[#e5e7eb] text-[#374151]">
+            <button className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-neutral-050 text-bg-800">
               수정
             </button>
             <button
-              className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-[#fecaca] text-[#991b1b]"
+              className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-red-200 text-red-700"
               onClick={(e) => handleDeleteStudent(e, row.id)}
             >
               삭제
@@ -278,7 +278,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         actions={
           <button
             type="button"
-            className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-15 font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={handleExportCSV}
             disabled={students.length === 0}
           >
@@ -289,12 +289,12 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
 
       <div className="border-y border-gray-200 overflow-hidden">
         <div className="flex items-stretch border-b border-gray-200">
-          <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+          <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
             검색어
           </div>
           <div className="flex items-center gap-3 flex-1 px-4 py-3 bg-white">
             <select
-              className="h-9 px-3 py-1.5 border border-gray-200 rounded text-[14px] text-gray-700 bg-white"
+              className="h-9 px-3 py-1.5 border border-gray-200 rounded text-14 text-gray-700 bg-white"
               value={searchType}
               onChange={(e) => setSearchType(e.target.value)}
             >
@@ -311,7 +311,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         </div>
 
         <div className="flex items-stretch">
-          <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+          <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
             학년
           </div>
           <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white border-r border-gray-200">
@@ -322,7 +322,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
             ].map((opt) => (
               <label
                 key={opt.value}
-                className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer"
+                className="flex items-center gap-1.5 text-14 text-gray-700 cursor-pointer"
               >
                 <input
                   type="checkbox"
@@ -338,7 +338,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
               </label>
             ))}
           </div>
-          <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+          <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
             주관구매
           </div>
           <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white">
@@ -349,7 +349,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
             ].map((opt) => (
               <label
                 key={opt.value}
-                className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer"
+                className="flex items-center gap-1.5 text-14 text-gray-700 cursor-pointer"
               >
                 <input
                   type="checkbox"
@@ -527,14 +527,14 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
           <div className="flex gap-2">
             <button
               type="button"
-              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap"
+              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-15 font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap"
               onClick={() => setIsStockModalOpen(true)}
             >
               재고 추가
             </button>
             <button
               type="button"
-              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-[15px] font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap"
+              className="flex items-center justify-center w-auto h-8.5 px-4 bg-white border border-gray-300 rounded-lg text-15 font-normal text-gray-700 cursor-pointer transition-opacity duration-200 hover:opacity-80 whitespace-nowrap"
               onClick={handleExportCSV}
             >
               CSV 내보내기
@@ -545,14 +545,14 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
 
       <div className="border-y border-gray-200 overflow-hidden">
         <div className="flex items-stretch">
-          <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-[14px] font-medium text-gray-700 border-r border-gray-200">
+          <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
             품목
           </div>
           <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white flex-wrap">
             {productOptions.map((opt) => (
               <label
                 key={opt}
-                className="flex items-center gap-1.5 text-[14px] text-gray-700 cursor-pointer"
+                className="flex items-center gap-1.5 text-14 text-gray-700 cursor-pointer"
               >
                 <input
                   type="checkbox"
@@ -581,11 +581,11 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-gray-400 text-[14px]">
+        <div className="flex items-center justify-center py-20 text-gray-400 text-14">
           로딩 중...
         </div>
       ) : error ? (
-        <div className="flex items-center justify-center py-20 text-red-400 text-[14px]">
+        <div className="flex items-center justify-center py-20 text-red-400 text-14">
           {error}
         </div>
       ) : visibleProducts.length > 0 ? (
@@ -593,7 +593,7 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
           <OrderSizeTable key={product.product_id} product={product} />
         ))
       ) : (
-        <div className="flex items-center justify-center py-20 text-gray-400 text-[14px]">
+        <div className="flex items-center justify-center py-20 text-gray-400 text-14">
           주문/예약 데이터가 없습니다.
         </div>
       )}

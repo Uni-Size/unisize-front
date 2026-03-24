@@ -106,13 +106,13 @@ export const ProductAddModal = ({
       actions={
         <>
           <button
-            className="px-6 py-2.5 bg-[#6c757d] text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+            className="px-6 py-2.5 bg-neutral-500 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
             onClick={handleClose}
           >
             취소
           </button>
           <button
-            className="px-6 py-2.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+            className="px-6 py-2.5 bg-primary-900 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
             onClick={handleSubmit}
           >
             추가
@@ -222,18 +222,18 @@ export const ProductAddModal = ({
         {/* 사용 학교 */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2.5">
-            <span className="text-[15px] font-normal text-gray-700">
+            <span className="text-15 font-normal text-gray-700">
               사용 학교
             </span>
             <button
-              className="px-4 py-1.5 bg-primary-900 text-[#f9fafb] text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              className="px-4 py-1.5 bg-primary-900 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
               onClick={onOpenSchoolModal}
             >
               학교 추가
             </button>
           </div>
           {selectedSchools.length === 0 ? (
-            <p className="text-[15px] text-gray-400 text-center py-2">
+            <p className="text-15 text-gray-400 text-center py-2">
               사용하는 학교가 없습니다
             </p>
           ) : (
@@ -260,13 +260,13 @@ export const ProductAddModal = ({
                           key={`${school.year}-${school.schoolId}`}
                           className="flex items-center gap-2"
                         >
-                          <span className="flex items-center px-4 py-2 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
+                          <span className="flex items-center px-4 py-2 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
                             {school.schoolName}
                           </span>
-                          <div className="flex items-center px-4 py-2 border border-gray-200 rounded-lg bg-white text-[15px] text-gray-700">
+                          <div className="flex items-center px-4 py-2 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
                             <input
                               type="number"
-                              className="w-20 border-none bg-transparent text-[15px] text-gray-700 text-right outline-none"
+                              className="w-20 border-none bg-transparent text-15 text-gray-700 text-right outline-none"
                               value={school.price}
                               onChange={(e) =>
                                 onSchoolPriceChange(

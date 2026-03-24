@@ -40,7 +40,7 @@ export const Table = <T extends object>({
         <tbody className="bg-white">
           {data.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="p-12 text-center text-sm text-[#767676]">
+              <td colSpan={columns.length} className="p-12 text-center text-sm text-bg-500">
                 {emptyMessage}
               </td>
             </tr>

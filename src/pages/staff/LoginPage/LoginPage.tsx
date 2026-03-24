@@ -104,7 +104,7 @@ export const LoginPage = () => {
           </p>
         </div>
 
-        <div className="text-[13px] md:text-sm text-gray-500 text-center leading-[1.8]">
+        <div className="text-13 md:text-sm text-gray-500 text-center leading-[1.8]">
           <p>모든 데이터는 기밀이며, 외부로의 유출/공유를 금지합니다.</p>
           <p>업무 외 무단 열람/복제 및 개인적 사용을 금지합니다.</p>
           <p>이를 위반할 경우 관련 법규에 따른 책임을 질 수 있습니다.</p>

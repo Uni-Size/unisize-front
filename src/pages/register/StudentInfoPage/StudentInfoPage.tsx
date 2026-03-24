@@ -62,7 +62,7 @@ export const StudentInfoPage = () => {
         <button
           type="button"
           onClick={handleBack}
-          className="flex items-center gap-1 bg-none border-none cursor-pointer text-[#4b5563] font-medium p-0 transition-colors duration-200 ease-in-out hover:text-[#262626]"
+          className="flex items-center gap-1 bg-none border-none cursor-pointer text-slate-600 font-medium p-0 transition-colors duration-200 ease-in-out hover:text-bg-900"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -80,7 +80,7 @@ export const StudentInfoPage = () => {
         </button>
       </div>
 
-      <h2 className="text-2xl font-bold text-center mb-14 text-[#262626] leading-[1.4]">
+      <h2 className="text-2xl font-bold text-center mb-14 text-bg-900 leading-[1.4]">
         {formData.admissionSchool}에
         {formData.admissionGrade === 1 ? ' 입학하는' : ' 전학오는'} <br />
         학생의 정보를 알려주세요
@@ -88,7 +88,7 @@ export const StudentInfoPage = () => {
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <label htmlFor="birthDate" className="text-sm font-medium text-[#4c4c4c]">
+          <label htmlFor="birthDate" className="text-sm font-medium text-gray-700">
             학생 생년월일
           </label>
           <input
@@ -96,12 +96,12 @@ export const StudentInfoPage = () => {
             type="date"
             value={formData.birthDate}
             onChange={(e) => setFormData('birthDate', e.target.value)}
-            className="w-full py-3 px-4 border border-[#a3a3a3] rounded-lg text-base bg-white focus:outline-none focus:border-[#6a73a7] focus:ring-2 focus:ring-[#6a73a7]/20"
+            className="w-full py-3 px-4 border border-gray-300 rounded-lg text-base bg-white focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="name" className="text-sm font-medium text-[#4c4c4c]">
+          <label htmlFor="name" className="text-sm font-medium text-gray-700">
             학생이름
           </label>
           <Input
@@ -115,27 +115,27 @@ export const StudentInfoPage = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-[#4c4c4c]">성별</label>
+          <label className="text-sm font-medium text-gray-700">성별</label>
           <div className="flex gap-4">
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-[#4c4c4c]">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
               <input
                 type="radio"
                 name="gender"
                 value="M"
                 checked={formData.gender === 'M'}
                 onChange={(e) => setFormData('gender', e.target.value as 'M' | 'F')}
-                className="w-4 h-4 accent-[#525a8d]"
+                className="w-4 h-4 accent-primary-600"
               />
               <span>남자</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-[#4c4c4c]">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
               <input
                 type="radio"
                 name="gender"
                 value="F"
                 checked={formData.gender === 'F'}
                 onChange={(e) => setFormData('gender', e.target.value as 'M' | 'F')}
-                className="w-4 h-4 accent-[#525a8d]"
+                className="w-4 h-4 accent-primary-600"
               />
               <span>여자</span>
             </label>
@@ -143,7 +143,7 @@ export const StudentInfoPage = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="studentPhone" className="text-sm font-medium text-[#4c4c4c]">
+          <label htmlFor="studentPhone" className="text-sm font-medium text-gray-700">
             학생 연락처
           </label>
           <Input
@@ -161,7 +161,7 @@ export const StudentInfoPage = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="guardianPhone" className="text-sm font-medium text-[#4c4c4c]">
+          <label htmlFor="guardianPhone" className="text-sm font-medium text-gray-700">
             보호자 연락처
           </label>
           <Input
@@ -178,19 +178,19 @@ export const StudentInfoPage = () => {
           />
         </div>
 
-        <div className="mt-6 p-4 bg-[#f9fafb] rounded-lg">
+        <div className="mt-6 p-4 bg-bg-050 rounded-lg">
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
               checked={formData.privacyConsent || false}
               onChange={(e) => setFormData('privacyConsent', e.target.checked)}
-              className="w-4 h-4 mt-1 accent-[#525a8d] shrink-0"
+              className="w-4 h-4 mt-1 accent-primary-600 shrink-0"
             />
             <div className="text-sm">
-              <span className="font-medium text-[#262626]">
+              <span className="font-medium text-bg-900">
                 {PRIVACY_POLICY.title}
               </span>
-              <div className="mt-2 text-xs text-[#4b5563] leading-relaxed">
+              <div className="mt-2 text-xs text-slate-600 leading-relaxed">
                 {PRIVACY_POLICY.items.map((item, index) => (
                   <div key={index}>• {item}</div>
                 ))}
@@ -199,7 +199,7 @@ export const StudentInfoPage = () => {
           </label>
         </div>
 
-        {error && <p className="text-[#ef4444] text-sm text-center">{error}</p>}
+        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
         <div className="flex gap-4 mt-6">
           <Button

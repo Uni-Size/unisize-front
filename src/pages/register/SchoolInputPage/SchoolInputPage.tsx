@@ -66,7 +66,7 @@ export const SchoolInputPage = () => {
         <button
           type="button"
           onClick={handleBack}
-          className="flex items-center gap-1 bg-none border-none cursor-pointer text-[#4b5563] font-medium p-0 transition-colors duration-200 ease-in-out hover:text-[#262626]"
+          className="flex items-center gap-1 bg-none border-none cursor-pointer text-slate-600 font-medium p-0 transition-colors duration-200 ease-in-out hover:text-bg-900"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -84,13 +84,13 @@ export const SchoolInputPage = () => {
         </button>
       </div>
 
-      <h2 className="text-2xl font-bold text-center mb-14 text-[#262626]">
+      <h2 className="text-2xl font-bold text-center mb-14 text-bg-900">
         출신학교와 입학학교를 알려주세요
       </h2>
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <label htmlFor="previousSchool" className="text-sm font-medium text-[#4c4c4c]">
+          <label htmlFor="previousSchool" className="text-sm font-medium text-gray-700">
             출신학교
           </label>
           <Input
@@ -104,14 +104,14 @@ export const SchoolInputPage = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="admissionYear" className="text-sm font-medium text-[#4c4c4c]">
+          <label htmlFor="admissionYear" className="text-sm font-medium text-gray-700">
             입학년도
           </label>
           <select
             id="admissionYear"
             value={formData.admissionYear}
             onChange={(e) => setFormData('admissionYear', parseInt(e.target.value))}
-            className="w-full py-3 px-4 border border-[#a3a3a3] rounded-lg text-base bg-white cursor-pointer focus:outline-none focus:border-[#6a73a7] focus:ring-2 focus:ring-[#6a73a7]/20 disabled:bg-[#e1e1e1] disabled:cursor-not-allowed"
+            className="w-full py-3 px-4 border border-gray-300 rounded-lg text-base bg-white cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
             {generateYearOptions().map((year) => (
               <option key={year} value={year}>
@@ -122,14 +122,14 @@ export const SchoolInputPage = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="admissionGrade" className="text-sm font-medium text-[#4c4c4c]">
+          <label htmlFor="admissionGrade" className="text-sm font-medium text-gray-700">
             입학학년
           </label>
           <select
             id="admissionGrade"
             value={formData.admissionGrade}
             onChange={(e) => setFormData('admissionGrade', parseInt(e.target.value))}
-            className="w-full py-3 px-4 border border-[#a3a3a3] rounded-lg text-base bg-white cursor-pointer focus:outline-none focus:border-[#6a73a7] focus:ring-2 focus:ring-[#6a73a7]/20 disabled:bg-[#e1e1e1] disabled:cursor-not-allowed"
+            className="w-full py-3 px-4 border border-gray-300 rounded-lg text-base bg-white cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
             {GRADE_OPTIONS.map((grade) => (
               <option key={grade.value} value={grade.value}>
@@ -140,7 +140,7 @@ export const SchoolInputPage = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="admissionSchool" className="text-sm font-medium text-[#4c4c4c]">
+          <label htmlFor="admissionSchool" className="text-sm font-medium text-gray-700">
             입학학교
           </label>
           <select
@@ -159,7 +159,7 @@ export const SchoolInputPage = () => {
               }
             }}
             disabled={isLoadingSchools}
-            className="w-full py-3 px-4 border border-[#a3a3a3] rounded-lg text-base bg-white cursor-pointer focus:outline-none focus:border-[#6a73a7] focus:ring-2 focus:ring-[#6a73a7]/20 disabled:bg-[#e1e1e1] disabled:cursor-not-allowed"
+            className="w-full py-3 px-4 border border-gray-300 rounded-lg text-base bg-white cursor-pointer focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
             <option value="">
               {isLoadingSchools
@@ -178,11 +178,11 @@ export const SchoolInputPage = () => {
           <img
             src="/student/congrats.svg"
             alt="축하 이미지"
-            className="w-[200px] h-auto"
+            className="w-50 h-auto"
           />
         </div>
 
-        {error && <p className="text-[#ef4444] text-sm text-center">{error}</p>}
+        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
         <Button
           type="button"

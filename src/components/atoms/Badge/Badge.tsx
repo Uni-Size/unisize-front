@@ -8,10 +8,10 @@ export interface BadgeProps {
 
 const variantStyles = {
   default: 'bg-gray-100 text-gray-700',
-  success: 'bg-[#dcfce7] text-[#166534]',
-  warning: 'bg-[#fef3c7] text-[#92400e]',
-  error: 'bg-[#fee2e2] text-[#991b1b]',
-  info: 'bg-[#dbeafe] text-[#1e40af]',
+  success: 'bg-green-050 text-green-700',
+  warning: 'bg-yellow-050 text-yellow-700',
+  error: 'bg-red-050 text-red-700',
+  info: 'bg-blue-050 text-blue-700',
 };
 
 const sizeStyles = {
