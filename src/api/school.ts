@@ -26,8 +26,8 @@ export type SchoolType = '초' | '중' | '고';
 export interface SupportedYear {
   id?: number;
   year: number;
-  measurement_start_date: string;
-  measurement_end_date: string;
+  measurement_start_date: string | null;
+  measurement_end_date: string | null;
 }
 
 export interface SchoolListItem {
@@ -64,8 +64,8 @@ export interface SchoolDetailYear {
   year: number;
   is_active: boolean;
   expected_student_count: number;
-  measurement_start_date: string;
-  measurement_end_date: string;
+  measurement_start_date: string | null;
+  measurement_end_date: string | null;
 }
 
 export interface SchoolDetailUniform {

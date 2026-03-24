@@ -50,7 +50,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 
 const YEAR_OPTIONS = [2023, 2024, 2025, 2026];
 
-const formatDate = (dateStr: string): string => {
+const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
   const yy = String(d.getFullYear()).slice(2);

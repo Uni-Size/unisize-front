@@ -74,8 +74,8 @@ export const SchoolDetailModal = ({
         detail.years.map((y) => ({
           _id: `sy-${y.id}`,
           year: y.year,
-          measurement_start_date: y.measurement_start_date,
-          measurement_end_date: y.measurement_end_date,
+          measurement_start_date: y.measurement_start_date ?? null,
+          measurement_end_date: y.measurement_end_date ?? null,
           expected_student_count: y.expected_student_count,
         }))
       );
@@ -468,7 +468,7 @@ export const SchoolDetailModal = ({
                   <Input
                     label="측정기간"
                     placeholder="2025-01-01"
-                    value={y.measurement_start_date}
+                    value={y.measurement_start_date ?? ''}
                     onChange={(e) => handleYearChange(y._id, 'measurement_start_date', e.target.value)}
                     fullWidth
                   />
@@ -487,7 +487,7 @@ export const SchoolDetailModal = ({
                   <Input
                     label=" "
                     placeholder="2025-01-10"
-                    value={y.measurement_end_date}
+                    value={y.measurement_end_date ?? ''}
                     onChange={(e) => handleYearChange(y._id, 'measurement_end_date', e.target.value)}
                     fullWidth
                   />
