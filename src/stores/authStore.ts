@@ -46,12 +46,6 @@ export const useAuthStore = create<AuthState>()(
 
       // 로그인 성공 시 호출
       setAuth: (staff, accessToken, refreshToken) => {
-        // localStorage에도 저장
-        localStorage.setItem("accessToken", accessToken);
-        if (refreshToken) {
-          localStorage.setItem("refreshToken", refreshToken);
-        }
-
         set({
           isAuthenticated: true,
           staff,

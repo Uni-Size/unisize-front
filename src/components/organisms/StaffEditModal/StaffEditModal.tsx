@@ -7,7 +7,6 @@ export interface StaffEditData {
   employeeId: string;
   name: string;
   gender: '남' | '여';
-  phone: string;
   registeredDate: string;
 }
 
@@ -27,14 +26,12 @@ export const StaffEditModal = ({
   const [isEditMode, setIsEditMode] = useState(false);
   const [name, setName] = useState('');
   const [gender, setGender] = useState<'남' | '여'>('남');
-  const [phone, setPhone] = useState('');
   const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
     if (staff) {
       setName(staff.name);
       setGender(staff.gender);
-      setPhone(staff.phone);
       setIsEditMode(false);
     }
   }, [staff]);
@@ -54,7 +51,6 @@ export const StaffEditModal = ({
         ...staff,
         name,
         gender,
-        phone,
       });
     }
     setIsEditMode(false);
@@ -131,7 +127,7 @@ export const StaffEditModal = ({
         <div className="flex gap-2 items-end">
           <div className="flex-1 min-w-0">
             <div className="flex flex-col gap-1">
-              <span className="px-2 text-base text-bg-800">사번</span>
+              <span className="px-2 text-base text-bg-800">연락처</span>
               <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
                 {staff.employeeId}
               </div>
@@ -189,26 +185,6 @@ export const StaffEditModal = ({
                 <span className="px-2 text-base text-bg-800">성별</span>
                 <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
                   {staff.gender}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex gap-2 items-end">
-          <div className="flex-1 min-w-0">
-            {isEditMode ? (
-              <Input
-                label="연락처"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                fullWidth
-              />
-            ) : (
-              <div className="flex flex-col gap-1">
-                <span className="px-2 text-base text-bg-800">연락처</span>
-                <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
-                  {staff.phone}
                 </div>
               </div>
             )}

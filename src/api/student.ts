@@ -406,6 +406,7 @@ export interface AdminStudent {
   previous_school: string;
   admission_year: number;
   admission_grade: number;
+  admission_school?: string;
   school_name: string;
   class_name: string;
   student_number: string;

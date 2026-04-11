@@ -48,7 +48,7 @@ export async function getPendingStaffList(): Promise<StaffItem[]> {
  */
 export async function approveStaff(staffId: number): Promise<void> {
   await apiClient.post<ApiResponse<void>>("/api/v1/admin/staff/approve", {
-    staff_id: staffId,
+    user_ids: [staffId],
   });
 }
 

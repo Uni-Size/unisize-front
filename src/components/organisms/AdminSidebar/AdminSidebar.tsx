@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { getSupportedSchoolsByYear } from '@/api/school';
-import type { School } from '@/api/school';
+import { getSchoolList } from '@/api/school';
+import type { SchoolListItem } from '@/api/school';
 import { getTargetYear } from '@/utils/schoolUtils';
 
 interface SchoolSubPage {
@@ -37,15 +37,16 @@ const staffSubMenus: SubMenuItem[] = [
   { id: 'staff-approval', name: '승인', path: '/admin/staff/approval' },
 ];
 
-const toSchoolItem = (school: School, type: 'middle' | 'high'): SchoolItem => {
-  const basePath = `/admin/orders/${type}/${school.id}`;
+const toSchoolItem = (school: SchoolListItem, type: 'elementary' | 'middle' | 'high'): SchoolItem => {
+  const id = school.id ?? school.school_name;
+  const basePath = `/admin/orders/${type}/${id}`;
   return {
-    id: `school-${school.id}`,
-    name: school.name,
+    id: `school-${id}`,
+    name: school.school_name,
     basePath,
     subPages: [
-      { id: `school-${school.id}-students`, name: '학생', path: `${basePath}/students` },
-      { id: `school-${school.id}-orders`, name: '주문/예약', path: `${basePath}/orders` },
+      { id: `school-${id}-students`, name: '학생', path: `${basePath}/students` },
+      { id: `school-${id}-orders`, name: '주문/예약', path: `${basePath}/orders` },
     ],
   };
 };
@@ -59,24 +60,26 @@ export const AdminSidebar = () => {
   const navigate = useNavigate();
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [expandedSchools, setExpandedSchools] = useState<string[]>([]);
+  const [elementarySchools, setElementarySchools] = useState<SchoolItem[]>([]);
   const [middleSchools, setMiddleSchools] = useState<SchoolItem[]>([]);
   const [highSchools, setHighSchools] = useState<SchoolItem[]>([]);
   const targetYear = getTargetYear();
 
   // API에서 학교 목록 조회
   useEffect(() => {
-    getSupportedSchoolsByYear(targetYear)
-      .then((schools) => {
-        const middle = schools
-          .filter((s) => s.name.includes('중학교'))
-          .sort((a, b) => a.name.localeCompare(b.name, 'ko'))
-          .map((s) => toSchoolItem(s, 'middle'));
-        const high = schools
-          .filter((s) => !s.name.includes('중학교'))
-          .sort((a, b) => a.name.localeCompare(b.name, 'ko'))
-          .map((s) => toSchoolItem(s, 'high'));
-        setMiddleSchools(middle);
-        setHighSchools(high);
+    getSchoolList({ is_active: true, year: targetYear })
+      .then(({ schools }) => {
+        const sort = (a: SchoolListItem, b: SchoolListItem) =>
+          a.school_name.localeCompare(b.school_name, 'ko');
+        setElementarySchools(
+          schools.filter((s) => s.school_type === '초').sort(sort).map((s) => toSchoolItem(s, 'elementary'))
+        );
+        setMiddleSchools(
+          schools.filter((s) => s.school_type === '중').sort(sort).map((s) => toSchoolItem(s, 'middle'))
+        );
+        setHighSchools(
+          schools.filter((s) => s.school_type === '고').sort(sort).map((s) => toSchoolItem(s, 'high'))
+        );
       })
       .catch((err) => {
         console.error('학교 목록 조회 실패:', err);
@@ -88,6 +91,7 @@ export const AdminSidebar = () => {
     const handleSchoolDeleted = (e: Event) => {
       const { schoolId } = (e as CustomEvent<{ schoolId: number }>).detail;
       const targetId = `school-${schoolId}`;
+      setElementarySchools((prev) => prev.filter((s) => s.id !== targetId));
       setMiddleSchools((prev) => prev.filter((s) => s.id !== targetId));
       setHighSchools((prev) => prev.filter((s) => s.id !== targetId));
       setExpandedSchools((prev) => prev.filter((id) => id !== targetId));
@@ -97,42 +101,43 @@ export const AdminSidebar = () => {
   }, []);
 
   const menuItems: MenuItem[] = [
-    { id: 'middle', label: `[${targetYear}]주관구매 -중`, path: '/admin/orders/middle', schoolItems: middleSchools },
-    { id: 'high', label: `[${targetYear}]주관구매 -고`, path: '/admin/orders/high', schoolItems: highSchools },
+    ...(elementarySchools.length > 0 ? [{ id: 'elementary', label: `[${targetYear}]주관구매 -초`, path: '/admin/orders/elementary', schoolItems: elementarySchools }] : []),
+    ...(middleSchools.length > 0 ? [{ id: 'middle', label: `[${targetYear}]주관구매 -중`, path: '/admin/orders/middle', schoolItems: middleSchools }] : []),
+    ...(highSchools.length > 0 ? [{ id: 'high', label: `[${targetYear}]주관구매 -고`, path: '/admin/orders/high', schoolItems: highSchools }] : []),
     { id: 'product', label: '교복/용품', path: '/admin/products' },
     { id: 'school', label: '학교', path: '/admin/schools' },
     { id: 'student', label: '학생', path: '/admin/students' },
     { id: 'staff', label: '스태프', path: '/admin/staff', subMenus: staffSubMenus },
   ];
 
-  const isActive = (path: string) => location.pathname === path;
-  const isMenuExpanded = (menuId: string) => expandedMenus.includes(menuId);
-  const isSchoolExpanded = (schoolId: string) => expandedSchools.includes(schoolId);
+  const pathname = location.pathname;
+
+  const isActive = (path: string) => pathname === path;
 
   const isSchoolActive = (school: SchoolItem) =>
-    school.subPages.some((sp) => location.pathname === sp.path);
+    school.subPages.some((sp) => pathname === sp.path);
 
   const isMenuActive = (menu: MenuItem) => {
-    if (menu.subMenus) return menu.subMenus.some((sub) => location.pathname === sub.path);
+    if (menu.subMenus) return menu.subMenus.some((sub) => pathname === sub.path);
     if (menu.schoolItems) return menu.schoolItems.some((s) => isSchoolActive(s));
     return false;
   };
 
-  // 현재 경로에 해당하는 메뉴 & 학교를 자동으로 펼침
-  useEffect(() => {
-    menuItems.forEach((menu) => {
-      if ((menu.subMenus || menu.schoolItems) && isMenuActive(menu) && !expandedMenus.includes(menu.id)) {
-        setExpandedMenus((prev) => [...prev, menu.id]);
-      }
-      if (menu.schoolItems) {
-        menu.schoolItems.forEach((school) => {
-          if (isSchoolActive(school) && !expandedSchools.includes(school.id)) {
-            setExpandedSchools((prev) => [...prev, school.id]);
-          }
-        });
-      }
-    });
-  }, [location.pathname, middleSchools, highSchools]);
+  // 수동 토글 + 현재 경로에 해당하는 메뉴를 합산하여 펼침 여부 결정
+  const isMenuExpanded = (menuId: string) => {
+    if (expandedMenus.includes(menuId)) return true;
+    const menu = menuItems.find((m) => m.id === menuId);
+    return menu ? isMenuActive(menu) : false;
+  };
+
+  const isSchoolExpanded = (schoolId: string) => {
+    if (expandedSchools.includes(schoolId)) return true;
+    for (const menu of menuItems) {
+      const school = menu.schoolItems?.find((s) => s.id === schoolId);
+      if (school) return isSchoolActive(school);
+    }
+    return false;
+  };
 
   const toggleMenu = (menu: MenuItem) => {
     const isExpanded = expandedMenus.includes(menu.id);

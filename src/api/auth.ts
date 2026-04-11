@@ -8,11 +8,14 @@ import type { StaffInfo } from "@/stores/authStore";
 function setCookie(name: string, value: string, days: number = 7) {
   const expires = new Date();
   expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
-  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+  const secure = window.location.protocol === "https:" ? ";Secure" : "";
+  // HttpOnly는 서버에서만 설정 가능하므로 JS에서는 SameSite=Strict으로 CSRF 방지
+  document.cookie = `${name}=${encodeURIComponent(value)};expires=${expires.toUTCString()};path=/;SameSite=Strict${secure}`;
 }
 
 function deleteCookie(name: string) {
-  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
+  const secure = window.location.protocol === "https:" ? ";Secure" : "";
+  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;SameSite=Strict${secure}`;
 }
 
 // ============================================================================
@@ -70,17 +73,15 @@ export async function login(credentials: LoginRequest): Promise<LoginResponseDat
 
   const loginData = response.data.data;
 
-  // 토큰을 localStorage와 쿠키에 저장
+  // 토큰을 localStorage에 저장 (authStore.setAuth에서도 저장하지만 apiClient 인터셉터가 즉시 사용할 수 있도록 선행 저장)
   if (loginData.access_token) {
     localStorage.setItem("accessToken", loginData.access_token);
-    setCookie("accessToken", loginData.access_token, 7);
 
     if (loginData.refresh_token) {
       localStorage.setItem("refreshToken", loginData.refresh_token);
-      setCookie("refreshToken", loginData.refresh_token, 30);
     }
 
-    // role 정보를 쿠키에 저장 (middleware에서 권한 검증용)
+    // role 정보를 쿠키에 저장 (라우터 가드용, 민감하지 않은 정보만)
     if (loginData.user?.role) {
       setCookie("userRole", loginData.user.role, 7);
     }

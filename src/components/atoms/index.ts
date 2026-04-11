@@ -5,3 +5,4 @@ export * from './Badge';
 export * from './Pagination';
 export * from './Modal';
 export * from './Select';
+export * from './Toast';

@@ -48,11 +48,11 @@ export const StudentListPage = () => {
     id: student.id,
     no: (page - 1) * itemsPerPage + index + 1,
     category: `${student.admission_grade}학년`,
-    school: student.school_name,
+    school: student.admission_school ?? student.school_name,
     name: student.name,
     gender: student.gender === 'M' ? '남' : student.gender === 'F' ? '여' : student.gender === 'U' ? '공용' : student.gender,
-    studentPhone: student.student_phone,
-    parentPhone: student.guardian_phone,
+    studentPhone: student.student_phone || '-',
+    parentPhone: student.guardian_phone || '-',
     governmentPurchase: student.government_purchase ? 'O' : 'X',
     registeredDate: student.created_at ?? '',
   });
@@ -172,7 +172,7 @@ export const StudentListPage = () => {
     return {
       id: String(detail.id),
       orderId: firstSnapshot?.orderId,
-      admissionSchool: detail.school_name,
+      admissionSchool: detail.admission_school ?? detail.school_name,
       previousSchool: detail.previous_school,
       classNumber: detail.class_name || '',
       name: detail.name,

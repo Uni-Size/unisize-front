@@ -17,7 +17,6 @@ interface StaffRow {
   no: number;
   name: string;
   gender: '남' | '여';
-  phone: string;
   employeeId: string;
   registeredDate: string;
 }
@@ -27,7 +26,6 @@ const toStaffRow = (item: StaffItem, index: number): StaffRow => ({
   no: index + 1,
   name: item.employee_name,
   gender: item.gender === 'M' ? '남' : '여',
-  phone: item.phone ?? '-',
   employeeId: item.employee_id,
   registeredDate: item.created_at,
 });
@@ -37,7 +35,6 @@ const toStaffEditData = (row: StaffRow): StaffEditData => ({
   employeeId: row.employeeId,
   name: row.name,
   gender: row.gender,
-  phone: row.phone,
   registeredDate: row.registeredDate,
 });
 
@@ -87,7 +84,7 @@ export const StaffListPage = () => {
 
   const handleExportCSV = () => {
     downloadCSV(
-      ['No.', '사번', '이름', '성별', '등록일'],
+      ['No.', '연락처', '이름', '성별', '등록일'],
       staffList.map((s) => [s.no, s.employeeId, s.name, s.gender, s.registeredDate]),
       '스태프목록',
     );
@@ -95,7 +92,7 @@ export const StaffListPage = () => {
 
   const columns: Column<StaffRow>[] = [
     { key: 'no', header: 'No.', width: '34px', align: 'center' },
-    { key: 'employeeId', header: '사번', width: '100px', align: 'center' },
+    { key: 'employeeId', header: '연락처', width: '100px', align: 'center' },
     { key: 'name', header: '이름', align: 'center' },
     { key: 'gender', header: '성별', width: '28px', align: 'center' },
 { key: 'registeredDate', header: '등록일', align: 'center' },

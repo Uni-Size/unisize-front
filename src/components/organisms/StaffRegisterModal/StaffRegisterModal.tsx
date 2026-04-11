@@ -63,7 +63,7 @@ export const StaffRegisterModal = ({
       handleClose();
       onSuccess();
     } catch {
-      setError('등록에 실패했습니다. 사번이 중복되었을 수 있습니다.');
+      setError('등록에 실패했습니다. 연락처가 중복되었을 수 있습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -97,8 +97,8 @@ export const StaffRegisterModal = ({
         <div className="flex gap-2 items-end">
           <div className="flex-1 min-w-0">
             <Input
-              label="사번"
-              placeholder="사번을 입력하세요"
+              label="연락처"
+              placeholder="연락처를 입력하세요"
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
               fullWidth

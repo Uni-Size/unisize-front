@@ -46,7 +46,7 @@ export const RegisterPage = () => {
       alert('가입 신청이 완료되었습니다. 관리자 승인 후 로그인할 수 있습니다.');
       navigate('/staff/login');
     } catch {
-      setError('가입에 실패했습니다. 사번이 중복되었을 수 있습니다.');
+      setError('가입에 실패했습니다. 연락처가 중복되었을 수 있습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +61,7 @@ export const RegisterPage = () => {
 
         <div className="flex flex-col gap-3">
           <Input
-            placeholder="사번"
+            placeholder="연락처"
             value={employeeId}
             onChange={(e) => setEmployeeId(e.target.value)}
             disabled={isLoading}

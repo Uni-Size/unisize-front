@@ -29,7 +29,7 @@ export const Table = <T extends object>({
             {columns.map((column) => (
               <th
                 key={String(column.key)}
-                className="p-4 text-left text-sm font-semibold text-gray-700 border-b border-gray-200 whitespace-nowrap"
+                className={`p-4 text-sm font-semibold text-gray-700 border-b border-gray-200 whitespace-nowrap ${column.align === 'center' ? 'text-center' : column.align === 'right' ? 'text-right' : 'text-left'}`}
                 style={{ width: column.width }}
               >
                 {column.header}
@@ -52,7 +52,7 @@ export const Table = <T extends object>({
                 onClick={() => onRowClick?.(item)}
               >
                 {columns.map((column) => (
-                  <td key={String(column.key)} className="p-4 text-sm text-gray-900 border-b border-gray-200">
+                  <td key={String(column.key)} className={`p-4 text-sm text-gray-900 border-b border-gray-200 ${column.align === 'center' ? 'text-center' : column.align === 'right' ? 'text-right' : ''}`}>
                     {column.render
                       ? column.render(item, index)
                       : String(item[column.key as keyof T] ?? '')}

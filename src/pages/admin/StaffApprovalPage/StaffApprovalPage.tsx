@@ -9,6 +9,7 @@ import type { Column } from '@components/atoms/Table';
 import { getPendingStaffList, approveStaff, type StaffItem } from '@/api/staff';
 import { getApiErrorMessage } from '@/utils/errorUtils';
 import { downloadCSV } from '@/utils/csvUtils';
+import { Toast } from '@components/atoms/Toast';
 
 interface PendingStaffRow {
   id: number;
@@ -16,7 +17,6 @@ interface PendingStaffRow {
   employeeId: string;
   name: string;
   gender: '남' | '여';
-  phone: string;
   registeredDate: string;
 }
 
@@ -26,7 +26,6 @@ const toPendingRow = (item: StaffItem, index: number): PendingStaffRow => ({
   employeeId: item.employee_id,
   name: item.employee_name,
   gender: item.gender === 'M' ? '남' : '여',
-  phone: item.phone ?? '-',
   registeredDate: item.created_at,
 });
 
@@ -35,6 +34,7 @@ export const StaffApprovalPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ReactNode>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [toast, setToast] = useState<{ message: string; variant: 'success' | 'error' } | null>(null);
   const itemsPerPage = 10;
 
   const fetchPendingList = useCallback(async () => {
@@ -59,26 +59,26 @@ export const StaffApprovalPage = () => {
     try {
       await approveStaff(staffId);
       fetchPendingList();
+      setToast({ message: '승인이 완료되었습니다.', variant: 'success' });
     } catch (error) {
       console.error('승인 실패:', error);
-      alert('승인에 실패했습니다.');
+      setToast({ message: '승인에 실패했습니다.', variant: 'error' });
     }
   };
 
   const handleExportCSV = () => {
     downloadCSV(
-      ['No.', '사번', '이름', '성별', '연락처', '등록일'],
-      pendingList.map((s) => [s.no, s.employeeId, s.name, s.gender, s.phone, s.registeredDate]),
+      ['No.', '연락처', '이름', '성별', '등록일'],
+      pendingList.map((s) => [s.no, s.employeeId, s.name, s.gender, s.registeredDate]),
       '스태프승인대기목록',
     );
   };
 
   const columns: Column<PendingStaffRow>[] = [
     { key: 'no', header: 'No.', width: '34px', align: 'center' },
-    { key: 'employeeId', header: '사번', width: '100px', align: 'center' },
+    { key: 'employeeId', header: '연락처', width: '100px', align: 'center' },
     { key: 'name', header: '이름', align: 'center' },
     { key: 'gender', header: '성별', width: '28px', align: 'center' },
-    { key: 'phone', header: '연락처', align: 'center' },
     { key: 'registeredDate', header: '등록일', align: 'center' },
     {
       key: 'actions',
@@ -108,6 +108,13 @@ export const StaffApprovalPage = () => {
 
   return (
     <AdminLayout>
+      {toast && (
+        <Toast
+          message={toast.message}
+          variant={toast.variant}
+          onClose={() => setToast(null)}
+        />
+      )}
       <div className="flex flex-col gap-5">
         <AdminHeader
           title="스태프 승인대기"
