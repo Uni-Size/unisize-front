@@ -107,9 +107,12 @@ export const MainPage = () => {
       <header className="flex justify-between items-center px-5 py-4 bg-white border-b border-gray-200 sticky top-0 z-10">
         <h1 className="text-xl font-bold text-gray-800 m-0">교복 측정</h1>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-600">
+          <button
+            className="text-sm text-gray-600 hover:text-blue-600 hover:underline bg-transparent border-none cursor-pointer"
+            onClick={() => navigate('/staff/my')}
+          >
             {staff?.employee_name || '스태프'}
-          </span>
+          </button>
           <button
             className="px-4 py-2 text-sm text-gray-500 bg-transparent border border-gray-300 rounded-md transition-all duration-150 hover:bg-gray-100 hover:text-gray-700"
             onClick={handleLogout}

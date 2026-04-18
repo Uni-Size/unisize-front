@@ -1,2 +1,2 @@
-export { default as StudentTable } from './StudentTable';
-export { default as ConfirmModal } from './ConfirmModal';
+export { StudentTable } from '../../../../components/staff/StudentTable';
+export { MeasurementConfirmModal as ConfirmModal } from '../../../../components/staff/MeasurementConfirmModal';

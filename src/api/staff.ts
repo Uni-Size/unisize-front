@@ -1,6 +1,54 @@
 import { apiClient } from "@/lib/apiClient";
 import type { ApiResponse } from "./auth";
 
+export interface StaffProfile {
+  id: number;
+  employee_id: string;
+  employee_name: string;
+  gender: string;
+  role: string;
+  is_active: boolean;
+  last_login: string;
+  created_at: string;
+  updated_at: string;
+  staff_stats: {
+    currently_measuring: number;
+    today_students_handled: number;
+    total_students_handled: number;
+  };
+}
+
+export interface PaymentPendingOrder {
+  order_id: number;
+  order_number: string;
+  student_id: number;
+  student_name: string;
+  gender: string;
+  school_name: string;
+  category_summary: string;
+  measurement_end_time: string;
+  total_amount: number;
+  paid_amount: number;
+  remaining_amount: number;
+}
+
+export interface PaymentPendingResponse {
+  data: {
+    orders: PaymentPendingOrder[];
+    total: number;
+  };
+}
+
+export async function getStaffProfile(): Promise<StaffProfile> {
+  const response = await apiClient.get<ApiResponse<StaffProfile>>("/api/v1/auth/profile");
+  return response.data.data;
+}
+
+export async function getMyPaymentPending(): Promise<PaymentPendingResponse["data"]> {
+  const response = await apiClient.get<ApiResponse<PaymentPendingResponse["data"]>>("/api/v1/staff/my-payment-pending");
+  return response.data.data;
+}
+
 export interface StaffItem {
   id: number;
   employee_id: string;

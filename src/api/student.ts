@@ -91,13 +91,14 @@ export interface RegisterStudent {
   previous_school: string;
   admission_year: number;
   admission_grade: number;
+  admission_school: string;
   school_name: string;
   class_name: string;
   student_number: string;
   address: string;
   privacy_consent: boolean;
   delivery: boolean;
-  grade: number;
+  student_type: string;
   checked_in_at: string;
   created_at: string;
   updated_at: string;
