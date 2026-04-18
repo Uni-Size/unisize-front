@@ -12,7 +12,7 @@ import { AxiosError } from 'axios';
 
 export const MainPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, staff, clearAuth } = useAuthStore();
+  const { staff, clearAuth } = useAuthStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] =
     useState<RegisterStudent | null>(null);
@@ -37,12 +37,6 @@ export const MainPage = () => {
     hasMore,
     onLoadMore: loadMore,
   });
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/staff/login');
-    }
-  }, [isAuthenticated, navigate]);
 
   const handleLogout = async () => {
     try {
@@ -97,10 +91,6 @@ export const MainPage = () => {
       document.body.style.overflow = 'unset';
     };
   }, [isModalOpen]);
-
-  if (!isAuthenticated) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">

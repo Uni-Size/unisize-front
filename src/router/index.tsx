@@ -25,6 +25,19 @@ import {
   MyPage as StaffMyPage,
   RegisterPage as StaffRegisterPage,
 } from '@pages/staff';
+import ProtectedRoute from '@/components/ProtectedRoute';
+
+const adminGuard = (element: React.ReactNode) => (
+  <ProtectedRoute requiredRole="admin" loginPath="/admin/login">
+    {element}
+  </ProtectedRoute>
+);
+
+const staffGuard = (element: React.ReactNode) => (
+  <ProtectedRoute requiredRole="staff" loginPath="/staff/login">
+    {element}
+  </ProtectedRoute>
+);
 
 export const router = createBrowserRouter([
   {
@@ -69,7 +82,7 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <MainPage />,
+        element: adminGuard(<MainPage />),
       },
       {
         path: 'login',
@@ -77,47 +90,47 @@ export const router = createBrowserRouter([
       },
       {
         path: 'orders',
-        element: <MainPage />,
+        element: adminGuard(<MainPage />),
       },
       {
         path: 'orders/middle/:schoolId/students',
-        element: <SchoolDetailPage />,
+        element: adminGuard(<SchoolDetailPage />),
       },
       {
         path: 'orders/middle/:schoolId/orders',
-        element: <SchoolDetailPage />,
+        element: adminGuard(<SchoolDetailPage />),
       },
       {
         path: 'orders/high/:schoolId/students',
-        element: <SchoolDetailPage />,
+        element: adminGuard(<SchoolDetailPage />),
       },
       {
         path: 'orders/high/:schoolId/orders',
-        element: <SchoolDetailPage />,
+        element: adminGuard(<SchoolDetailPage />),
       },
       {
         path: 'orders/students',
-        element: <StudentOrderPage />,
+        element: adminGuard(<StudentOrderPage />),
       },
       {
         path: 'products',
-        element: <ProductListPage />,
+        element: adminGuard(<ProductListPage />),
       },
       {
         path: 'schools',
-        element: <SchoolListPage />,
+        element: adminGuard(<SchoolListPage />),
       },
       {
         path: 'students',
-        element: <StudentListPage />,
+        element: adminGuard(<StudentListPage />),
       },
       {
         path: 'staff',
-        element: <StaffListPage />,
+        element: adminGuard(<StaffListPage />),
       },
       {
         path: 'staff/approval',
-        element: <StaffApprovalPage />,
+        element: adminGuard(<StaffApprovalPage />),
       },
     ],
   },
@@ -126,7 +139,7 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <StaffMainPage />,
+        element: staffGuard(<StaffMainPage />),
       },
       {
         path: 'login',
@@ -138,7 +151,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'my',
-        element: <StaffMyPage />,
+        element: staffGuard(<StaffMyPage />),
       },
     ],
   },

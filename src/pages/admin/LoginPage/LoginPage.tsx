@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Input } from '../../../components/atoms/Input';
 import { Button } from '../../../components/atoms/Button';
 import { login } from '@/api/auth';
@@ -11,7 +11,11 @@ export const LoginPage = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const { isAuthenticated, staff, setAuth } = useAuthStore();
+
+  if (isAuthenticated && staff?.role === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
 
   const isFormValid = id.trim() !== '' && password.trim() !== '';
 

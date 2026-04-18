@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getSchoolList } from '@/api/school';
 import type { SchoolListItem } from '@/api/school';
 import { getTargetYear } from '@/utils/schoolUtils';
+import { logout } from '@/api/auth';
+import { useAuthStore } from '@/stores/authStore';
 
 interface SchoolSubPage {
   id: string;
@@ -58,6 +60,18 @@ const toSchoolItem = (school: SchoolListItem, type: 'elementary' | 'middle' | 'h
 export const AdminSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch {
+      // 실패해도 로컬 인증 정보는 제거
+    } finally {
+      clearAuth();
+      navigate('/admin/login');
+    }
+  };
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [expandedSchools, setExpandedSchools] = useState<string[]>([]);
   const [elementarySchools, setElementarySchools] = useState<SchoolItem[]>([]);
@@ -196,7 +210,7 @@ export const AdminSidebar = () => {
           스마트학생복 청주점
         </Link>
       </div>
-      <nav className="flex flex-col">
+      <nav className="flex flex-col flex-1">
         {menuItems.map((menu) => (
           <div key={menu.id} className="flex flex-col">
             {menu.subMenus || menu.schoolItems ? (
@@ -244,6 +258,13 @@ export const AdminSidebar = () => {
           </div>
         ))}
       </nav>
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="flex items-center w-45 h-8.5 pt-3.5 pr-2.5 pb-1.5 pl-2.5 text-14 font-medium bg-transparent border-none cursor-pointer text-left text-gray-300 hover:text-red-400 transition-colors duration-200"
+      >
+        로그아웃
+      </button>
     </aside>
   );
 };

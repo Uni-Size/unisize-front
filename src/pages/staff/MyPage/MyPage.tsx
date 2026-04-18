@@ -14,7 +14,7 @@ type Tab = 'in_progress' | 'payment_pending';
 
 export const MyPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, staff } = useAuthStore();
+  const { staff } = useAuthStore();
   const { toast, showToast, hideToast } = useToast();
 
   const [profile, setProfile] = useState<StaffProfile | null>(null);
@@ -32,10 +32,6 @@ export const MyPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<RegisterStudent | null>(null);
   const [, setMeasurementData] = useState<StartMeasurementResponse | null>(null);
-
-  useEffect(() => {
-    if (!isAuthenticated) navigate('/staff/login');
-  }, [isAuthenticated, navigate]);
 
   useEffect(() => {
     getStaffProfile().then(setProfile).catch(console.error);
@@ -115,8 +111,6 @@ export const MyPage = () => {
   );
 
   const stats = profile?.staff_stats;
-
-  if (!isAuthenticated) return null;
 
   return (
     <div className="min-h-screen bg-gray-50">

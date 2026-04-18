@@ -621,11 +621,16 @@ export const SchoolDetailPage = () => {
 
   useEffect(() => {
     if (!schoolId) return;
-    const targetYear = getTargetYear();
-    getSupportedSchoolsByYear(targetYear).then((schools) => {
-      const found = schools.find((s) => s.id === Number(schoolId));
-      if (found) setSchoolName(found.name);
-    });
+    const numericId = Number(schoolId);
+    if (!isNaN(numericId)) {
+      const targetYear = getTargetYear();
+      getSupportedSchoolsByYear(targetYear).then((schools) => {
+        const found = schools.find((s) => s.id === numericId);
+        if (found) setSchoolName(found.name);
+      });
+    } else {
+      setSchoolName(decodeURIComponent(schoolId));
+    }
   }, [schoolId]);
 
   return (
