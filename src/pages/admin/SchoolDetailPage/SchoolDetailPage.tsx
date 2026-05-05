@@ -424,9 +424,16 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
 
 const EXCLUDED_STATUSES = new Set(['receipt', 'delivered', 'shipped']);
 
+type SeasonTab = '동복' | '하복';
+
+function getSeasonTab(product: InventoryProduct): SeasonTab {
+  return product.season === 'S' ? '하복' : '동복';
+}
+
 const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
   const [allProducts, setAllProducts] = useState<InventoryProduct[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>(["전체"]);
+  const [seasonTab, setSeasonTab] = useState<SeasonTab>('동복');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
@@ -448,7 +455,8 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
     fetchInventory();
   }, [schoolName]);
 
-  const productOptions = ["전체", ...allProducts.map((p) => p.display_name)];
+  const seasonProducts = allProducts.filter((p) => getSeasonTab(p) === seasonTab);
+  const productOptions = ["전체", ...seasonProducts.map((p) => p.display_name)];
   const individualOptions = productOptions.filter((o) => o !== "전체");
 
   const toggleProduct = (product: string) => {
@@ -469,9 +477,14 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
     }
   };
 
+  const handleSeasonTabChange = (tab: SeasonTab) => {
+    setSeasonTab(tab);
+    setSelectedProducts(["전체"]);
+  };
+
   const visibleProducts = selectedProducts.includes("전체")
-    ? allProducts
-    : allProducts.filter((p) => selectedProducts.includes(p.display_name));
+    ? seasonProducts
+    : seasonProducts.filter((p) => selectedProducts.includes(p.display_name));
 
   const handleReset = () => setSelectedProducts(["전체"]);
 
@@ -542,6 +555,25 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
           </div>
         }
       />
+
+      {/* 동복/하복 탭 */}
+      <div className="flex border-b border-gray-200">
+        {(['동복', '하복'] as SeasonTab[]).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => handleSeasonTabChange(tab)}
+            className={[
+              "px-6 py-2.5 text-14 font-medium transition-colors border-b-2 -mb-px",
+              seasonTab === tab
+                ? "border-gray-800 text-gray-800"
+                : "border-transparent text-gray-400 hover:text-gray-600",
+            ].join(" ")}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
 
       <div className="border-y border-gray-200 overflow-hidden">
         <div className="flex items-stretch">

@@ -9,7 +9,7 @@ import { getSupportedSchoolsByYear } from '@/api/school';
 import { getTargetYear } from '@/utils/schoolUtils';
 import { downloadCSV } from '@/utils/csvUtils';
 
-type SchoolType = 'middle' | 'high';
+type SchoolType = 'elementary' | 'middle' | 'high';
 
 interface OrderListPageProps {
   schoolType: SchoolType;
@@ -44,7 +44,9 @@ export const OrderListPage = ({ schoolType }: OrderListPageProps) => {
   const getTitle = () => {
     if (schoolName) return schoolName;
     const targetYear = getTargetYear();
-    return schoolType === 'middle' ? `[${targetYear}]주관구매 -중` : `[${targetYear}]주관구매 -고`;
+    if (schoolType === 'elementary') return `[${targetYear}]주관구매 -초`;
+    if (schoolType === 'middle') return `[${targetYear}]주관구매 -중`;
+    return `[${targetYear}]주관구매 -고`;
   };
 
   // TODO: 실제 API 연동 시 학교별 학생 데이터를 가져오도록 교체

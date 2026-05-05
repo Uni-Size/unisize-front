@@ -4,88 +4,12 @@ import { StockAddModal } from '@components/organisms/StockAddModal';
 import { Button } from '@components/atoms/Button';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import type { InventoryProduct } from '@/api/order';
-
-// ── 더미 데이터 ────────────────────────────────────────────────
-
-const INITIAL_PRODUCTS: InventoryProduct[] = [
-  {
-    product_id: 1,
-    display_name: '동복 상의 (후드)',
-    category: 'uniform',
-    size_stats: [
-      { size: '85', stock: 5,  ordered: 2, remaining: 3,  orders: [{ name: '김민준', status: 'pending' }, { name: '이서연', status: 'reserved' }] },
-      { size: '90', stock: 4,  ordered: 4, remaining: 0,  orders: [{ name: '박지훈', status: 'pending' }, { name: '최수아', status: 'pending' }, { name: '정우진', status: 'out_of_stock' }, { name: '강하은', status: 'reserved' }] },
-      { size: '95', stock: 4,  ordered: 2, remaining: 2,  orders: [{ name: '윤도현', status: 'pending' }, { name: '임소율', status: 'pending' }] },
-      { size: '100', stock: 3, ordered: 6, remaining: -3, orders: [{ name: '한기선', status: 'out_of_stock' }, { name: '오준서', status: 'out_of_stock' }, { name: '김태양', status: 'out_of_stock' }, { name: '신예린', status: 'pending' }, { name: '류현우', status: 'pending' }, { name: '백채원', status: 'pending' }] },
-      { size: '105', stock: 4, ordered: 0, remaining: 4,  orders: [] },
-      { size: '110', stock: 4, ordered: 1, remaining: 3,  orders: [{ name: '장민서', status: 'pending' }] },
-      { size: '115', stock: 4, ordered: 1, remaining: 3,  orders: [{ name: '조하린', status: 'reserved' }] },
-      { size: '120', stock: 2, ordered: 0, remaining: 2,  orders: [] },
-      { size: '125', stock: 3, ordered: 4, remaining: -1, orders: [{ name: '권나연', status: 'out_of_stock' }, { name: '문성준', status: 'pending' }, { name: '손유진', status: 'pending' }, { name: '나도윤', status: 'pending' }] },
-      { size: '130', stock: 2, ordered: 1, remaining: 1,  orders: [{ name: '홍길동', status: 'pending' }] },
-    ],
-  },
-  {
-    product_id: 2,
-    display_name: '동복 하의 (바지)',
-    category: 'uniform',
-    size_stats: [
-      { size: '62', stock: 3,  ordered: 1, remaining: 2, orders: [{ name: '김민준', status: 'pending' }] },
-      { size: '65', stock: 3,  ordered: 2, remaining: 1, orders: [{ name: '이서연', status: 'pending' }, { name: '박지훈', status: 'pending' }] },
-      { size: '68', stock: 4,  ordered: 3, remaining: 1, orders: [{ name: '최수아', status: 'pending' }, { name: '정우진', status: 'reserved' }, { name: '강하은', status: 'pending' }] },
-      { size: '74', stock: 5,  ordered: 3, remaining: 2, orders: [{ name: '윤도현', status: 'pending' }, { name: '임소율', status: 'pending' }, { name: '한기선', status: 'pending' }] },
-      { size: '80', stock: 4,  ordered: 1, remaining: 3, orders: [{ name: '오준서', status: 'pending' }] },
-      { size: '86', stock: 3,  ordered: 0, remaining: 3, orders: [] },
-      { size: '92', stock: 3,  ordered: 4, remaining: -1, orders: [{ name: '김태양', status: 'out_of_stock' }, { name: '신예린', status: 'pending' }, { name: '류현우', status: 'pending' }, { name: '백채원', status: 'pending' }] },
-      { size: '98', stock: 2,  ordered: 0, remaining: 2, orders: [] },
-    ],
-  },
-  {
-    product_id: 3,
-    display_name: '생활복 상의',
-    category: 'casual',
-    size_stats: [
-      { size: '85',  stock: 4, ordered: 1, remaining: 3, orders: [{ name: '최수아', status: 'pending' }] },
-      { size: '90',  stock: 5, ordered: 2, remaining: 3, orders: [{ name: '김민준', status: 'pending' }, { name: '이서연', status: 'pending' }] },
-      { size: '95',  stock: 3, ordered: 1, remaining: 2, orders: [{ name: '박지훈', status: 'pending' }] },
-      { size: '100', stock: 4, ordered: 1, remaining: 3, orders: [{ name: '정우진', status: 'reserved' }] },
-      { size: '105', stock: 4, ordered: 0, remaining: 4, orders: [] },
-      { size: '110', stock: 3, ordered: 1, remaining: 2, orders: [{ name: '강하은', status: 'pending' }] },
-      { size: '115', stock: 4, ordered: 1, remaining: 3, orders: [{ name: '윤도현', status: 'reserved' }] },
-      { size: '120', stock: 3, ordered: 0, remaining: 3, orders: [] },
-    ],
-  },
-  {
-    product_id: 4,
-    display_name: '라운드 티셔츠',
-    category: 'casual',
-    size_stats: [
-      { size: '85',  stock: 3, ordered: 1, remaining: 2,  orders: [{ name: '한기선', status: 'pending' }] },
-      { size: '90',  stock: 4, ordered: 2, remaining: 2,  orders: [{ name: '오준서', status: 'pending' }, { name: '김태양', status: 'pending' }] },
-      { size: '95',  stock: 3, ordered: 0, remaining: 3,  orders: [] },
-      { size: '100', stock: 5, ordered: 1, remaining: 4,  orders: [{ name: '신예린', status: 'pending' }] },
-      { size: '105', stock: 3, ordered: 1, remaining: 2,  orders: [{ name: '류현우', status: 'pending' }] },
-      { size: '110', stock: 4, ordered: 0, remaining: 4,  orders: [] },
-      { size: '115', stock: 3, ordered: 1, remaining: 2,  orders: [{ name: '백채원', status: 'reserved' }] },
-    ],
-  },
-  // 재고 없는 품목 (empty state 테스트용)
-  {
-    product_id: 5,
-    display_name: '체육복 상의',
-    category: 'pe',
-    size_stats: [
-      { size: '85',  stock: 0, ordered: 0, remaining: 0, orders: [] },
-      { size: '90',  stock: 0, ordered: 0, remaining: 0, orders: [] },
-      { size: '95',  stock: 0, ordered: 0, remaining: 0, orders: [] },
-      { size: '100', stock: 0, ordered: 0, remaining: 0, orders: [] },
-    ],
-  },
-];
+import { INITIAL_PRODUCTS } from './inventoryDummyData';
 
 // ── 컴포넌트 ───────────────────────────────────────────────────
 
 type ScenarioKey = 'hasStock' | 'noStock' | 'empty';
+type SeasonTab = '동복' | '하복';
 
 const SCENARIOS: { key: ScenarioKey; label: string; description: string }[] = [
   { key: 'hasStock', label: '품목 재고 있음',    description: '재고가 있는 품목들 (재고 부족 포함)' },
@@ -93,8 +17,13 @@ const SCENARIOS: { key: ScenarioKey; label: string; description: string }[] = [
   { key: 'empty',    label: '품목 데이터 없음',  description: '조회된 데이터 자체가 없는 상태' },
 ];
 
+function getSeasonTab(product: InventoryProduct): SeasonTab {
+  return product.season === 'S' ? '하복' : '동복';
+}
+
 export const InventoryTestPage = () => {
   const [scenario, setScenario] = useState<ScenarioKey>('hasStock');
+  const [seasonTab, setSeasonTab] = useState<SeasonTab>('동복');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [products, setProducts] = useState<InventoryProduct[]>(INITIAL_PRODUCTS);
   const [selectedProducts, setSelectedProducts] = useState<string[]>(['전체']);
@@ -107,7 +36,8 @@ export const InventoryTestPage = () => {
       })) :
     [];
 
-  const productOptions = ['전체', ...products.map((p) => p.display_name)];
+  const seasonProducts = displayProducts.filter((p) => getSeasonTab(p) === seasonTab);
+  const productOptions = ['전체', ...seasonProducts.map((p) => p.display_name)];
 
   const toggleProduct = (opt: string) => {
     if (opt === '전체') {
@@ -120,9 +50,14 @@ export const InventoryTestPage = () => {
     setSelectedProducts(updated.length === individuals.length ? ['전체'] : updated);
   };
 
+  const handleSeasonTabChange = (tab: SeasonTab) => {
+    setSeasonTab(tab);
+    setSelectedProducts(['전체']);
+  };
+
   const visibleProducts = selectedProducts.includes('전체')
-    ? displayProducts
-    : displayProducts.filter((p) => selectedProducts.includes(p.display_name));
+    ? seasonProducts
+    : seasonProducts.filter((p) => selectedProducts.includes(p.display_name));
 
   const handleStockSubmit = async (items: { product_id: number; size: string; stock: number }[]) => {
     // 더미 저장: API 대신 로컬 state 업데이트
@@ -200,6 +135,25 @@ export const InventoryTestPage = () => {
                 CSV 내보내기
               </button>
             </div>
+          </div>
+
+          {/* 동복/하복 탭 */}
+          <div className="flex border-b border-gray-200">
+            {(['동복', '하복'] as SeasonTab[]).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => handleSeasonTabChange(tab)}
+                className={[
+                  'px-6 py-2.5 text-14 font-medium transition-colors border-b-2 -mb-px',
+                  seasonTab === tab
+                    ? 'border-gray-800 text-gray-800'
+                    : 'border-transparent text-gray-400 hover:text-gray-600',
+                ].join(' ')}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
 
           {/* 품목 필터 */}

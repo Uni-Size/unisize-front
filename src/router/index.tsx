@@ -94,6 +94,14 @@ export const router = createBrowserRouter([
         element: adminGuard(<MainPage />),
       },
       {
+        path: 'orders/elementary/:schoolId/students',
+        element: adminGuard(<SchoolDetailPage />),
+      },
+      {
+        path: 'orders/elementary/:schoolId/orders',
+        element: adminGuard(<SchoolDetailPage />),
+      },
+      {
         path: 'orders/middle/:schoolId/students',
         element: adminGuard(<SchoolDetailPage />),
       },

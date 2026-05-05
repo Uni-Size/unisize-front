@@ -122,6 +122,7 @@ export interface InventoryProduct {
   product_id: number;
   display_name: string;
   category: string;
+  season: 'W' | 'S';
   size_stats: InventorySizeStat[];
 }
 

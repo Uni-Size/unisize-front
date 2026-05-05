@@ -11,10 +11,15 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   // receipt/delivered/shipped 제외, 각 사이즈별 표시할 orders 필터링
-  const sizesWithOrders = product.size_stats.map((stat) => ({
-    ...stat,
-    visibleOrders: stat.orders.filter((o) => !EXCLUDED_STATUSES.has(o.status)),
-  }));
+  const sizesWithOrders = product.size_stats.map((stat) => {
+    const visible = stat.orders.filter((o) => !EXCLUDED_STATUSES.has(o.status));
+    const normal = visible.filter((o) => o.status !== 'out_of_stock' && o.status !== 'reserved');
+    const reserved = visible.filter((o) => o.status === 'reserved');
+    const outOfStock = visible.filter((o) => o.status === 'out_of_stock');
+    const visibleOrders = [...normal, ...reserved, ...outOfStock];
+    const actualSold = visibleOrders.length;
+    return { ...stat, visibleOrders, actualSold };
+  });
 
   const hasOverflow = sizesWithOrders.some((s) => s.remaining < 0);
 
@@ -22,7 +27,7 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
   const maxOrderRows = Math.max(0, ...sizesWithOrders.map((s) => s.visibleOrders.length));
 
   return (
-    <div className="mb-3 border-t border-gray-200 overflow-hidden">
+    <div className="mb-3 border-t border-gray-100 overflow-hidden">
       {/* 품목명 + 토글 버튼 */}
       <div className="bg-gray-50">
         <button
@@ -66,7 +71,12 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
                   {sizesWithOrders.map((stat) => (
                     <th
                       key={stat.size}
-                      className="border border-gray-200 px-2 py-2 text-center font-medium min-w-17.5"
+                      className={[
+                        "px-2 py-2 text-center font-medium min-w-17.5",
+                        stat.stock > 0
+                          ? "border-[0.5px] border-gray-200"
+                          : "text-gray-300",
+                      ].join(" ")}
                     >
                       {stat.size} ({stat.stock})
                     </th>
@@ -78,17 +88,21 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
                   <tr key={rowIdx} className="h-9">
                     {sizesWithOrders.map((stat) => {
                       const order = stat.visibleOrders[rowIdx];
+
                       if (!order) {
-                        // 이 사이즈에 더 이상 주문 없으면 '-' 표시 (다른 열보다 짧은 경우)
+                        const withinStock = rowIdx < stat.stock;
                         const hasAnyRemaining = sizesWithOrders.some(
                           (s) => s.visibleOrders[rowIdx] !== undefined,
                         );
                         return (
                           <td
                             key={stat.size}
-                            className="border border-gray-200 px-2 py-1.5 text-center text-gray-400"
+                            className={[
+                              "px-2 py-1.5 text-center text-gray-400",
+                              withinStock ? "border-[0.5px] border-gray-200" : "border-0",
+                            ].join(" ")}
                           >
-                            {hasAnyRemaining ? "-" : ""}
+                            {withinStock && hasAnyRemaining ? "-" : ""}
                           </td>
                         );
                       }
@@ -100,22 +114,21 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
                         <td
                           key={stat.size}
                           className={[
-                            "px-2 py-1.5 text-center text-13 border",
+                            "px-2 py-1.5 text-center text-13",
                             isOutOfStock
-                              ? "border-red-400 bg-red-50"
-                              : "border-gray-200",
+                              ? "border-[0.5px] border-gray-200 outline-1 outline-red-400 bg-red-50 relative z-10"
+                              : "border-[0.5px] border-gray-200",
                           ].join(" ")}
                         >
                           <span
-                            className={
-                              isOutOfStock
-                                ? "text-red-600 font-bold"
-                                : undefined
-                            }
+                            className={[
+                              "inline-flex items-center gap-1 whitespace-nowrap",
+                              isOutOfStock ? "text-red-600 font-bold" : "",
+                            ].join(" ")}
                           >
                             {order.name}
                             {isReserved && (
-                              <span className="ml-1 text-11 text-blue-500 font-medium">
+                              <span className="text-11 text-blue-500 font-medium">
                                 예약
                               </span>
                             )}
@@ -140,22 +153,25 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
               {sizesWithOrders.map((stat) => (
                 <td
                   key={stat.size}
-                  className="border border-gray-200 px-2 py-1.5 text-center text-13"
+                  className={[
+                    "px-2 py-1.5 text-center text-13",
+                    stat.stock > 0
+                      ? "border-[0.5px] border-gray-200"
+                      : "text-gray-300",
+                  ].join(" ")}
                 >
                   <div>
-                    {stat.size} ({stat.ordered}/{stat.stock})
+                    {stat.size} ({stat.actualSold}/{stat.stock})
                   </div>
-                  {stat.remaining !== 0 && (
-                    <div
-                      className={
-                        stat.remaining < 0
-                          ? "text-red-600 font-bold"
-                          : "text-blue-600 font-bold"
-                      }
-                    >
-                      잔여 {stat.remaining}
-                    </div>
-                  )}
+                  {stat.stock > 0 && (() => {
+                    const surplus = stat.stock - stat.actualSold;
+                    if (surplus === 0) return null;
+                    return (
+                      <div className={surplus < 0 ? "text-red-600 font-bold" : "text-blue-600 font-bold"}>
+                        {surplus < 0 ? `부족 ${Math.abs(surplus)}` : `재고 ${surplus}`}
+                      </div>
+                    );
+                  })()}
                 </td>
               ))}
             </tr>
