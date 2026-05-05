@@ -114,8 +114,19 @@ export const AdminSidebar = () => {
     return () => window.removeEventListener('school-deleted', handleSchoolDeleted);
   }, []);
 
+  const TEST_SCHOOL: SchoolItem = {
+    id: 'school-test',
+    name: 'TEST',
+    basePath: '/admin/test/inventory',
+    subPages: [
+      { id: 'school-test-inventory', name: '재고 테스트', path: '/admin/test/inventory' },
+    ],
+  };
+
+  const elementaryWithTest = [...elementarySchools, TEST_SCHOOL];
+
   const menuItems: MenuItem[] = [
-    ...(elementarySchools.length > 0 ? [{ id: 'elementary', label: `[${targetYear}]주관구매 -초`, path: '/admin/orders/elementary', schoolItems: elementarySchools }] : []),
+    { id: 'elementary', label: `[${targetYear}]주관구매 -초`, path: '/admin/orders/elementary', schoolItems: elementaryWithTest },
     ...(middleSchools.length > 0 ? [{ id: 'middle', label: `[${targetYear}]주관구매 -중`, path: '/admin/orders/middle', schoolItems: middleSchools }] : []),
     ...(highSchools.length > 0 ? [{ id: 'high', label: `[${targetYear}]주관구매 -고`, path: '/admin/orders/high', schoolItems: highSchools }] : []),
     { id: 'product', label: '교복/용품', path: '/admin/products' },

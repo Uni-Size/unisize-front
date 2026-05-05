@@ -9,6 +9,7 @@ import {
   StaffListPage,
   StaffApprovalPage,
   SchoolDetailPage,
+  InventoryTestPage,
 } from '@pages/admin';
 import {
   OnboardingPage,
@@ -131,6 +132,10 @@ export const router = createBrowserRouter([
       {
         path: 'staff/approval',
         element: adminGuard(<StaffApprovalPage />),
+      },
+      {
+        path: 'test/inventory',
+        element: <InventoryTestPage />,
       },
     ],
   },
