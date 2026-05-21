@@ -8,8 +8,9 @@ import { Table } from '@components/atoms/Table';
 import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
 import type { StaffEditData } from '@components/organisms/StaffEditModal';
-import { getStaffList, type StaffItem } from '@/api/staff';
+import { getStaffList, type StaffItem, type StaffListResponse } from '@/api/staff';
 import { getApiErrorMessage } from '@/utils/errorUtils';
+import { formatDate } from '@/utils/dateUtils';
 import { downloadCSV } from '@/utils/csvUtils';
 
 interface StaffRow {
@@ -21,13 +22,13 @@ interface StaffRow {
   registeredDate: string;
 }
 
-const toStaffRow = (item: StaffItem, index: number): StaffRow => ({
+const toStaffRow = (item: StaffItem, absoluteIndex: number): StaffRow => ({
   id: item.id,
-  no: index + 1,
+  no: absoluteIndex + 1,
   name: item.employee_name,
   gender: item.gender === 'M' ? '남' : '여',
   employeeId: item.employee_id,
-  registeredDate: item.created_at,
+  registeredDate: formatDate(item.created_at),
 });
 
 const toStaffEditData = (row: StaffRow): StaffEditData => ({
@@ -43,17 +44,19 @@ export const StaffListPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ReactNode>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffEditData | null>(null);
   const itemsPerPage = 10;
 
-  const fetchStaffList = useCallback(async () => {
+  const fetchStaffList = useCallback(async (page: number) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getStaffList();
-      setStaffList(data.map(toStaffRow));
+      const response: StaffListResponse = await getStaffList({ page, limit: itemsPerPage });
+      setStaffList(response.data.map((item, i) => toStaffRow(item, (page - 1) * itemsPerPage + i)));
+      setTotalPages(response.meta.total_pages ?? 1);
     } catch (err) {
       console.error('스태프 목록 조회 실패:', err);
       setError(getApiErrorMessage(err, '스태프 목록을 불러오는 중 오류가 발생했습니다.'));
@@ -63,8 +66,8 @@ export const StaffListPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchStaffList();
-  }, [fetchStaffList]);
+    fetchStaffList(currentPage);
+  }, [currentPage, fetchStaffList]);
 
   const handleEditClick = (staff: StaffRow) => {
     setSelectedStaff(toStaffEditData(staff));
@@ -79,7 +82,7 @@ export const StaffListPage = () => {
   const handleUpdateStaff = (data: StaffEditData) => {
     console.log('스태프 정보 수정:', data);
     handleCloseEditModal();
-    fetchStaffList();
+    fetchStaffList(currentPage);
   };
 
   const handleExportCSV = () => {
@@ -118,12 +121,6 @@ export const StaffListPage = () => {
     },
   ];
 
-  const totalPages = Math.ceil(staffList.length / itemsPerPage);
-  const paginatedStaff = staffList.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
   return (
     <AdminLayout>
       <div className="flex flex-col p-5 gap-4">
@@ -146,7 +143,7 @@ export const StaffListPage = () => {
         <div className="flex-1">
           <Table
             columns={columns}
-            data={loading ? [] : paginatedStaff}
+            data={loading ? [] : staffList}
             onRowClick={(staff) => console.log('Staff clicked:', staff)}
             emptyMessage={loading ? "로딩 중..." : error ?? "데이터가 없습니다."}
           />

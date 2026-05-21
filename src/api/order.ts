@@ -20,17 +20,44 @@ interface PaymentPendingResponse {
   total: number;
 }
 
+export interface GetPaymentPendingParams {
+  page?: number;
+  limit?: number;
+}
+
+export interface PaymentPendingListResponse {
+  orders: PaymentPendingOrder[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+  };
+}
+
 /**
  * 결제 대기자 목록
  * GET /api/v1/admin/payment-pending
  */
-export async function getPaymentPendingOrders(): Promise<
-  PaymentPendingOrder[]
-> {
+export async function getPaymentPendingOrders(
+  params?: GetPaymentPendingParams,
+): Promise<PaymentPendingListResponse> {
   const response = await apiClient.get<ApiResponse<PaymentPendingResponse>>(
     "/api/v1/admin/payment-pending",
+    { params },
   );
-  return response.data.data.orders;
+  const { orders, total } = response.data.data;
+  const page = params?.page ?? 1;
+  const limit = params?.limit ?? 10;
+  return {
+    orders,
+    meta: {
+      page,
+      limit,
+      total,
+      total_pages: Math.ceil(total / limit),
+    },
+  };
 }
 
 // ============================================================================

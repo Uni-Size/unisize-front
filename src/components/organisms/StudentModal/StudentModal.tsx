@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Select } from "@components/atoms";
+import { Toast } from "@components/atoms/Toast";
 import { GENDER_OPTIONS_MF } from "@/constants/gender";
+import { updateStudent } from "@/api/student";
+import { formatShortDate } from "@/utils/dateUtils";
 
 // ============================================================================
 // 타입 정의
@@ -87,6 +90,7 @@ export interface StudentModalProps {
   student?: StudentDetailData | null;
   onSubmit?: (data: StudentFormInput) => void;
   onEditSave?: (orderId: number, data: StudentFormInput) => void;
+  onStudentUpdated?: () => void;
 }
 
 // ============================================================================
@@ -147,10 +151,12 @@ export const StudentModal = ({
   student,
   onSubmit,
   onEditSave,
+  onStudentUpdated,
 }: StudentModalProps) => {
   // view 모드에서 수정 버튼 클릭 시 편집 상태
   const [isEditing, setIsEditing] = useState(false);
   const isView = mode === "view" && !isEditing;
+  const [toast, setToast] = useState<{ message: string; variant: 'success' | 'error' } | null>(null);
 
   // 학생 정보 폼 state
   const [admissionSchool, setAdmissionSchool] = useState("");
@@ -244,7 +250,7 @@ export const StudentModal = ({
     onClose();
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const formData: StudentFormInput = {
       admissionSchool,
       previousSchool,
@@ -260,11 +266,30 @@ export const StudentModal = ({
     };
 
     if (isEditing) {
-      const targetOrderId = activeOrderId ?? student?.orderId;
-      if (targetOrderId) {
-        onEditSave?.(targetOrderId, formData);
+      const studentId = student?.id ? Number(student.id) : undefined;
+      try {
+        if (studentId) {
+          await updateStudent(studentId, {
+            name,
+            ...(gender ? { gender } : {}),
+            student_phone: studentPhone,
+            guardian_phone: guardianPhone,
+            class_name: classNumber,
+            previous_school: previousSchool,
+            admission_school: admissionSchool,
+          });
+          onStudentUpdated?.();
+        }
+        const targetOrderId = activeOrderId ?? student?.orderId;
+        if (targetOrderId) {
+          onEditSave?.(targetOrderId, formData);
+        }
+        setToast({ message: '저장되었습니다.', variant: 'success' });
+        setIsEditing(false);
+      } catch (err) {
+        console.error("학생 정보 수정 실패:", err);
+        setToast({ message: '저장에 실패했습니다.', variant: 'error' });
       }
-      // isEditing 모드에서는 저장 후 모달을 닫지 않음 (onEditSave 콜백이 처리)
     } else {
       onSubmit?.(formData);
       handleClose();
@@ -653,6 +678,7 @@ export const StudentModal = ({
           : "학생 상세";
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
@@ -685,8 +711,10 @@ export const StudentModal = ({
               취소
             </button>
             <button
-              className="px-6 py-2.5 bg-primary-900 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              className="px-6 py-2.5 bg-primary-900 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={handleSubmit}
+              disabled={isEditing && !gender}
+              title={isEditing && !gender ? "성별을 선택해주세요" : undefined}
             >
               {mode === "add" ? "추가" : "저장"}
             </button>
@@ -699,7 +727,7 @@ export const StudentModal = ({
         <div className="flex flex-col overflow-hidden [&_.input-wrapper]:flex-row [&_.input-wrapper]:items-center [&_.input-wrapper]:w-full [&_.input-wrapper]:gap-0 [&_.input-label]:flex-[0_0_120px] [&_.input-label]:px-4 [&_.input-label]:py-3 [&_.input-label]:text-15 [&_.input-label]:font-medium [&_.input-label]:text-bg-800 [&_.input-label]:bg-bg-050 [&_.input-label]:border-r [&_.input-label]:border-gray-200 [&_.input-label]:mb-0 [&_.input-label]:h-full [&_.input-label]:flex [&_.input-label]:items-center [&_.input]:border-none [&_.input]:rounded-none [&_.input]:h-12 [&_.input:focus]:shadow-none [&_.input:focus]:border-none [&_.select-wrapper]:flex-row [&_.select-wrapper]:items-center [&_.select-wrapper]:w-full [&_.select-wrapper]:gap-0 [&_.select-label]:flex-[0_0_120px] [&_.select-label]:px-4 [&_.select-label]:py-3 [&_.select-label]:text-15 [&_.select-label]:font-medium [&_.select-label]:text-bg-800 [&_.select-label]:bg-bg-050 [&_.select-label]:border-r [&_.select-label]:border-gray-200 [&_.select-label]:mb-0 [&_.select-label]:h-full [&_.select-label]:flex [&_.select-label]:items-center [&_.select]:border-none [&_.select]:rounded-none [&_.select]:h-12">
           <div className="flex items-stretch">
             <div className="flex-1 min-w-0 flex items-center">
-              {isView || isEditing ? (
+              {isView ? (
                 <ViewField label="입학학교" value={admissionSchool} />
               ) : (
                 <EditField label="입학학교">
@@ -714,7 +742,7 @@ export const StudentModal = ({
             </div>
             <div className="flex-[1_1_0%] min-w-0 flex items-center" style={{ marginRight: "80px" }}>
               <div className="flex-1 flex items-center">
-                {isView || isEditing ? (
+                {isView ? (
                   <ViewField label="출신학교" value={previousSchool} />
                 ) : (
                   <EditField label="출신학교">
@@ -728,7 +756,7 @@ export const StudentModal = ({
                 )}
               </div>
               <div className="flex-[0_0_140px] flex items-center">
-                {isView || isEditing ? (
+                {isView ? (
                   <ViewField label="반" value={classNumber} />
                 ) : (
                   <EditField label="반" labelWidth="70px">
@@ -746,7 +774,7 @@ export const StudentModal = ({
 
           <div className="flex items-stretch">
             <div className="flex-1 min-w-0 flex items-center">
-              {isView || isEditing ? (
+              {isView ? (
                 <ViewField label="이름" value={name} />
               ) : (
                 <EditField label="이름">
@@ -763,7 +791,7 @@ export const StudentModal = ({
               className="flex-[1_1_0%] min-w-0 flex items-center"
               style={{ marginRight: "80px" }}
             >
-              {isView || isEditing ? (
+              {isView ? (
                 <ViewField label="성별" value={genderLabel} />
               ) : (
                 <EditField label="성별">
@@ -786,7 +814,7 @@ export const StudentModal = ({
 
           <div className="flex items-stretch">
             <div className="flex-1 min-w-0 flex items-center">
-              {isView || isEditing ? (
+              {isView ? (
                 <ViewField label="학생 연락처" value={studentPhone} />
               ) : (
                 <EditField label="학생 연락처">
@@ -799,11 +827,11 @@ export const StudentModal = ({
                 </EditField>
               )}
             </div>
-          </div>
-
-          <div className="flex items-stretch">
-            <div className="flex-1 min-w-0 flex items-center">
-              {isView || isEditing ? (
+            <div
+              className="flex-[1_1_0%] min-w-0 flex items-center"
+              style={{ marginRight: "80px" }}
+            >
+              {isView ? (
                 <ViewField label="보호자 연락처" value={guardianPhone} />
               ) : (
                 <EditField label="보호자 연락처">
@@ -835,7 +863,7 @@ export const StudentModal = ({
                     }`}
                     onClick={() => handleDateTabClick(i)}
                   >
-                    {snapshot.date}
+                    {formatShortDate(snapshot.date)}
                   </button>
                 ))}
               </div>
@@ -900,6 +928,14 @@ export const StudentModal = ({
         )}
       </div>
     </Modal>
+    {toast && (
+      <Toast
+        message={toast.message}
+        variant={toast.variant}
+        onClose={() => setToast(null)}
+      />
+    )}
+    </>
   );
 };
 

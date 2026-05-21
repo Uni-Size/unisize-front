@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { getSchoolList } from '@/api/school';
 import type { SchoolListItem } from '@/api/school';
 import { getTargetYear } from '@/utils/schoolUtils';
 import { logout } from '@/api/auth';
 import { useAuthStore } from '@/stores/authStore';
+import { useSchoolStore } from '@/stores/schoolStore';
 
 interface SchoolSubPage {
   id: string;
@@ -74,41 +74,29 @@ export const AdminSidebar = () => {
   };
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [expandedSchools, setExpandedSchools] = useState<string[]>([]);
-  const [elementarySchools, setElementarySchools] = useState<SchoolItem[]>([]);
-  const [middleSchools, setMiddleSchools] = useState<SchoolItem[]>([]);
-  const [highSchools, setHighSchools] = useState<SchoolItem[]>([]);
   const targetYear = getTargetYear();
 
-  // API에서 학교 목록 조회
-  useEffect(() => {
-    getSchoolList({ is_active: true, year: targetYear })
-      .then(({ schools }) => {
-        const sort = (a: SchoolListItem, b: SchoolListItem) =>
-          a.school_name.localeCompare(b.school_name, 'ko');
-        setElementarySchools(
-          schools.filter((s) => s.school_type === '초').sort(sort).map((s) => toSchoolItem(s, 'elementary'))
-        );
-        setMiddleSchools(
-          schools.filter((s) => s.school_type === '중').sort(sort).map((s) => toSchoolItem(s, 'middle'))
-        );
-        setHighSchools(
-          schools.filter((s) => s.school_type === '고').sort(sort).map((s) => toSchoolItem(s, 'high'))
-        );
-      })
-      .catch((err) => {
-        console.error('학교 목록 조회 실패:', err);
-      });
-  }, [targetYear]);
+  const { schools: rawSchools, fetchSchools } = useSchoolStore();
 
-  // 학교 삭제 이벤트 수신 → 낙관적 제거
+  useEffect(() => {
+    fetchSchools(targetYear);
+  }, [targetYear, fetchSchools]);
+
+  const sort = (a: SchoolListItem, b: SchoolListItem) =>
+    a.school_name.localeCompare(b.school_name, 'ko');
+
+  const elementarySchools = rawSchools.filter((s) => s.school_type === '초').sort(sort).map((s) => toSchoolItem(s, 'elementary'));
+  const middleSchools = rawSchools.filter((s) => s.school_type === '중').sort(sort).map((s) => toSchoolItem(s, 'middle'));
+  const highSchools = rawSchools.filter((s) => s.school_type === '고').sort(sort).map((s) => toSchoolItem(s, 'high'));
+
+  // 학교 삭제 이벤트 수신 → store에서 낙관적 제거
   useEffect(() => {
     const handleSchoolDeleted = (e: Event) => {
       const { schoolId } = (e as CustomEvent<{ schoolId: number }>).detail;
-      const targetId = `school-${schoolId}`;
-      setElementarySchools((prev) => prev.filter((s) => s.id !== targetId));
-      setMiddleSchools((prev) => prev.filter((s) => s.id !== targetId));
-      setHighSchools((prev) => prev.filter((s) => s.id !== targetId));
-      setExpandedSchools((prev) => prev.filter((id) => id !== targetId));
+      useSchoolStore.setState((state) => ({
+        schools: state.schools.filter((s) => s.id !== schoolId),
+      }));
+      setExpandedSchools((prev) => prev.filter((id) => id !== `school-${schoolId}`));
     };
     window.addEventListener('school-deleted', handleSchoolDeleted);
     return () => window.removeEventListener('school-deleted', handleSchoolDeleted);

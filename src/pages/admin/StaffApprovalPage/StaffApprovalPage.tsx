@@ -6,8 +6,9 @@ import { Table } from '@components/atoms/Table';
 import { Button } from '@components/atoms/Button';
 import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
-import { getPendingStaffList, approveStaff, type StaffItem } from '@/api/staff';
+import { getPendingStaffList, approveStaff, type StaffItem, type StaffListResponse } from '@/api/staff';
 import { getApiErrorMessage } from '@/utils/errorUtils';
+import { formatDate } from '@/utils/dateUtils';
 import { downloadCSV } from '@/utils/csvUtils';
 import { Toast } from '@components/atoms/Toast';
 
@@ -20,13 +21,13 @@ interface PendingStaffRow {
   registeredDate: string;
 }
 
-const toPendingRow = (item: StaffItem, index: number): PendingStaffRow => ({
+const toPendingRow = (item: StaffItem, absoluteIndex: number): PendingStaffRow => ({
   id: item.id,
-  no: index + 1,
+  no: absoluteIndex + 1,
   employeeId: item.employee_id,
   name: item.employee_name,
   gender: item.gender === 'M' ? '남' : '여',
-  registeredDate: item.created_at,
+  registeredDate: formatDate(item.created_at),
 });
 
 export const StaffApprovalPage = () => {
@@ -34,15 +35,17 @@ export const StaffApprovalPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ReactNode>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [toast, setToast] = useState<{ message: string; variant: 'success' | 'error' } | null>(null);
   const itemsPerPage = 10;
 
-  const fetchPendingList = useCallback(async () => {
+  const fetchPendingList = useCallback(async (page: number) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getPendingStaffList();
-      setPendingList(data.map(toPendingRow));
+      const response: StaffListResponse = await getPendingStaffList({ page, limit: itemsPerPage });
+      setPendingList(response.data.map((item, i) => toPendingRow(item, (page - 1) * itemsPerPage + i)));
+      setTotalPages(response.meta.total_pages ?? 1);
     } catch (err) {
       console.error('승인 대기 목록 조회 실패:', err);
       setError(getApiErrorMessage(err, '승인 대기 목록을 불러오는 중 오류가 발생했습니다.'));
@@ -52,13 +55,13 @@ export const StaffApprovalPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchPendingList();
-  }, [fetchPendingList]);
+    fetchPendingList(currentPage);
+  }, [currentPage, fetchPendingList]);
 
   const handleApprove = async (staffId: number) => {
     try {
       await approveStaff(staffId);
-      fetchPendingList();
+      fetchPendingList(currentPage);
       setToast({ message: '승인이 완료되었습니다.', variant: 'success' });
     } catch (error) {
       console.error('승인 실패:', error);
@@ -100,12 +103,6 @@ export const StaffApprovalPage = () => {
     },
   ];
 
-  const totalPages = Math.ceil(pendingList.length / itemsPerPage);
-  const paginatedStaff = pendingList.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
   return (
     <AdminLayout>
       {toast && (
@@ -133,7 +130,7 @@ export const StaffApprovalPage = () => {
         <div className="bg-white rounded-lg p-2.5">
           <Table
             columns={columns}
-            data={loading ? [] : paginatedStaff}
+            data={loading ? [] : pendingList}
             onRowClick={(staff) => console.log('Staff clicked:', staff)}
             emptyMessage={loading ? "로딩 중..." : error ?? "데이터가 없습니다."}
           />

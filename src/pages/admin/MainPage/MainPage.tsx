@@ -5,14 +5,17 @@ import { AdminHeader } from "@components/organisms/AdminHeader";
 import { StudentModal } from "@components/organisms/StudentModal";
 import type { StudentDetailData } from "@components/organisms/StudentModal";
 import { Table } from "@components/atoms/Table";
+import { Pagination } from "@components/atoms/Pagination";
 import type { Column } from "@components/atoms/Table";
 import {
   getPaymentPendingOrders,
   getOrderDetail,
   type PaymentPendingOrder,
+  type PaymentPendingListResponse,
 } from "@/api/order";
 import { getStudentDetail } from "@/api/student";
 import { getApiErrorMessage } from "@/utils/errorUtils";
+import { formatDate } from "@/utils/dateUtils";
 
 interface PendingRow {
   id: number;
@@ -27,12 +30,12 @@ interface PendingRow {
   remainingAmount: string;
 }
 
-const toRow = (item: PaymentPendingOrder, index: number): PendingRow => ({
+const toRow = (item: PaymentPendingOrder, absoluteIndex: number): PendingRow => ({
   id: item.order_id,
   orderId: item.order_id,
   studentId: item.student_id,
-  no: index + 1,
-  measuredAt: item.measurement_end_time,
+  no: absoluteIndex + 1,
+  measuredAt: formatDate(item.measurement_end_time),
   studentName: item.student_name,
   gender: item.gender === "M" ? "남" : item.gender === "F" ? "여" : item.gender,
   school: item.school_name,
@@ -40,22 +43,27 @@ const toRow = (item: PaymentPendingOrder, index: number): PendingRow => ({
   remainingAmount: `${item.remaining_amount.toLocaleString()}원`,
 });
 
+const ITEMS_PER_PAGE = 10;
+
 export const MainPage = () => {
   const [orders, setOrders] = useState<PendingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ReactNode>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] =
     useState<StudentDetailData | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (page: number) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getPaymentPendingOrders();
-      setOrders(data.map(toRow));
+      const response: PaymentPendingListResponse = await getPaymentPendingOrders({ page, limit: ITEMS_PER_PAGE });
+      setOrders(response.orders.map((item, i) => toRow(item, (page - 1) * ITEMS_PER_PAGE + i)));
+      setTotalPages(response.meta.total_pages ?? 1);
     } catch (err) {
       console.error("결제 대기자 목록 조회 실패:", err);
       setError(
@@ -70,8 +78,8 @@ export const MainPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    fetchOrders(currentPage);
+  }, [currentPage, fetchOrders]);
 
   const handleDetailClick = async (e: React.MouseEvent, row: PendingRow) => {
     e.stopPropagation();
@@ -103,8 +111,8 @@ export const MainPage = () => {
         gender: student.gender,
         studentPhone: student.student_phone,
         guardianPhone: student.guardian_phone,
-        registeredDate: student.created_at ?? undefined,
-        modifiedDate: order.last_modified_date ?? undefined,
+        registeredDate: formatDate(student.created_at) || undefined,
+        modifiedDate: formatDate(order.last_modified_date) || undefined,
         winterUniforms: (order.winter_uniforms ?? []).map(toUniformItem),
         summerUniforms: (order.summer_uniforms ?? []).map(toUniformItem),
         supplies: (order.supplies ?? []).map((s) => ({
@@ -187,6 +195,11 @@ export const MainPage = () => {
             emptyMessage={
               loading ? "로딩 중..." : (error ?? "데이터가 없습니다.")
             }
+          />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
           />
         </div>
       </div>

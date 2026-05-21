@@ -44,18 +44,9 @@ export const MeasurementInputPage = () => {
     } catch (err) {
       console.error('학생 등록 실패:', err);
 
-      let errorMessage = '학생 정보 등록에 실패했습니다.';
-
-      if (err && typeof err === 'object') {
-        if ('response' in err && err.response && typeof err.response === 'object') {
-          const response = err.response as { data?: { message?: string } };
-          if (response.data?.message) {
-            errorMessage = response.data.message;
-          }
-        } else if ('message' in err && typeof err.message === 'string') {
-          errorMessage = err.message;
-        }
-      }
+      const axiosError = err as { response?: { data?: { error?: { message?: string } } } };
+      const errorMessage =
+        axiosError.response?.data?.error?.message ?? '학생 정보 등록에 실패했습니다.';
 
       setError(errorMessage);
     } finally {

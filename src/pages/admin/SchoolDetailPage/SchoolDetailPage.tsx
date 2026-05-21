@@ -14,11 +14,12 @@ import { Input } from "@components/atoms/Input";
 import { Button } from "@components/atoms/Button";
 import { Pagination } from "@components/atoms/Pagination";
 import type { Column } from "@components/atoms/Table";
-import { getStudents, getStudentDetail, deleteStudent } from "@/api/student";
-import type { AdminStudent } from "@/api/student";
+import { getStudents, getStudentDetail, deleteStudent, getOrderHistory } from "@/api/student";
+import type { AdminStudent, AdminStudentOrder, AdminOrderItem } from "@/api/student";
 import { getSupportedSchoolsByYear } from "@/api/school";
 import { getTargetYear } from "@/utils/schoolUtils";
 import { getApiErrorMessage } from "@/utils/errorUtils";
+import { formatDate } from "@/utils/dateUtils";
 import { downloadCSV } from "@/utils/csvUtils";
 import { getOrderInventory, updateInventoryStock } from "@/api/order";
 import type { InventoryProduct } from "@/api/order";
@@ -66,7 +67,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     id: student.id,
     no: (page - 1) * itemsPerPage + index + 1,
     category: `${student.admission_grade}학년`,
-    school: student.school_name,
+    school: student.admission_school ?? '',
     name: student.name,
     gender:
       student.gender === "M"
@@ -78,14 +79,8 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
             : student.gender,
     studentPhone: student.student_phone,
     parentPhone: student.guardian_phone,
-    governmentPurchase: student.government_purchase ? "O" : "X",
-    registeredDate: student.created_at
-      ? new Date(student.created_at).toLocaleDateString("ko-KR", {
-          year: "2-digit",
-          month: "2-digit",
-          day: "2-digit",
-        })
-      : "",
+    governmentPurchase: student.is_eligible_for_public_purchase ? "O" : "X",
+    registeredDate: formatDate(student.created_at),
   });
 
   const fetchStudents = useCallback(
@@ -100,13 +95,9 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
           school: schoolName,
           grade,
         });
-        const list = Array.isArray(response.data)
-          ? response.data
-          : ((response.data as unknown as { students: AdminStudent[] })
-              .students ?? []);
-        const rows = list.map((s, i) => mapToRow(s, i, page));
+        const rows = response.data.map((s, i) => mapToRow(s, i, page));
         setStudents(rows);
-        setTotalPages(response.meta?.total_pages ?? 1);
+        setTotalPages(response.meta.total_pages);
       } catch (err) {
         console.error("학생 목록 조회 실패:", err);
         setError(
@@ -152,25 +143,89 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     fetchStudents(currentPage);
   };
 
+  const parseAdminOrderItems = (
+    orderItems: AdminOrderItem[],
+  ): {
+    winterUniforms: import("@components/organisms/StudentModal").UniformItem[];
+    summerUniforms: import("@components/organisms/StudentModal").UniformItem[];
+  } => {
+    const winterUniforms: import("@components/organisms/StudentModal").UniformItem[] = [];
+    const summerUniforms: import("@components/organisms/StudentModal").UniformItem[] = [];
+
+    for (const item of orderItems) {
+      const season = item.product?.season?.toUpperCase() ?? "";
+      const uniform: import("@components/organisms/StudentModal").UniformItem = {
+        id: String(item.id),
+        name: item.product?.name ?? "",
+        size: item.size,
+        supportedQuantity: item.supportedQuantity,
+        additionalQuantity: item.quantity - item.supportedQuantity,
+        repair: item.customization ?? "",
+        reservation: false,
+        received: item.receivedAt !== null,
+        nameTag: null,
+      };
+      if (season === "W" || season === "WINTER" || season === "동복") {
+        winterUniforms.push(uniform);
+      } else {
+        summerUniforms.push(uniform);
+      }
+    }
+
+    return { winterUniforms, summerUniforms };
+  };
+
   const handleRowClick = async (student: StudentRow) => {
     try {
       const detail = await getStudentDetail(student.id);
+      const adminOrders = detail.orders ?? [];
+
+      const orderSnapshots: import("@components/organisms/StudentModal").OrderSnapshot[] =
+        adminOrders.map((order: AdminStudentOrder) => {
+          const { winterUniforms, summerUniforms } = parseAdminOrderItems(order.orderItems ?? []);
+          return {
+            orderId: order.id,
+            date: order.orderDate ?? order.createdAt,
+            winterUniforms,
+            summerUniforms,
+            history: [],
+            modifiedDate: formatDate(order.updatedAt),
+          };
+        });
+
+      const firstSnapshot = orderSnapshots[0];
+
+      const historyData = firstSnapshot
+        ? await getOrderHistory(firstSnapshot.orderId).catch(() => null)
+        : null;
+      const firstHistory =
+        historyData?.histories.map((h) => ({
+          date: h.changed_at,
+          content: h.description,
+        })) ?? [];
+
+      if (firstSnapshot) {
+        firstSnapshot.history = firstHistory;
+      }
+
       const detailData: StudentDetailData = {
         id: String(detail.id),
-        admissionSchool: detail.school_name,
+        orderId: firstSnapshot?.orderId,
+        admissionSchool: detail.admission_school ?? detail.school_name,
         previousSchool: detail.previous_school,
         classNumber: detail.class_name || "",
         name: detail.name,
         gender: detail.gender,
         studentPhone: detail.student_phone,
         guardianPhone: detail.guardian_phone,
-        registeredDate: detail.created_at
-          ? new Date(detail.created_at).toLocaleDateString("ko-KR")
-          : "",
-        winterUniforms: [],
-        summerUniforms: [],
+        registeredDate: formatDate(detail.created_at) || undefined,
+        modifiedDate: firstSnapshot?.modifiedDate,
+        orderSnapshots,
+        winterUniforms: firstSnapshot?.winterUniforms ?? [],
+        summerUniforms: firstSnapshot?.summerUniforms ?? [],
         supplies: [],
         nameTag: { orderQuantity: 0, attachQuantity: 0 },
+        history: firstHistory,
       };
       setSelectedStudent(detailData);
       setIsEditModalOpen(true);
@@ -197,7 +252,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     try {
       const gradeParam = categoryFilter === "신입" ? 1 : categoryFilter === "재학" ? 2 : undefined;
       const response = await getStudents({ search: searchTerm || undefined, school: schoolName, grade: gradeParam, limit: 99999 });
-      const list = Array.isArray(response.data) ? response.data : ((response.data as unknown as { students: AdminStudent[] }).students ?? []);
+      const list = response.data;
       downloadCSV(
         ['No.', '학년', '입학학교', '학생이름', '성별', '학생 연락처', '학부모 연락처', '주관구매', '등록일'],
         list.map((s, i) => [
@@ -209,7 +264,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
           s.student_phone,
           s.guardian_phone,
           s.government_purchase ? "O" : "X",
-          s.created_at ?? '',
+          formatDate(s.created_at),
         ]),
         `${schoolName}_학생목록`,
       );
@@ -410,9 +465,9 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
       <StudentModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        mode="edit"
+        mode="view"
         student={selectedStudent}
-        onSubmit={handleEditStudent}
+        onStudentUpdated={() => fetchStudents(currentPage)}
       />
     </>
   );

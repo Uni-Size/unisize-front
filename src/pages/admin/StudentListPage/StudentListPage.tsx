@@ -12,6 +12,7 @@ import type { Column } from '@components/atoms/Table';
 import { getStudents, getStudentDetail, deleteStudent, getOrderHistory, updateAdminOrder } from '@/api/student';
 import type { AdminStudent } from '@/api/student';
 import { getApiErrorMessage } from '@/utils/errorUtils';
+import { formatDate } from '@/utils/dateUtils';
 import { downloadCSV } from '@/utils/csvUtils';
 
 interface StudentRow {
@@ -48,13 +49,13 @@ export const StudentListPage = () => {
     id: student.id,
     no: (page - 1) * itemsPerPage + index + 1,
     category: `${student.admission_grade}학년`,
-    school: student.admission_school ?? student.school_name,
+    school: student.admission_school ?? '',
     name: student.name,
     gender: student.gender === 'M' ? '남' : student.gender === 'F' ? '여' : student.gender === 'U' ? '공용' : student.gender,
     studentPhone: student.student_phone || '-',
     parentPhone: student.guardian_phone || '-',
-    governmentPurchase: student.government_purchase ? 'O' : 'X',
-    registeredDate: student.created_at ?? '',
+    governmentPurchase: student.is_eligible_for_public_purchase ? 'O' : 'X',
+    registeredDate: formatDate(student.created_at),
   });
 
   const fetchStudents = useCallback(async (page: number, search?: string, school?: string, grade?: number) => {
@@ -68,10 +69,9 @@ export const StudentListPage = () => {
         school,
         grade,
       });
-      const list = Array.isArray(response.data) ? response.data : (response.data as unknown as { students: AdminStudent[] }).students ?? [];
-      const rows = list.map((s, i) => mapToRow(s, i, page));
+      const rows = response.data.map((s, i) => mapToRow(s, i, page));
       setStudents(rows);
-      setTotalPages(response.meta?.total_pages ?? 1);
+      setTotalPages(response.meta.total_pages);
     } catch (err) {
       console.error('학생 목록 조회 실패:', err);
       setError(getApiErrorMessage(err, '학생 목록을 불러오는 중 오류가 발생했습니다.'));
@@ -150,7 +150,7 @@ export const StudentListPage = () => {
           winterUniforms,
           summerUniforms,
           history: [],
-          modifiedDate: order.updatedAt,
+          modifiedDate: formatDate(order.updatedAt),
         };
       },
     );
@@ -179,7 +179,7 @@ export const StudentListPage = () => {
       gender: detail.gender,
       studentPhone: detail.student_phone,
       guardianPhone: detail.guardian_phone,
-      registeredDate: detail.created_at ?? undefined,
+      registeredDate: formatDate(detail.created_at) || undefined,
       modifiedDate: firstSnapshot?.modifiedDate,
       orderSnapshots,
       winterUniforms: firstSnapshot?.winterUniforms ?? [],
@@ -262,7 +262,7 @@ export const StudentListPage = () => {
     try {
       const gradeParam = categoryFilter === '신입' ? 1 : categoryFilter === '재학' ? 2 : undefined;
       const response = await getStudents({ search: searchTerm || undefined, grade: gradeParam, limit: 99999 });
-      const list = Array.isArray(response.data) ? response.data : (response.data as unknown as { students: AdminStudent[] }).students ?? [];
+      const list = response.data;
       downloadCSV(
         ['No.', '학년', '입학학교', '학생이름', '성별', '학생 연락처', '학부모 연락처', '주관구매', '등록일'],
         list.map((s, i) => [

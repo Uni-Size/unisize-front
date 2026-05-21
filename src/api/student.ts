@@ -417,6 +417,7 @@ export interface AdminStudent {
   grade: number;
   checked_in_at: string;
   government_purchase: boolean;
+  is_eligible_for_public_purchase: boolean;
   created_at: string;
   updated_at: string;
   orders?: AdminStudentOrder[];
@@ -438,12 +439,6 @@ export interface GetStudentsResponse {
     total: number;
     total_pages: number;
   };
-  success: boolean;
-  error?: {
-    code: string;
-    message: string;
-    details: string;
-  };
 }
 
 /**
@@ -453,22 +448,79 @@ export interface GetStudentsResponse {
 export async function getStudents(
   params?: GetStudentsParams,
 ): Promise<GetStudentsResponse> {
-  const response = await apiClient.get<GetStudentsResponse>(
+  const response = await apiClient.get<ApiResponse<{ students: AdminStudent[]; total: number }>>(
     "/api/v1/students",
     { params },
   );
-  return response.data;
+  const { students, total } = response.data.data;
+  const limit = params?.limit ?? 10;
+  return {
+    data: students,
+    meta: {
+      page: params?.page ?? 1,
+      limit,
+      total,
+      total_pages: Math.ceil(total / limit),
+    },
+  };
 }
 
 /**
- * 학생 상세 조회
- * GET /api/v1/students/:id
+ * 학생 상세 조회 (주문 기록 포함)
+ * GET /api/v1/students/:id + GET /api/v1/students/:id/orders
  */
 export async function getStudentDetail(id: number): Promise<AdminStudent> {
-  const response = await apiClient.get<ApiResponse<AdminStudent>>(
-    `/api/v1/students/${id}`,
-  );
-  return response.data.data;
+  const [studentRes, ordersRes] = await Promise.allSettled([
+    apiClient.get<ApiResponse<AdminStudent>>(`/api/v1/students/${id}`),
+    apiClient.get<ApiResponse<StudentOrdersData>>(`/api/v1/students/${id}/orders`),
+  ]);
+
+  if (studentRes.status === 'rejected') {
+    throw studentRes.reason;
+  }
+
+  const student = studentRes.value.data.data;
+
+  if (ordersRes.status === 'fulfilled') {
+    const ordersData = ordersRes.value.data.data;
+    student.orders = ordersData.orders.map((o) => ({
+      id: o.id,
+      orderNumber: o.orderNumber,
+      studentId: o.studentId,
+      totalAmount: o.totalAmount,
+      status: o.status,
+      orderType: o.orderType,
+      orderDate: o.orderDate,
+      notes: o.notes,
+      createdAt: o.createdAt,
+      updatedAt: o.updatedAt,
+      orderItems: o.orderItems.map((item) => ({
+        id: item.id,
+        orderId: item.orderId,
+        productId: item.productId,
+        size: item.size,
+        quantity: item.quantity,
+        supportedQuantity: item.supportedQuantity,
+        unitPrice: item.unitPrice,
+        subtotal: item.subtotal,
+        customization: item.customization,
+        deliveryStatus: item.deliveryStatus,
+        receivedAt: item.receivedAt,
+        product: item.product
+          ? {
+              id: item.product.id,
+              name: item.product.name,
+              category: '',
+              gender: '',
+              season: item.product.season,
+              price: item.product.price,
+            }
+          : undefined,
+      })),
+    }));
+  }
+
+  return student;
 }
 
 /**
@@ -477,6 +529,32 @@ export async function getStudentDetail(id: number): Promise<AdminStudent> {
  */
 export async function deleteStudent(id: number): Promise<void> {
   await apiClient.delete<ApiResponse<void>>(`/api/v1/students/${id}`);
+}
+
+export interface UpdateStudentRequest {
+  name?: string;
+  gender?: string;
+  student_phone?: string;
+  guardian_phone?: string;
+  address?: string;
+  class_name?: string;
+  previous_school?: string;
+  admission_school?: string;
+}
+
+/**
+ * 학생 정보 수정
+ * PUT /api/v1/students/:id
+ */
+export async function updateStudent(
+  id: number,
+  data: UpdateStudentRequest,
+): Promise<AdminStudent> {
+  const response = await apiClient.put<ApiResponse<AdminStudent>>(
+    `/api/v1/students/${id}`,
+    data,
+  );
+  return response.data.data;
 }
 
 // ============================================================================
