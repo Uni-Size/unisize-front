@@ -165,7 +165,7 @@ export const StaffListPage = () => {
       <StaffRegisterModal
         isOpen={isRegisterModalOpen}
         onClose={() => setIsRegisterModalOpen(false)}
-        onSuccess={fetchStaffList}
+        onSuccess={() => fetchStaffList(currentPage)}
       />
     </AdminLayout>
   );

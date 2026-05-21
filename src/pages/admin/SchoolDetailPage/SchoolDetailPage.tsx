@@ -138,11 +138,6 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     fetchStudents(currentPage);
   };
 
-  const handleEditStudent = (data: StudentFormInput) => {
-    console.log("학생 수정:", data);
-    fetchStudents(currentPage);
-  };
-
   const parseAdminOrderItems = (
     orderItems: AdminOrderItem[],
   ): {
