@@ -121,10 +121,12 @@ export const StudentListPage = () => {
         size: item.size,
         supportedQuantity: item.supportedQuantity,
         additionalQuantity: item.quantity - item.supportedQuantity,
+        unitPrice: item.unitPrice,
         repair: item.customization ?? '',
         reservation: false,
         received: item.receivedAt !== null,
         nameTag: null,
+        attachCount: 0,
       };
       // season: "W" = 동복, "S" = 하복
       if (season === 'W' || season === 'WINTER' || season === '동복') {
@@ -149,6 +151,7 @@ export const StudentListPage = () => {
           date: order.orderDate ?? order.createdAt,
           winterUniforms,
           summerUniforms,
+          supplies: [],
           history: [],
           modifiedDate: formatDate(order.updatedAt),
         };

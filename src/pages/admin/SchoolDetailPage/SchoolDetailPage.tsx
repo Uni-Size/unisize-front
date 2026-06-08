@@ -155,10 +155,12 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         size: item.size,
         supportedQuantity: item.supportedQuantity,
         additionalQuantity: item.quantity - item.supportedQuantity,
+        unitPrice: item.unitPrice,
         repair: item.customization ?? "",
         reservation: false,
         received: item.receivedAt !== null,
         nameTag: null,
+        attachCount: 0,
       };
       if (season === "W" || season === "WINTER" || season === "동복") {
         winterUniforms.push(uniform);
@@ -183,6 +185,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
             date: order.orderDate ?? order.createdAt,
             winterUniforms,
             summerUniforms,
+            supplies: [],
             history: [],
             modifiedDate: formatDate(order.updatedAt),
           };

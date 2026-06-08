@@ -15,7 +15,7 @@ import {
 } from "@/api/order";
 import { getStudentDetail } from "@/api/student";
 import { getApiErrorMessage } from "@/utils/errorUtils";
-import { formatDate } from "@/utils/dateUtils";
+import { formatDate, formatDateTime } from "@/utils/dateUtils";
 
 interface PendingRow {
   id: number;
@@ -26,7 +26,6 @@ interface PendingRow {
   studentName: string;
   gender: string;
   school: string;
-  categorySummary: string;
   remainingAmount: string;
 }
 
@@ -35,11 +34,10 @@ const toRow = (item: PaymentPendingOrder, absoluteIndex: number): PendingRow => 
   orderId: item.order_id,
   studentId: item.student_id,
   no: absoluteIndex + 1,
-  measuredAt: formatDate(item.measurement_end_time),
+  measuredAt: formatDateTime(item.measurement_end_time),
   studentName: item.student_name,
   gender: item.gender === "M" ? "남" : item.gender === "F" ? "여" : item.gender,
   school: item.school_name,
-  categorySummary: item.category_summary,
   remainingAmount: `${item.remaining_amount.toLocaleString()}원`,
 });
 
@@ -95,11 +93,13 @@ export const MainPage = () => {
         name: item.name,
         size: item.selected_size,
         supportedQuantity: item.supported_quantity,
+        unitPrice: item.unit_price,
         additionalQuantity: item.additional_quantity,
         repair: item.customization || "불가능",
         reservation: item.reservation,
         received: false,
         nameTag: item.name_tag,
+        attachCount: 0,
       });
 
       const detailData: StudentDetailData = {
@@ -121,13 +121,14 @@ export const MainPage = () => {
           name: s.name,
           size: s.selected_size,
           quantity: s.quantity,
+          unitPrice: s.unit_price,
         })),
         nameTag: {
           orderQuantity: order.name_tag?.order_quantity ?? 0,
           attachQuantity: order.name_tag?.attach_quantity ?? 0,
         },
         history: order.history?.map((h) => ({
-          date: h.date,
+          date: formatDateTime(h.date),
           content: h.content,
         })),
       };
@@ -148,7 +149,6 @@ export const MainPage = () => {
     { key: "studentName", header: "학생이름", width: "100px", align: "center" },
     { key: "gender", header: "성별", width: "28px", align: "center" },
     { key: "school", header: "입학학교", align: "center" },
-    { key: "categorySummary", header: "분류", width: "80px", align: "center" },
     { key: "remainingAmount", header: "결제 예정 금액", align: "center" },
     {
       key: "detail",
@@ -209,6 +209,12 @@ export const MainPage = () => {
         onClose={() => setIsDetailOpen(false)}
         mode="view"
         student={selectedStudent}
+        onPaymentComplete={(orderId) => {
+          // TODO: 결제 완료 API 연동
+          console.log("결제 완료 처리 orderId:", orderId);
+          setIsDetailOpen(false);
+          fetchOrders(currentPage);
+        }}
       />
     </AdminLayout>
   );

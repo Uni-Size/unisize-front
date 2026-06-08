@@ -71,6 +71,7 @@ export interface OrderUniformItem {
   selected_size: string;
   supported_quantity: number;
   additional_quantity: number;
+  unit_price?: number;
   customization: string;
   reservation: boolean;
   name_tag: number | null;
@@ -82,6 +83,7 @@ export interface OrderSupplyItem {
   name: string;
   selected_size: string;
   quantity: number;
+  unit_price?: number;
 }
 
 export interface OrderNameTag {

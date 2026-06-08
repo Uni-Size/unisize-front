@@ -15,10 +15,12 @@ export interface UniformItem {
   size: string;
   supportedQuantity: number;
   additionalQuantity: number;
+  unitPrice?: number;
   repair: string;
   reservation: boolean;
   received: boolean;
   nameTag: number | null;
+  attachCount: number;
   isDeleted?: boolean;
 }
 
@@ -28,6 +30,7 @@ export interface SupplyItem {
   name: string;
   size: string;
   quantity: number;
+  unitPrice?: number;
 }
 
 export interface NameTagInfo {
@@ -45,6 +48,7 @@ export interface OrderSnapshot {
   date: string;
   winterUniforms: UniformItem[];
   summerUniforms: UniformItem[];
+  supplies: SupplyItem[];
   history: HistoryItem[];
   modifiedDate?: string;
 }
@@ -91,6 +95,7 @@ export interface StudentModalProps {
   onSubmit?: (data: StudentFormInput) => void;
   onEditSave?: (orderId: number, data: StudentFormInput) => void;
   onStudentUpdated?: () => void;
+  onPaymentComplete?: (orderId: number) => void;
 }
 
 // ============================================================================
@@ -152,6 +157,7 @@ export const StudentModal = ({
   onSubmit,
   onEditSave,
   onStudentUpdated,
+  onPaymentComplete,
 }: StudentModalProps) => {
   // view 모드에서 수정 버튼 클릭 시 편집 상태
   const [isEditing, setIsEditing] = useState(false);
@@ -192,6 +198,7 @@ export const StudentModal = ({
   const applyOrderSnapshot = (snapshot: OrderSnapshot) => {
     setWinterUniforms(snapshot.winterUniforms);
     setSummerUniforms(snapshot.summerUniforms);
+    setSupplies(snapshot.supplies.length > 0 ? snapshot.supplies : defaultSupplies);
     setActiveOrderId(snapshot.orderId);
     setActiveHistory(snapshot.history);
   };
@@ -304,11 +311,26 @@ export const StudentModal = ({
     value: string | number | boolean,
   ) => {
     const setter = season === "winter" ? setWinterUniforms : setSummerUniforms;
-    setter((prev) =>
-      prev.map((item) =>
+    setter((prev) => {
+      const next = prev.map((item) =>
         item.id === itemId ? { ...item, [field]: value } : item,
-      ),
-    );
+      );
+
+      const otherUniforms = season === "winter" ? summerUniforms : winterUniforms;
+
+      if (field === "nameTag") {
+        const total = [...next, ...otherUniforms].reduce((sum, item) => sum + (item.nameTag ?? 0), 0);
+        const ceiled = total === 0 ? 0 : Math.ceil(total / 8) * 8;
+        setNameTag((prev) => ({ ...prev, orderQuantity: Math.max(prev.orderQuantity, ceiled) }));
+      }
+
+      if (field === "attachCount") {
+        const total = [...next, ...otherUniforms].reduce((sum, item) => sum + (item.attachCount ?? 0), 0);
+        setNameTag((prev) => ({ ...prev, attachQuantity: total }));
+      }
+
+      return next;
+    });
   };
 
   // 교복 아이템 삭제 (삭제 표시)
@@ -339,6 +361,31 @@ export const StudentModal = ({
   const genderLabel = gender === "M" ? "남" : gender === "F" ? "여" : gender;
 
   // ============================================================================
+  // 가격 계산
+  // ============================================================================
+
+  const calcUniformSection = (items: UniformItem[]) => {
+    let total = 0;
+    let supported = 0;
+    for (const item of items) {
+      if (item.isDeleted || item.unitPrice == null) continue;
+      const totalQty = item.supportedQuantity + item.additionalQuantity;
+      total += item.unitPrice * totalQty;
+      supported += item.unitPrice * item.supportedQuantity;
+    }
+    return { total, supported, payable: total - supported };
+  };
+
+  const winterCalc = calcUniformSection(winterUniforms);
+  const summerCalc = calcUniformSection(summerUniforms);
+  const hasPrice = winterUniforms.some(i => i.unitPrice != null) || summerUniforms.some(i => i.unitPrice != null);
+  const supplyCalcTotal = supplies.reduce((sum, i) => i.unitPrice != null ? sum + i.unitPrice * i.quantity : sum, 0);
+  const hasSupplyPrice = supplies.some(i => i.unitPrice != null);
+  const grandTotal = winterCalc.total + summerCalc.total + supplyCalcTotal;
+  const grandSupported = winterCalc.supported + summerCalc.supported;
+  const grandPayable = grandTotal - grandSupported;
+
+  // ============================================================================
   // 교복 테이블 렌더링
   // ============================================================================
 
@@ -346,162 +393,231 @@ export const StudentModal = ({
     title: string,
     items: UniformItem[],
     season: "winter" | "summer",
-  ) => (
-    <div>
-      <table className="w-full border-collapse border border-gray-200 text-sm">
-        <thead>
-          <tr>
-            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-32.5">
-              {title}
-            </th>
-            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-25">
-              사이즈
-            </th>
-            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">
-              지원수량
-            </th>
-            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">
-              추가수량
-            </th>
-            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
-              수선
-            </th>
-            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-15">
-              예약
-            </th>
-            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-15">
-              수령
-            </th>
-            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-15">
-              명찰
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {!hasSchool && mode === "add" ? (
+  ) => {
+    const showPrice = hasPrice;
+    const sectionTotal = items.reduce((sum, i) => {
+      if (i.isDeleted || i.unitPrice == null) return sum;
+      return sum + i.unitPrice * (i.supportedQuantity + i.additionalQuantity);
+    }, 0);
+    const colSpan = showPrice ? 11 : 9;
+
+    return (
+      <div>
+        <table className="w-full border-collapse border border-gray-200 text-sm">
+          <thead>
             <tr>
-              <td colSpan={8} className="text-center p-5 text-sm text-bg-400">
-                학교를 먼저 선택해주세요
-              </td>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-32.5">
+                {title}
+              </th>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-25">
+                사이즈
+              </th>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">
+                지원수량
+              </th>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">
+                추가수량
+              </th>
+              {showPrice && (
+                <>
+                  <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-22">
+                    단가
+                  </th>
+                  <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-24">
+                    총금액
+                  </th>
+                </>
+              )}
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
+                수선
+              </th>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-15">
+                예약
+              </th>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-15">
+                수령
+              </th>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-15">
+                명찰
+              </th>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-15">
+                부착
+              </th>
             </tr>
-          ) : items.length === 0 ? (
-            <tr>
-              <td colSpan={8} className="text-center p-5 text-sm text-bg-400">
-                {mode === "add"
-                  ? "학교를 먼저 선택해주세요"
-                  : "데이터가 없습니다"}
-              </td>
-            </tr>
-          ) : (
-            items.map((item) => (
-              <tr
-                key={item.id}
-                className={
-                  item.isDeleted ? "bg-red-050 [&_td]:text-red-700" : ""
-                }
-              >
-                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle relative">
-                  {!isView && item.isDeleted && (
-                    <button
-                      className="inline-flex items-center justify-center px-2.5 py-1 bg-red-500 border-none rounded text-xs font-medium text-white cursor-pointer mr-2 hover:bg-red-600"
-                      onClick={() => handleUniformDelete(season, item.id)}
-                    >
-                      삭제
-                    </button>
-                  )}
-                  {!isView && !item.isDeleted && mode === "edit" && (
-                    <button
-                      className="absolute left-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center bg-transparent border border-gray-200 rounded text-sm text-red-700 cursor-pointer p-0 hover:bg-red-050 hover:border-red-700"
-                      onClick={() => handleUniformDelete(season, item.id)}
-                      title="삭제"
-                    >
-                      ×
-                    </button>
-                  )}
-                  {item.name}
-                </td>
-                <td className="p-1 border border-gray-200 text-center text-gray-700 align-middle">
-                  {isView ? (
-                    <span>{item.size || "-"}</span>
-                  ) : (
-                    <Select
-                      options={sizeOptions}
-                      value={item.size}
-                      onChange={(value) =>
-                        handleUniformChange(season, item.id, "size", value)
-                      }
-                      fullWidth
-                    />
-                  )}
-                </td>
-                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                  {item.supportedQuantity}
-                </td>
-                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                  {isView ? (
-                    <span>{item.additionalQuantity}</span>
-                  ) : (
-                    <input
-                      type="number"
-                      className="w-12.5 px-2 py-1 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      value={item.additionalQuantity}
-                      onChange={(e) =>
-                        handleUniformChange(
-                          season,
-                          item.id,
-                          "additionalQuantity",
-                          Number(e.target.value),
-                        )
-                      }
-                      min={0}
-                    />
-                  )}
-                </td>
-                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                  {item.repair}
-                </td>
-                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                  <input
-                    type="checkbox"
-                    className="w-4.5 h-4.5 accent-primary-900 cursor-pointer"
-                    checked={item.reservation}
-                    disabled={isView}
-                    onChange={(e) =>
-                      handleUniformChange(
-                        season,
-                        item.id,
-                        "reservation",
-                        e.target.checked,
-                      )
-                    }
-                  />
-                </td>
-                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                  <input
-                    type="checkbox"
-                    className="w-4.5 h-4.5 accent-primary-900 cursor-pointer"
-                    checked={item.received}
-                    disabled={isView}
-                    onChange={(e) =>
-                      handleUniformChange(
-                        season,
-                        item.id,
-                        "received",
-                        e.target.checked,
-                      )
-                    }
-                  />
-                </td>
-                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                  {item.nameTag !== null ? item.nameTag : "-"}
+          </thead>
+          <tbody>
+            {!hasSchool && mode === "add" ? (
+              <tr>
+                <td colSpan={colSpan} className="text-center p-5 text-sm text-bg-400">
+                  학교를 먼저 선택해주세요
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
+            ) : items.length === 0 ? (
+              <tr>
+                <td colSpan={colSpan} className="text-center p-5 text-sm text-bg-400">
+                  {mode === "add" ? "학교를 먼저 선택해주세요" : "데이터가 없습니다"}
+                </td>
+              </tr>
+            ) : (
+              <>
+                {items.map((item) => {
+                  const totalQty = item.supportedQuantity + item.additionalQuantity;
+                  const rowTotal = item.unitPrice != null ? item.unitPrice * totalQty : null;
+                  return (
+                    <tr
+                      key={item.id}
+                      className={item.isDeleted ? "bg-red-050 [&_td]:text-red-700" : ""}
+                    >
+                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle relative">
+                        {!isView && item.isDeleted && (
+                          <button
+                            className="inline-flex items-center justify-center px-2.5 py-1 bg-red-500 border-none rounded text-xs font-medium text-white cursor-pointer mr-2 hover:bg-red-600"
+                            onClick={() => handleUniformDelete(season, item.id)}
+                          >
+                            삭제
+                          </button>
+                        )}
+                        {!isView && !item.isDeleted && mode === "edit" && (
+                          <button
+                            className="absolute left-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center bg-transparent border border-gray-200 rounded text-sm text-red-700 cursor-pointer p-0 hover:bg-red-050 hover:border-red-700"
+                            onClick={() => handleUniformDelete(season, item.id)}
+                            title="삭제"
+                          >
+                            ×
+                          </button>
+                        )}
+                        {item.name}
+                      </td>
+                      <td className="p-1 border border-gray-200 text-center text-gray-700 align-middle">
+                        {isView ? (
+                          <span>{item.size || "-"}</span>
+                        ) : (
+                          <Select
+                            options={sizeOptions}
+                            value={item.size}
+                            onChange={(value) => handleUniformChange(season, item.id, "size", value)}
+                            fullWidth
+                          />
+                        )}
+                      </td>
+                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
+                        {item.supportedQuantity}
+                      </td>
+                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
+                        {isView ? (
+                          <span>{item.additionalQuantity}</span>
+                        ) : (
+                          <input
+                            type="number"
+                            className="w-12.5 px-2 py-1 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            value={item.additionalQuantity}
+                            onChange={(e) => handleUniformChange(season, item.id, "additionalQuantity", Number(e.target.value))}
+                            min={0}
+                          />
+                        )}
+                      </td>
+                      {showPrice && (
+                        <>
+                          <td className="p-2 border border-gray-200 text-right text-gray-500 align-middle tabular-nums pr-3">
+                            {item.unitPrice != null ? `${item.unitPrice.toLocaleString()}원` : "-"}
+                          </td>
+                          <td className="p-2 border border-gray-200 text-right text-gray-700 align-middle tabular-nums pr-3">
+                            {item.unitPrice != null ? `${rowTotal!.toLocaleString()}원` : "-"}
+                          </td>
+                        </>
+                      )}
+                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
+                        {item.repair}
+                      </td>
+                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
+                        <input
+                          type="checkbox"
+                          className="w-4.5 h-4.5 accent-primary-900 cursor-pointer"
+                          checked={item.reservation}
+                          disabled={isView}
+                          onChange={(e) => handleUniformChange(season, item.id, "reservation", e.target.checked)}
+                        />
+                      </td>
+                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
+                        <input
+                          type="checkbox"
+                          className="w-4.5 h-4.5 accent-primary-900 cursor-pointer"
+                          checked={item.received}
+                          disabled={isView}
+                          onChange={(e) => handleUniformChange(season, item.id, "received", e.target.checked)}
+                        />
+                      </td>
+                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
+                        {isView ? (
+                          item.nameTag !== null ? item.nameTag : "-"
+                        ) : (
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
+                              onClick={() => handleUniformChange(season, item.id, "nameTag", Math.max(0, (item.nameTag ?? 0) - 1))}
+                              disabled={(item.nameTag ?? 0) <= 0}
+                            >
+                              −
+                            </button>
+                            <span className="w-5 text-center text-sm text-gray-800 tabular-nums">{item.nameTag ?? 0}</span>
+                            <button
+                              type="button"
+                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
+                              onClick={() => handleUniformChange(season, item.id, "nameTag", (item.nameTag ?? 0) + 1)}
+                              disabled={(item.nameTag ?? 0) >= item.supportedQuantity + item.additionalQuantity}
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
+                        {isView ? (
+                          item.attachCount > 0 ? item.attachCount : "-"
+                        ) : (
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
+                              onClick={() => handleUniformChange(season, item.id, "attachCount", Math.max(0, (item.attachCount ?? 0) - 1))}
+                              disabled={(item.attachCount ?? 0) <= 0}
+                            >
+                              −
+                            </button>
+                            <span className="w-5 text-center text-sm text-gray-800 tabular-nums">{item.attachCount ?? 0}</span>
+                            <button
+                              type="button"
+                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
+                              onClick={() => handleUniformChange(season, item.id, "attachCount", (item.attachCount ?? 0) + 1)}
+                              disabled={(item.attachCount ?? 0) >= item.supportedQuantity + item.additionalQuantity}
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {showPrice && (
+                  <tr className="bg-bg-050 font-medium">
+                    <td colSpan={5} className="px-3 py-2 border border-gray-200 text-right text-bg-700">
+                      소계
+                    </td>
+                    <td className="px-3 py-2 border border-gray-200 text-right text-gray-900 tabular-nums">
+                      {sectionTotal.toLocaleString()}원
+                    </td>
+                    <td colSpan={5} className="border border-gray-200" />
+                  </tr>
+                )}
+              </>
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
 
   // ============================================================================
   // 용품 테이블 렌더링
@@ -518,6 +634,12 @@ export const StudentModal = ({
       }
     });
 
+    const showPrice = supplies.some(i => i.unitPrice != null);
+    const supplyTotal = supplies.reduce((sum, i) => {
+      if (i.unitPrice == null) return sum;
+      return sum + i.unitPrice * i.quantity;
+    }, 0);
+
     return (
       <div className="flex-1">
         <table className="w-full border-collapse border border-gray-200 text-sm">
@@ -529,67 +651,93 @@ export const StudentModal = ({
               >
                 용품
               </th>
+              {showPrice && (
+                <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-22">
+                  단가
+                </th>
+              )}
               <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-25">
                 사이즈
               </th>
               <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">
                 수량
               </th>
+              {showPrice && (
+                <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-24">
+                  총금액
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
             {grouped.map((group) =>
-              group.items.map((item, idx) => (
-                <tr key={item.id}>
-                  {idx === 0 && group.category && (
-                    <td
-                      className="p-2 border border-gray-200 text-center align-middle bg-bg-050 font-medium text-gray-700"
-                      rowSpan={group.items.length}
-                    >
-                      {group.category}
+              group.items.map((item, idx) => {
+                const rowTotal = item.unitPrice != null ? item.unitPrice * item.quantity : null;
+                return (
+                  <tr key={item.id}>
+                    {idx === 0 && group.category && (
+                      <td
+                        className="p-2 border border-gray-200 text-center align-middle bg-bg-050 font-medium text-gray-700"
+                        rowSpan={group.items.length}
+                      >
+                        {group.category}
+                      </td>
+                    )}
+                    <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
+                      {item.name}
                     </td>
-                  )}
-                  <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                    {item.name}
-                  </td>
-                  <td className="p-1 border border-gray-200 text-center text-gray-700 align-middle">
-                    {isView ? (
-                      <span>{item.size || "-"}</span>
-                    ) : item.category === "스타킹" ? (
-                      <span>-</span>
-                    ) : (
-                      <Select
-                        options={supplySizeOptions}
-                        value={item.size}
-                        onChange={(value) =>
-                          handleSupplyChange(item.id, "size", value)
-                        }
-                        placeholder="-"
-                        fullWidth
-                      />
+                    {showPrice && (
+                      <td className="p-2 border border-gray-200 text-right text-gray-500 align-middle tabular-nums pr-3">
+                        {item.unitPrice != null ? `${item.unitPrice.toLocaleString()}원` : "-"}
+                      </td>
                     )}
-                  </td>
-                  <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                    {isView ? (
-                      <span>{item.quantity}</span>
-                    ) : (
-                      <input
-                        type="number"
-                        className="w-12.5 px-2 py-1 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        value={item.quantity}
-                        onChange={(e) =>
-                          handleSupplyChange(
-                            item.id,
-                            "quantity",
-                            Number(e.target.value),
-                          )
-                        }
-                        min={0}
-                      />
+                    <td className="p-1 border border-gray-200 text-center text-gray-700 align-middle">
+                      {isView ? (
+                        <span>{item.size || "-"}</span>
+                      ) : item.category === "스타킹" ? (
+                        <span>-</span>
+                      ) : (
+                        <Select
+                          options={supplySizeOptions}
+                          value={item.size}
+                          onChange={(value) => handleSupplyChange(item.id, "size", value)}
+                          placeholder="-"
+                          fullWidth
+                        />
+                      )}
+                    </td>
+                    <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
+                      {isView ? (
+                        <span>{item.quantity}</span>
+                      ) : (
+                        <input
+                          type="number"
+                          className="w-12.5 px-2 py-1 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={item.quantity}
+                          onChange={(e) => handleSupplyChange(item.id, "quantity", Number(e.target.value))}
+                          min={0}
+                        />
+                      )}
+                    </td>
+                    {showPrice && (
+                      <td className="p-2 border border-gray-200 text-right text-gray-700 align-middle tabular-nums pr-3">
+                        {item.unitPrice != null ? `${(item.unitPrice * item.quantity).toLocaleString()}원` : "-"}
+                      </td>
                     )}
-                  </td>
-                </tr>
-              )),
+                  </tr>
+                );
+              })
+            )}
+            {showPrice && supplyTotal > 0 && (
+              <tr className="bg-bg-050 font-medium">
+                <td colSpan={4} className="px-3 py-2 border border-gray-200 text-right text-bg-700">
+                  소계
+                </td>
+                <td className="px-3 py-2 border border-gray-200 text-center text-gray-700" />
+                <td className="px-3 py-2 border border-gray-200 text-right text-gray-900 tabular-nums">
+                  {supplyTotal.toLocaleString()}원
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -601,7 +749,35 @@ export const StudentModal = ({
   // 명찰 테이블 렌더링
   // ============================================================================
 
-  const renderNameTagTable = () => (
+  const renderNameTagTable = () => {
+    const Stepper = ({
+      value,
+      onChange,
+    }: {
+      value: number;
+      onChange: (v: number) => void;
+    }) => (
+      <div className="flex items-center justify-center gap-1">
+        <button
+          type="button"
+          className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
+          onClick={() => onChange(Math.max(0, value - 1))}
+          disabled={value <= 0}
+        >
+          −
+        </button>
+        <span className="w-7 text-center text-sm text-gray-800 tabular-nums">{value}</span>
+        <button
+          type="button"
+          className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 text-base leading-none"
+          onClick={() => onChange(value + 1)}
+        >
+          +
+        </button>
+      </div>
+    );
+
+    return (
     <div className="flex-none">
       <table className="w-full border-collapse border border-gray-200 text-sm">
         <thead>
@@ -609,10 +785,10 @@ export const StudentModal = ({
             <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap">
               명찰
             </th>
-            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">
+            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-24">
               주문수량
             </th>
-            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">
+            <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-24">
               부착수량
             </th>
           </tr>
@@ -626,43 +802,26 @@ export const StudentModal = ({
               {isView ? (
                 <span>{nameTag.orderQuantity}</span>
               ) : (
-                <input
-                  type="number"
-                  className="w-12.5 px-2 py-1 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                <Stepper
                   value={nameTag.orderQuantity}
-                  onChange={(e) =>
-                    setNameTag((prev) => ({
-                      ...prev,
-                      orderQuantity: Number(e.target.value),
-                    }))
-                  }
-                  min={0}
+                  onChange={(v) => {
+                    const itemTotal = [...winterUniforms, ...summerUniforms].reduce((sum, item) => sum + (item.nameTag ?? 0), 0);
+                    const minCeiled = itemTotal === 0 ? 0 : Math.ceil(itemTotal / 8) * 8;
+                    const newVal = v === 0 ? 0 : Math.ceil(v / 8) * 8;
+                    setNameTag((prev) => ({ ...prev, orderQuantity: Math.max(newVal, minCeiled) }));
+                  }}
                 />
               )}
             </td>
             <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-              {isView ? (
-                <span>{nameTag.attachQuantity}</span>
-              ) : (
-                <input
-                  type="number"
-                  className="w-12.5 px-2 py-1 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  value={nameTag.attachQuantity}
-                  onChange={(e) =>
-                    setNameTag((prev) => ({
-                      ...prev,
-                      attachQuantity: Number(e.target.value),
-                    }))
-                  }
-                  min={0}
-                />
-              )}
+              <span>{nameTag.attachQuantity}</span>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
-  );
+    );
+  };
 
   // ============================================================================
   // 렌더링
@@ -696,12 +855,25 @@ export const StudentModal = ({
       }
       actions={
         mode === "view" && !isEditing ? (
-          <button
-            className="px-6 py-2.5 bg-neutral-500 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
-            onClick={handleClose}
-          >
-            닫기
-          </button>
+          <>
+            <button
+              className="px-6 py-2.5 bg-neutral-500 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              onClick={handleClose}
+            >
+              닫기
+            </button>
+            {onPaymentComplete && (
+              <button
+                className="px-6 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+                onClick={() => {
+                  const orderId = activeOrderId ?? student?.orderId;
+                  if (orderId) onPaymentComplete(orderId);
+                }}
+              >
+                결제 완료
+              </button>
+            )}
+          </>
         ) : (
           <>
             <button
@@ -879,6 +1051,60 @@ export const StudentModal = ({
           {renderSupplyTable()}
           {renderNameTagTable()}
         </div>
+
+        {/* 가격 요약 — 정가 / 지원금액 / 실납부액 */}
+        {hasPrice && (
+          <div className="border border-gray-200 rounded-lg overflow-hidden text-sm">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-bg-050">
+                  <th className="px-3 py-2 font-medium text-bg-800 text-left border-b border-gray-200 w-24">구분</th>
+                  <th className="px-3 py-2 font-medium text-bg-800 text-right border-b border-gray-200">정가</th>
+                  <th className="px-3 py-2 font-medium text-bg-800 text-right border-b border-gray-200">지원금액</th>
+                  <th className="px-3 py-2 font-medium text-bg-800 text-right border-b border-gray-200">실납부액</th>
+                </tr>
+              </thead>
+              <tbody>
+                {winterCalc.total > 0 && (
+                  <tr className="border-b border-gray-100">
+                    <td className="px-3 py-2 text-gray-700">동복</td>
+                    <td className="px-3 py-2 text-right text-gray-700 tabular-nums">{winterCalc.total.toLocaleString()}원</td>
+                    <td className="px-3 py-2 text-right text-blue-600 tabular-nums">
+                      {winterCalc.supported > 0 ? `-${winterCalc.supported.toLocaleString()}원` : "-"}
+                    </td>
+                    <td className="px-3 py-2 text-right font-medium text-gray-900 tabular-nums">{winterCalc.payable.toLocaleString()}원</td>
+                  </tr>
+                )}
+                {summerCalc.total > 0 && (
+                  <tr className="border-b border-gray-100">
+                    <td className="px-3 py-2 text-gray-700">하복</td>
+                    <td className="px-3 py-2 text-right text-gray-700 tabular-nums">{summerCalc.total.toLocaleString()}원</td>
+                    <td className="px-3 py-2 text-right text-blue-600 tabular-nums">
+                      {summerCalc.supported > 0 ? `-${summerCalc.supported.toLocaleString()}원` : "-"}
+                    </td>
+                    <td className="px-3 py-2 text-right font-medium text-gray-900 tabular-nums">{summerCalc.payable.toLocaleString()}원</td>
+                  </tr>
+                )}
+                {hasSupplyPrice && supplyCalcTotal > 0 && (
+                  <tr className="border-b border-gray-100">
+                    <td className="px-3 py-2 text-gray-700">용품</td>
+                    <td className="px-3 py-2 text-right text-gray-700 tabular-nums">{supplyCalcTotal.toLocaleString()}원</td>
+                    <td className="px-3 py-2 text-right text-gray-400 tabular-nums">-</td>
+                    <td className="px-3 py-2 text-right font-medium text-gray-900 tabular-nums">{supplyCalcTotal.toLocaleString()}원</td>
+                  </tr>
+                )}
+                <tr className="bg-bg-050 font-semibold">
+                  <td className="px-3 py-2.5 text-bg-800">합계</td>
+                  <td className="px-3 py-2.5 text-right text-gray-900 tabular-nums">{grandTotal.toLocaleString()}원</td>
+                  <td className="px-3 py-2.5 text-right text-blue-600 tabular-nums">
+                    {grandSupported > 0 ? `-${grandSupported.toLocaleString()}원` : "-"}
+                  </td>
+                  <td className="px-3 py-2.5 text-right text-primary-900 tabular-nums">{grandPayable.toLocaleString()}원</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* 이력 + 등록일/최종수정일 (view/edit 모드) */}
         {(mode === "view" || isEditing) && (

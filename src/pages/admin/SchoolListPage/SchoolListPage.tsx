@@ -26,6 +26,7 @@ import {
 } from '@/api/school';
 import { getApiErrorMessage } from '@/utils/errorUtils';
 import { downloadCSV } from '@/utils/csvUtils';
+import { formatDate } from '@/utils/dateUtils';
 
 interface SchoolRow {
   school_name: string;
@@ -49,15 +50,6 @@ const SCHOOL_TYPE_LABEL: Record<SchoolType, string> = {
 const CURRENT_YEAR = new Date().getFullYear();
 
 const YEAR_OPTIONS = [2023, 2024, 2025, 2026];
-
-const formatDate = (dateStr: string | null | undefined): string => {
-  if (!dateStr) return '-';
-  const d = new Date(dateStr);
-  const yy = String(d.getFullYear()).slice(2);
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yy}/${mm}/${dd}`;
-};
 
 const getMeasurementPeriod = (item: SchoolListItem): string => {
   const currentYearEntry = item.supported_years.find(

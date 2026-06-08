@@ -9,6 +9,7 @@ import { StudentTable, MeasurementConfirmModal } from '../../../components/staff
 import Toast from '../../../components/ui/Toast';
 import { useToast } from '../../../hooks/useToast';
 import { AxiosError } from 'axios';
+import { formatDateTime } from '@/utils/dateUtils';
 
 type Tab = 'in_progress' | 'payment_pending';
 
@@ -213,7 +214,7 @@ export const MyPage = () => {
                     <tr key={order.order_id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-2 py-3 text-sm text-gray-900 border-b border-gray-200 text-center">{index + 1}</td>
                       <td className="px-2 py-3 text-sm text-gray-900 border-b border-gray-200 text-center">
-                        <span className="break-keep">{order.measurement_end_time}</span>
+                        <span className="break-keep">{formatDateTime(order.measurement_end_time)}</span>
                       </td>
                       <td className="px-2 py-3 text-sm text-gray-900 border-b border-gray-200 text-center">{order.student_name}</td>
                       <td className="px-2 py-3 text-sm text-gray-900 border-b border-gray-200 text-center">{order.gender === 'M' ? '남' : '여'}</td>
