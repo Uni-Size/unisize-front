@@ -12,6 +12,7 @@ import { getStaffList, type StaffItem, type StaffListResponse } from '@/api/staf
 import { getApiErrorMessage } from '@/utils/errorUtils';
 import { formatDate } from '@/utils/dateUtils';
 import { downloadCSV } from '@/utils/csvUtils';
+import { formatGender } from '@/utils/genderUtils';
 
 interface StaffRow {
   id: number;
@@ -26,7 +27,7 @@ const toStaffRow = (item: StaffItem, absoluteIndex: number): StaffRow => ({
   id: item.id,
   no: absoluteIndex + 1,
   name: item.employee_name,
-  gender: item.gender === 'M' ? '남' : '여',
+  gender: formatGender(item.gender) as '남' | '여',
   employeeId: item.employee_id,
   registeredDate: formatDate(item.created_at),
 });

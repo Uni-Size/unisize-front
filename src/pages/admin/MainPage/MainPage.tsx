@@ -6,16 +6,19 @@ import { StudentModal } from "@components/organisms/StudentModal";
 import type { StudentDetailData } from "@components/organisms/StudentModal";
 import { Table } from "@components/atoms/Table";
 import { Pagination } from "@components/atoms/Pagination";
+import { Toast } from "@components/atoms/Toast";
 import type { Column } from "@components/atoms/Table";
 import {
   getPaymentPendingOrders,
-  getOrderDetail,
   type PaymentPendingOrder,
   type PaymentPendingListResponse,
 } from "@/api/order";
-import { getStudentDetail } from "@/api/student";
+import { getStudentDetail, getOrderHistory } from "@/api/student";
+import type { AdminStudentOrder, AdminOrderItem } from "@/api/student";
+import { completePayment } from "@/api/staff";
 import { getApiErrorMessage } from "@/utils/errorUtils";
 import { formatDate, formatDateTime } from "@/utils/dateUtils";
+import { formatGender } from "@/utils/genderUtils";
 
 interface PendingRow {
   id: number;
@@ -27,6 +30,7 @@ interface PendingRow {
   gender: string;
   school: string;
   remainingAmount: string;
+  remainingAmountRaw: number;
 }
 
 const toRow = (item: PaymentPendingOrder, absoluteIndex: number): PendingRow => ({
@@ -36,9 +40,10 @@ const toRow = (item: PaymentPendingOrder, absoluteIndex: number): PendingRow => 
   no: absoluteIndex + 1,
   measuredAt: formatDateTime(item.measurement_end_time),
   studentName: item.student_name,
-  gender: item.gender === "M" ? "남" : item.gender === "F" ? "여" : item.gender,
+  gender: formatGender(item.gender),
   school: item.school_name,
   remainingAmount: `${item.remaining_amount.toLocaleString()}원`,
+  remainingAmountRaw: item.remaining_amount,
 });
 
 const ITEMS_PER_PAGE = 10;
@@ -53,7 +58,9 @@ export const MainPage = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] =
     useState<StudentDetailData | null>(null);
+  const [selectedRemainingAmount, setSelectedRemainingAmount] = useState(0);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   const fetchOrders = useCallback(async (page: number) => {
     setLoading(true);
@@ -79,58 +86,87 @@ export const MainPage = () => {
     fetchOrders(currentPage);
   }, [currentPage, fetchOrders]);
 
+  const parseOrderItems = (orderItems: AdminOrderItem[]) => {
+    const winterUniforms: import("@components/organisms/StudentModal").UniformItem[] = [];
+    const summerUniforms: import("@components/organisms/StudentModal").UniformItem[] = [];
+    for (const item of orderItems) {
+      const season = item.product?.season?.toUpperCase() ?? "";
+      const uniform: import("@components/organisms/StudentModal").UniformItem = {
+        id: String(item.id),
+        name: item.product?.name ?? "",
+        size: item.size,
+        supportedQuantity: item.supportedQuantity,
+        additionalQuantity: item.quantity - item.supportedQuantity,
+        unitPrice: item.unitPrice,
+        repair: item.customization ?? "",
+        reservation: false,
+        received: item.receivedAt !== null,
+        nameTag: null,
+        attachCount: 0,
+      };
+      if (season === "W" || season === "WINTER") {
+        winterUniforms.push(uniform);
+      } else {
+        summerUniforms.push(uniform);
+      }
+    }
+    return { winterUniforms, summerUniforms };
+  };
+
   const handleDetailClick = async (e: React.MouseEvent, row: PendingRow) => {
     e.stopPropagation();
     setDetailLoading(true);
+    setSelectedRemainingAmount(row.remainingAmountRaw);
     try {
-      const [student, order] = await Promise.all([
-        getStudentDetail(row.studentId),
-        getOrderDetail(row.orderId),
-      ]);
+      const detail = await getStudentDetail(row.studentId);
+      const adminOrders = detail.orders ?? [];
 
-      const toUniformItem = (item: (typeof order.winter_uniforms)[number]) => ({
-        id: item.item_id,
-        name: item.name,
-        size: item.selected_size,
-        supportedQuantity: item.supported_quantity,
-        unitPrice: item.unit_price,
-        additionalQuantity: item.additional_quantity,
-        repair: item.customization || "불가능",
-        reservation: item.reservation,
-        received: false,
-        nameTag: item.name_tag,
-        attachCount: 0,
-      });
+      const orderSnapshots: import("@components/organisms/StudentModal").OrderSnapshot[] =
+        adminOrders.map((order: AdminStudentOrder) => {
+          const { winterUniforms, summerUniforms } = parseOrderItems(order.orderItems ?? []);
+          return {
+            orderId: order.id,
+            date: order.orderDate ?? order.createdAt,
+            winterUniforms,
+            summerUniforms,
+            supplies: [],
+            history: [],
+            modifiedDate: formatDate(order.updatedAt),
+          };
+        });
+
+      const targetSnapshot = orderSnapshots.find((s) => s.orderId === row.orderId) ?? orderSnapshots[0];
+
+      const historyData = targetSnapshot
+        ? await getOrderHistory(targetSnapshot.orderId).catch(() => null)
+        : null;
+      const history = historyData?.histories.map((h) => ({
+        date: formatDateTime(h.changed_at),
+        content: h.description,
+      })) ?? [];
+
+      if (targetSnapshot) {
+        targetSnapshot.history = history;
+      }
 
       const detailData: StudentDetailData = {
-        id: String(student.id),
-        admissionSchool: student.school_name,
-        previousSchool: student.previous_school,
-        classNumber: student.class_name || "",
-        name: student.name,
-        gender: student.gender,
-        studentPhone: student.student_phone,
-        guardianPhone: student.guardian_phone,
-        registeredDate: formatDate(student.created_at) || undefined,
-        modifiedDate: formatDate(order.last_modified_date) || undefined,
-        winterUniforms: (order.winter_uniforms ?? []).map(toUniformItem),
-        summerUniforms: (order.summer_uniforms ?? []).map(toUniformItem),
-        supplies: (order.supplies ?? []).map((s) => ({
-          id: s.item_id,
-          category: s.category,
-          name: s.name,
-          size: s.selected_size,
-          quantity: s.quantity,
-          unitPrice: s.unit_price,
-        })),
-        nameTag: {
-          orderQuantity: order.name_tag?.order_quantity ?? 0,
-          attachQuantity: order.name_tag?.attach_quantity ?? 0,
-        },
-        history: order.history?.map((h) => ({
-          date: formatDateTime(h.date),
-          content: h.content,
-        })),
+        id: String(detail.id),
+        orderId: targetSnapshot?.orderId,
+        admissionSchool: detail.admission_school ?? detail.school_name,
+        previousSchool: detail.previous_school,
+        classNumber: detail.class_name || "",
+        name: detail.name,
+        gender: detail.gender,
+        studentPhone: detail.student_phone,
+        guardianPhone: detail.guardian_phone,
+        registeredDate: formatDate(detail.created_at) || undefined,
+        modifiedDate: targetSnapshot?.modifiedDate,
+        orderSnapshots,
+        winterUniforms: targetSnapshot?.winterUniforms ?? [],
+        summerUniforms: targetSnapshot?.summerUniforms ?? [],
+        supplies: [],
+        nameTag: { orderQuantity: 0, attachQuantity: 0 },
+        history,
       };
 
       setSelectedStudent(detailData);
@@ -209,13 +245,25 @@ export const MainPage = () => {
         onClose={() => setIsDetailOpen(false)}
         mode="view"
         student={selectedStudent}
-        onPaymentComplete={(orderId) => {
-          // TODO: 결제 완료 API 연동
-          console.log("결제 완료 처리 orderId:", orderId);
-          setIsDetailOpen(false);
-          fetchOrders(currentPage);
+        onPaymentComplete={async (orderId) => {
+          try {
+            await completePayment(Number(orderId), { amount: selectedRemainingAmount, method: "cash" });
+            setIsDetailOpen(false);
+            setPaymentSuccess(true);
+            fetchOrders(currentPage);
+          } catch (err) {
+            alert(getApiErrorMessage(err, "결제 처리 중 오류가 발생했습니다."));
+          }
         }}
       />
+
+      {paymentSuccess && (
+        <Toast
+          message="결제가 완료되었습니다."
+          variant="success"
+          onClose={() => setPaymentSuccess(false)}
+        />
+      )}
     </AdminLayout>
   );
 };

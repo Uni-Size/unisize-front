@@ -18,7 +18,7 @@ export const useSchoolStore = create<SchoolStore>((set, get) => ({
     if (get().fetchedYear === year || get().loading) return;
     set({ loading: true });
     try {
-      const { schools } = await getSchoolList({ is_active: true, year });
+      const { schools } = await getSchoolList({ year });
       set({ schools, fetchedYear: year });
     } catch (err) {
       console.error('학교 목록 조회 실패:', err);

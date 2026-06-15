@@ -1,4 +1,5 @@
 import type { RegisterStudent } from '../../../api/student';
+import { formatGender } from '../../../utils/genderUtils';
 import {
   useReactTable,
   getCoreRowModel,
@@ -62,7 +63,7 @@ export function StudentTable({
       }),
       columnHelper.accessor('gender', {
         header: '성별',
-        cell: (info) => (info.getValue() === 'M' ? '남' : '여'),
+        cell: (info) => formatGender(info.getValue()),
         enableSorting: true,
       }),
       columnHelper.display({

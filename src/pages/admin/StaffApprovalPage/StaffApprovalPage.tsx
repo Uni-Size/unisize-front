@@ -10,6 +10,7 @@ import { getPendingStaffList, approveStaff, type StaffItem, type StaffListRespon
 import { getApiErrorMessage } from '@/utils/errorUtils';
 import { formatDate } from '@/utils/dateUtils';
 import { downloadCSV } from '@/utils/csvUtils';
+import { formatGender } from '@/utils/genderUtils';
 import { Toast } from '@components/atoms/Toast';
 
 interface PendingStaffRow {
@@ -26,7 +27,7 @@ const toPendingRow = (item: StaffItem, absoluteIndex: number): PendingStaffRow =
   no: absoluteIndex + 1,
   employeeId: item.employee_id,
   name: item.employee_name,
-  gender: item.gender === 'M' ? '남' : '여',
+  gender: formatGender(item.gender) as '남' | '여',
   registeredDate: formatDate(item.created_at),
 });
 

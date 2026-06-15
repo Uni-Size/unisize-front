@@ -233,6 +233,7 @@ export interface MeasurementOrderItem {
   selected_size: number;
   customization: string;
   purchase_count: number;
+  has_name_tag?: boolean;
 }
 
 export interface SupplyOrderItem {
@@ -242,9 +243,15 @@ export interface SupplyOrderItem {
   purchase_count: number;
 }
 
+export interface MeasurementOrderNameTag {
+  order_quantity: number;
+  attach_quantity: number;
+}
+
 export interface MeasurementOrderRequest {
   uniform_items: MeasurementOrderItem[];
   supply_items: SupplyOrderItem[];
+  name_tag?: MeasurementOrderNameTag;
 }
 
 // ============================================================================
@@ -467,60 +474,11 @@ export async function getStudents(
 
 /**
  * 학생 상세 조회 (주문 기록 포함)
- * GET /api/v1/students/:id + GET /api/v1/students/:id/orders
+ * GET /api/v1/students/:id
  */
 export async function getStudentDetail(id: number): Promise<AdminStudent> {
-  const [studentRes, ordersRes] = await Promise.allSettled([
-    apiClient.get<ApiResponse<AdminStudent>>(`/api/v1/students/${id}`),
-    apiClient.get<ApiResponse<StudentOrdersData>>(`/api/v1/students/${id}/orders`),
-  ]);
-
-  if (studentRes.status === 'rejected') {
-    throw studentRes.reason;
-  }
-
-  const student = studentRes.value.data.data;
-
-  if (ordersRes.status === 'fulfilled') {
-    const ordersData = ordersRes.value.data.data;
-    student.orders = ordersData.orders.map((o) => ({
-      id: o.id,
-      orderNumber: o.orderNumber,
-      studentId: o.studentId,
-      totalAmount: o.totalAmount,
-      status: o.status,
-      orderType: o.orderType,
-      orderDate: o.orderDate,
-      notes: o.notes,
-      createdAt: o.createdAt,
-      updatedAt: o.updatedAt,
-      orderItems: o.orderItems.map((item) => ({
-        id: item.id,
-        orderId: item.orderId,
-        productId: item.productId,
-        size: item.size,
-        quantity: item.quantity,
-        supportedQuantity: item.supportedQuantity,
-        unitPrice: item.unitPrice,
-        subtotal: item.subtotal,
-        customization: item.customization,
-        deliveryStatus: item.deliveryStatus,
-        receivedAt: item.receivedAt,
-        product: item.product
-          ? {
-              id: item.product.id,
-              name: item.product.name,
-              category: '',
-              gender: '',
-              season: item.product.season,
-              price: item.product.price,
-            }
-          : undefined,
-      })),
-    }));
-  }
-
-  return student;
+  const response = await apiClient.get<ApiResponse<AdminStudent>>(`/api/v1/students/${id}`);
+  return response.data.data;
 }
 
 /**
@@ -692,6 +650,7 @@ export interface UpdateOrderUniformItem {
   selected_size: number;
   purchase_count: number;
   customization: string;
+  has_name_tag?: boolean;
 }
 
 export interface UpdateOrderSupplyItem {
@@ -701,10 +660,16 @@ export interface UpdateOrderSupplyItem {
   purchase_count: number;
 }
 
+export interface UpdateOrderNameTag {
+  order_quantity: number;
+  attach_quantity: number;
+}
+
 export interface UpdateOrderRequest {
   uniform_items: UpdateOrderUniformItem[];
   supply_items: UpdateOrderSupplyItem[];
   notes: string;
+  name_tag?: UpdateOrderNameTag;
 }
 
 /**

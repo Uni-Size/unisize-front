@@ -56,6 +56,10 @@ export interface UniformItem {
   product_id: number;
   contract_price: number;
   free_support_count: number;
+  has_name_tag?: boolean;
+  name_tag_price?: number;
+  name_tag_attach_price?: number;
+  name_tag_min_unit?: number;
 }
 
 // GET /schools/supported/detail 응답 타입
@@ -76,6 +80,10 @@ export interface SchoolDetailUniform {
   display_name: string;
   contract_price: number;
   free_support_count: number;
+  has_name_tag: boolean;
+  name_tag_price: number | null;
+  name_tag_attach_price: number | null;
+  name_tag_min_unit: number | null;
 }
 
 export interface SchoolDetailResponse {
@@ -210,6 +218,54 @@ export async function updateSupportedSchool(schoolName: string, data: UpdateScho
 export async function deleteSupportedSchool(id: number): Promise<void> {
   await apiClient.delete<ApiResponse<void>>(
     `/api/v1/schools/supported/${id}`
+  );
+}
+
+export interface UpdateSchoolUniformRequest {
+  contract_price?: number;
+  free_support_count?: number;
+  has_name_tag?: boolean;
+  name_tag_price?: number | null;
+  name_tag_attach_price?: number | null;
+  name_tag_min_unit?: number | null;
+}
+
+export interface AddSchoolUniformRequest {
+  product_id: number;
+  contract_price: number;
+  free_support_count: number;
+  has_name_tag?: boolean;
+  name_tag_price?: number | null;
+  name_tag_attach_price?: number | null;
+  name_tag_min_unit?: number | null;
+}
+
+/**
+ * 학교 품목 수정
+ * PUT /api/v1/schools/supported/uniforms/single/:id
+ */
+export async function updateSchoolUniform(
+  uniformId: number,
+  data: UpdateSchoolUniformRequest,
+): Promise<void> {
+  await apiClient.put<ApiResponse<void>>(
+    `/api/v1/schools/supported/uniforms/single/${uniformId}`,
+    data,
+  );
+}
+
+/**
+ * 학교 품목 추가
+ * POST /api/v1/schools/supported/uniforms/single
+ */
+export async function addSchoolUniform(
+  schoolName: string,
+  season: 'W' | 'S',
+  data: AddSchoolUniformRequest,
+): Promise<void> {
+  await apiClient.post<ApiResponse<void>>(
+    `/api/v1/schools/supported/uniforms/single`,
+    { school_name: schoolName, season, ...data },
   );
 }
 

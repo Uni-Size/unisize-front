@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import { AdminHeader } from '@components/organisms/AdminHeader';
 import { downloadCSV } from '@/utils/csvUtils';
+import { formatGender } from '@/utils/genderUtils';
 import { Table } from '@components/atoms/Table';
 import { Badge } from '@components/atoms/Badge';
 import { Input } from '@components/atoms/Input';
@@ -81,7 +82,7 @@ export const StudentOrderPage = () => {
       key: 'gender',
       header: '성별',
       width: '60px',
-      render: (item) => (item.gender === 'M' ? '남' : item.gender === 'F' ? '여' : '공용'),
+      render: (item) => formatGender(item.gender),
     },
     {
       key: 'items',
@@ -119,7 +120,7 @@ export const StudentOrderPage = () => {
         o.phone,
         o.school,
         `${o.grade}-${o.className}`,
-        o.gender === 'M' ? '남' : o.gender === 'F' ? '여' : '공용',
+        formatGender(o.gender),
         o.items.join(', '),
         `${o.totalAmount.toLocaleString()}원`,
         { pending: '대기', measured: '치수측정', ordered: '주문완료', received: '수령완료' }[o.status],

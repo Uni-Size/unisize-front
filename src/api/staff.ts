@@ -130,6 +130,19 @@ export async function approveStaff(staffId: number): Promise<void> {
   });
 }
 
+export interface CompletePaymentRequest {
+  amount: number;
+  method: string;
+}
+
+/**
+ * 결제 완료 처리
+ * POST /api/v1/admin/orders/:id/payment
+ */
+export async function completePayment(orderId: number, data: CompletePaymentRequest): Promise<void> {
+  await apiClient.post<ApiResponse<void>>(`/api/v1/admin/orders/${orderId}/payment`, data);
+}
+
 /**
  * 스태프 비밀번호 초기화
  * POST /api/v1/admin/auth/reset-password

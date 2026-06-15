@@ -13,6 +13,14 @@ import {
   SIZE_TYPE_OPTIONS,
   getSeasonLabel,
 } from "@/constants/product";
+import { formatDateTime } from "@/utils/dateUtils";
+
+export interface ProductSchoolDetail {
+  school_name: string;
+  display_name: string;
+  price: number;
+  quantity: number;
+}
 
 export interface ProductDetailData {
   id: string;
@@ -25,6 +33,9 @@ export interface ProductDetailData {
   isRepairRequired: string;
   sizeType: string;
   schools: SchoolPrice[];
+  rawSchools?: ProductSchoolDetail[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ProductDetailModalProps {
@@ -33,9 +44,6 @@ export interface ProductDetailModalProps {
   product: ProductDetailData | null;
   onUpdate: (data: ProductDetailData) => void;
   onOpenSchoolModal?: () => void;
-  selectedSchools?: SchoolPrice[];
-  onRemoveSchool?: (schoolId: string) => void;
-  onSchoolPriceChange?: (schoolId: string, price: number) => void;
 }
 
 // ============================================================================
@@ -70,9 +78,6 @@ const ProductDetailModalContent = ({
   onClose,
   onUpdate,
   onOpenSchoolModal,
-  selectedSchools,
-  onRemoveSchool,
-  onSchoolPriceChange,
   isOpen,
 }: ProductDetailModalProps & { product: ProductDetailData }) => {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -88,6 +93,9 @@ const ProductDetailModalContent = ({
     product.isRepairRequired,
   );
   const [sizeType, setSizeUnit] = useState(product.sizeType);
+  const [editSchools, setEditSchools] = useState<ProductSchoolDetail[]>(
+    product.rawSchools ?? [],
+  );
 
   const handleClose = () => {
     setIsEditMode(false);
@@ -105,12 +113,20 @@ const ProductDetailModalContent = ({
       isRepairable,
       isRepairRequired,
       sizeType,
-      schools: selectedSchools || product.schools,
+      rawSchools: editSchools,
     });
     setIsEditMode(false);
   };
 
-  const schools = selectedSchools || product.schools;
+  const updateSchoolField = (
+    index: number,
+    field: keyof ProductSchoolDetail,
+    value: string | number,
+  ) => {
+    setEditSchools((prev) =>
+      prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)),
+    );
+  };
 
   const getOptionLabel = (
     options: { value: string; label: string }[],
@@ -307,12 +323,29 @@ const ProductDetailModalContent = ({
           <div className="flex-1 min-w-0" />
         </div>
 
+        {/* ID / 등록일 / 수정일 */}
+        <div className="flex gap-2 items-start">
+          <div className="flex-1 min-w-0">
+            <FieldView label="상품 ID" value={product.id} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <FieldView
+              label="등록일"
+              value={formatDateTime(product.createdAt) || "-"}
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <FieldView
+              label="수정일"
+              value={formatDateTime(product.updatedAt) || "-"}
+            />
+          </div>
+        </div>
+
         {/* 사용 학교 */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-15 font-normal text-gray-700">
-              사용 학교
-            </span>
+            <span className="text-15 font-normal text-gray-700">사용 학교</span>
             {isEditMode && onOpenSchoolModal && (
               <button
                 className="px-4 py-1.5 bg-primary-900 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
@@ -322,68 +355,63 @@ const ProductDetailModalContent = ({
               </button>
             )}
           </div>
-          {schools.length > 0 ? (
-            <div className="flex flex-col gap-3">
-              {Object.entries(
-                schools.reduce<Record<string, typeof schools>>(
-                  (acc, school) => {
-                    if (!acc[school.year]) acc[school.year] = [];
-                    acc[school.year].push(school);
-                    return acc;
-                  },
-                  {},
-                ),
-              )
-                .sort(([a], [b]) => b.localeCompare(a))
-                .map(([year, yearSchools]) => (
-                  <div key={year} className="flex flex-col gap-2">
-                    <span className="text-sm font-medium text-gray-600">
-                      {year}
-                    </span>
-                    <div className="grid grid-cols-2 gap-4">
-                      {yearSchools.map((school) => (
-                        <div
-                          key={`${school.year}-${school.schoolId}`}
-                          className="flex items-stretch gap-1"
-                        >
-                          {isEditMode && onRemoveSchool && (
-                            <button
-                              className="shrink-0 flex items-center justify-center px-4 bg-delete-bg text-white text-sm font-medium cursor-pointer hover:bg-delete-bg-hover border border-delete-border rounded-lg"
-                              onClick={() => onRemoveSchool(school.schoolId)}
-                            >
-                              삭제
-                            </button>
-                          )}
-                          <div className="flex-1 flex items-stretch border border-gray-200 rounded-lg bg-white overflow-hidden">
-                            <span className="flex-1 flex items-center px-4 py-3 text-15 text-gray-700 border-r border-gray-200">
-                              {school.schoolName}
-                            </span>
-                            <div className="flex items-center px-4 py-3 text-15 text-gray-700 justify-end min-w-0 flex-1">
-                              {isEditMode && onSchoolPriceChange ? (
-                                <>
-                                  <input
-                                    type="number"
-                                    className="min-w-0 flex-1 border-none bg-transparent text-15 text-gray-700 text-right outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                    value={school.price}
-                                    onChange={(e) =>
-                                      onSchoolPriceChange(
-                                        school.schoolId,
-                                        Number(e.target.value),
-                                      )
-                                    }
-                                  />
-                                  <span className="ml-1 shrink-0">원</span>
-                                </>
-                              ) : (
-                                <>{school.price.toLocaleString()}원</>
-                              )}
-                            </div>
+          {editSchools.length > 0 ? (
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <table className="w-full text-14 text-gray-700">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="px-4 py-2.5 text-left font-medium">학교명</th>
+                    <th className="px-4 py-2.5 text-left font-medium">표시명</th>
+                    <th className="px-4 py-2.5 text-right font-medium">가격</th>
+                    <th className="px-4 py-2.5 text-right font-medium">지원 개수</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {editSchools.map((s, i) => (
+                    <tr key={i} className="border-b border-gray-100 last:border-b-0">
+                      <td className="px-4 py-2.5">{s.school_name}</td>
+                      <td className="px-4 py-2.5">
+                        {isEditMode ? (
+                          <input
+                            className="w-full border border-gray-200 rounded px-2 py-1 text-14 text-gray-700 outline-none focus:border-gray-400"
+                            value={s.display_name}
+                            onChange={(e) => updateSchoolField(i, "display_name", e.target.value)}
+                          />
+                        ) : (
+                          s.display_name
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        {isEditMode ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <input
+                              type="number"
+                              className="w-24 border border-gray-200 rounded px-2 py-1 text-14 text-gray-700 text-right outline-none focus:border-gray-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                              value={s.price}
+                              onChange={(e) => updateSchoolField(i, "price", Number(e.target.value))}
+                            />
+                            <span className="shrink-0">원</span>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                        ) : (
+                          `${s.price.toLocaleString()}원`
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        {isEditMode ? (
+                          <input
+                            type="number"
+                            className="w-16 border border-gray-200 rounded px-2 py-1 text-14 text-gray-700 text-right outline-none focus:border-gray-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            value={s.quantity}
+                            onChange={(e) => updateSchoolField(i, "quantity", Number(e.target.value))}
+                          />
+                        ) : (
+                          s.quantity
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <p className="text-15 text-gray-400 text-center py-2">

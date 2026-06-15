@@ -37,6 +37,7 @@ interface EditableYear extends SupportedYear {
 
 interface EditableProduct extends SchoolProductItem {
   productApiId?: string;
+  uniformApiId?: number;
 }
 
 export const SchoolDetailModal = ({
@@ -87,6 +88,11 @@ export const SchoolDetailModal = ({
         contractPrice: u.contract_price,
         freeQuantity: u.free_support_count,
         productApiId: String(u.product_id),
+        uniformApiId: u.id,
+        hasNameTag: u.has_name_tag,
+        nameTagPrice: u.name_tag_price ?? undefined,
+        nameTagAttachPrice: u.name_tag_attach_price ?? undefined,
+        nameTagMinUnit: u.name_tag_min_unit ?? undefined,
       });
       setWinterProducts(detail.uniforms.winter.map(toEditableProduct));
       setSummerProducts(detail.uniforms.summer.map(toEditableProduct));
@@ -197,6 +203,10 @@ export const SchoolDetailModal = ({
     product_id: Number(p.productApiId),
     contract_price: p.contractPrice,
     free_support_count: p.freeQuantity,
+    has_name_tag: p.hasNameTag ?? false,
+    name_tag_price: p.hasNameTag ? (p.nameTagPrice ?? null) : null,
+    name_tag_attach_price: p.hasNameTag ? (p.nameTagAttachPrice ?? null) : null,
+    name_tag_min_unit: p.hasNameTag ? (p.nameTagMinUnit ?? null) : null,
   });
 
   const handleSave = async () => {
@@ -222,6 +232,11 @@ export const SchoolDetailModal = ({
     onUpdate();
   };
 
+  const handleNameTagToggle = (season: 'winter' | 'summer', productId: string, checked: boolean) => {
+    const setter = season === 'winter' ? setWinterProducts : setSummerProducts;
+    setter((prev) => prev.map((p) => p.id === productId ? { ...p, hasNameTag: checked } : p));
+  };
+
   const renderProductRow = (product: EditableProduct, season: 'winter' | 'summer') => {
     const seasonCode = season === 'winter' ? 'W' : 'S';
     const options = getDisplayNameOptions(season, product.category, product.gender);
@@ -229,98 +244,173 @@ export const SchoolDetailModal = ({
     const isLoaded = cacheKey in productsCache;
 
     return (
-      <div key={product.id} className="flex gap-2 items-start">
-        {isEditMode && (
-          <button
-            className="shrink-0 flex items-center justify-center w-14 h-12.5 border border-delete-border rounded-lg bg-delete-bg text-white cursor-pointer hover:bg-delete-bg-hover text-sm font-medium"
-            onClick={() => handleRemoveProduct(season, product.id)}
-          >
-            삭제
-          </button>
-        )}
-        <div className="w-30 shrink-0">
-          {isEditMode ? (
-            <Select
-              placeholder="카테고리"
-              options={categoryOptions}
-              value={product.category}
-              onChange={(v) => handleProductChange(season, product.id, 'category', v)}
-              fullWidth
-            />
-          ) : (
-            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
-              {categoryOptions.find((o) => o.value === product.category)?.label ?? product.category}
-            </div>
+      <div key={product.id} className="flex flex-col gap-1">
+        <div className="flex gap-2 items-start">
+          {isEditMode && (
+            <button
+              className="shrink-0 flex items-center justify-center w-14 h-12.5 border border-delete-border rounded-lg bg-delete-bg text-white cursor-pointer hover:bg-delete-bg-hover text-sm font-medium"
+              onClick={() => handleRemoveProduct(season, product.id)}
+            >
+              삭제
+            </button>
           )}
-        </div>
-        <div className="w-17.5 shrink-0">
-          {isEditMode ? (
-            <Select
-              placeholder="성별"
-              options={genderOptions}
-              value={product.gender}
-              onChange={(v) => handleProductChange(season, product.id, 'gender', v)}
-              fullWidth
-            />
-          ) : (
-            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
-              {genderOptions.find((o) => o.value === product.gender)?.label ?? product.gender}
-            </div>
-          )}
-        </div>
-        <div className="flex-1 min-w-30">
-          {isEditMode ? (
-            product.category && product.gender ? (
+          <div className="w-30 shrink-0">
+            {isEditMode ? (
               <Select
-                placeholder={!isLoaded ? '불러오는 중...' : options.length === 0 ? '등록된 아이템이 없습니다' : '표시명'}
-                options={options}
-                value={product.productApiId ?? ''}
-                onChange={(v) => handleProductChange(season, product.id, 'displayName', v)}
-                disabled={isLoaded && options.length === 0}
+                placeholder="카테고리"
+                options={categoryOptions}
+                value={product.category}
+                onChange={(v) => handleProductChange(season, product.id, 'category', v)}
                 fullWidth
               />
             ) : (
-              <Select placeholder="표시명" options={[]} value="" disabled fullWidth />
-            )
-          ) : (
-            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
-              {product.displayName}
-            </div>
-          )}
-        </div>
-        <div className="w-35 shrink-0">
-          {isEditMode ? (
-            <div className="flex items-center h-12.5 px-3 border border-gray-200 rounded-lg bg-white gap-1">
-              <input
-                type="number"
-                className="min-w-0 flex-1 border-none bg-transparent text-15 text-gray-700 text-right outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                placeholder="-"
-                value={product.contractPrice || ''}
-                onChange={(e) => handleProductChange(season, product.id, 'contractPrice', Number(e.target.value))}
+              <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
+                {categoryOptions.find((o) => o.value === product.category)?.label ?? product.category}
+              </div>
+            )}
+          </div>
+          <div className="w-17.5 shrink-0">
+            {isEditMode ? (
+              <Select
+                placeholder="성별"
+                options={genderOptions}
+                value={product.gender}
+                onChange={(v) => handleProductChange(season, product.id, 'gender', v)}
+                fullWidth
               />
-              <span className="text-15 text-gray-700 shrink-0">원</span>
-            </div>
-          ) : (
-            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
-              {product.contractPrice.toLocaleString()}원
-            </div>
-          )}
+            ) : (
+              <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
+                {genderOptions.find((o) => o.value === product.gender)?.label ?? product.gender}
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-30">
+            {isEditMode ? (
+              product.category && product.gender ? (
+                <Select
+                  placeholder={!isLoaded ? '불러오는 중...' : options.length === 0 ? '등록된 아이템이 없습니다' : '표시명'}
+                  options={options}
+                  value={product.productApiId ?? ''}
+                  onChange={(v) => handleProductChange(season, product.id, 'displayName', v)}
+                  disabled={isLoaded && options.length === 0}
+                  fullWidth
+                />
+              ) : (
+                <Select placeholder="표시명" options={[]} value="" disabled fullWidth />
+              )
+            ) : (
+              <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
+                {product.displayName}
+              </div>
+            )}
+          </div>
+          <div className="w-35 shrink-0">
+            {isEditMode ? (
+              <div className="flex items-center h-12.5 px-3 border border-gray-200 rounded-lg bg-white gap-1">
+                <input
+                  type="number"
+                  className="min-w-0 flex-1 border-none bg-transparent text-15 text-gray-700 text-right outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  placeholder="-"
+                  value={product.contractPrice || ''}
+                  onChange={(e) => handleProductChange(season, product.id, 'contractPrice', Number(e.target.value))}
+                />
+                <span className="text-15 text-gray-700 shrink-0">원</span>
+              </div>
+            ) : (
+              <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
+                {product.contractPrice.toLocaleString()}원
+              </div>
+            )}
+          </div>
+          <div className="w-17.5 shrink-0">
+            {isEditMode ? (
+              <Input
+                placeholder=""
+                type="number"
+                value={String(product.freeQuantity || '')}
+                onChange={(e) => handleProductChange(season, product.id, 'freeQuantity', Number(e.target.value))}
+                fullWidth
+              />
+            ) : (
+              <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
+                {product.freeQuantity}
+              </div>
+            )}
+          </div>
+          <div className="w-17.5 shrink-0 flex items-center justify-center h-12.5">
+            <label className="flex items-center gap-1 text-14 text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={product.hasNameTag ?? false}
+                disabled={!isEditMode}
+                onChange={(e) => handleNameTagToggle(season, product.id, e.target.checked)}
+                className="w-4 h-4 accent-primary-900"
+              />
+              명찰
+            </label>
+          </div>
         </div>
-        <div className="w-17.5 shrink-0">
-          {isEditMode ? (
-            <Input
-              placeholder=""
-              type="number"
-              value={String(product.freeQuantity || '')}
-              onChange={(e) => handleProductChange(season, product.id, 'freeQuantity', Number(e.target.value))}
-              fullWidth
-            />
-          ) : (
-            <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
-              {product.freeQuantity}
+        {product.hasNameTag && (
+          <div className={`flex gap-2 items-start ${isEditMode ? 'pl-16' : 'pl-0'}`}>
+            <div className="w-30 shrink-0">
+              {isEditMode ? (
+                <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-white gap-1">
+                  <input
+                    type="number"
+                    className="min-w-0 flex-1 border-none bg-transparent text-14 text-gray-700 text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    placeholder="제작 단가"
+                    value={product.nameTagPrice || ''}
+                    onChange={(e) => handleProductChange(season, product.id, 'nameTagPrice', Number(e.target.value))}
+                  />
+                  <span className="text-14 text-gray-500 shrink-0">원</span>
+                </div>
+              ) : (
+                <div className="flex items-center h-10 px-4 border border-gray-200 rounded-lg bg-white text-14 text-gray-700">
+                  제작 {product.nameTagPrice != null ? `${product.nameTagPrice.toLocaleString()}원` : '-'}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+            <div className="w-30 shrink-0">
+              {isEditMode ? (
+                <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-white gap-1">
+                  <input
+                    type="number"
+                    className="min-w-0 flex-1 border-none bg-transparent text-14 text-gray-700 text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    placeholder="부착 단가"
+                    value={product.nameTagAttachPrice || ''}
+                    onChange={(e) => handleProductChange(season, product.id, 'nameTagAttachPrice', Number(e.target.value))}
+                  />
+                  <span className="text-14 text-gray-500 shrink-0">원</span>
+                </div>
+              ) : (
+                <div className="flex items-center h-10 px-4 border border-gray-200 rounded-lg bg-white text-14 text-gray-700">
+                  부착 {product.nameTagAttachPrice != null ? `${product.nameTagAttachPrice.toLocaleString()}원` : '-'}
+                </div>
+              )}
+            </div>
+            <div className="w-25 shrink-0">
+              {isEditMode ? (
+                <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-white gap-1">
+                  <input
+                    type="number"
+                    className="min-w-0 flex-1 border-none bg-transparent text-14 text-gray-700 text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    placeholder="최소단위"
+                    value={product.nameTagMinUnit || ''}
+                    onChange={(e) => handleProductChange(season, product.id, 'nameTagMinUnit', Number(e.target.value))}
+                  />
+                  <span className="text-14 text-gray-500 shrink-0">개</span>
+                </div>
+              ) : (
+                <div className="flex items-center h-10 px-4 border border-gray-200 rounded-lg bg-white text-14 text-gray-700">
+                  최소 {product.nameTagMinUnit != null ? `${product.nameTagMinUnit}개` : '-'}
+                </div>
+              )}
+            </div>
+            {isEditMode && (
+              <span className="text-13 text-gray-400 flex items-center h-10">제작단가 / 부착단가 / 최소주문단위</span>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -333,6 +423,7 @@ export const SchoolDetailModal = ({
       <div className="flex-1 min-w-30"><span className="px-2 text-base text-bg-800">표시명</span></div>
       <div className="w-35 shrink-0"><span className="px-2 text-base text-bg-800">계약가격</span></div>
       <div className="w-17.5 shrink-0"><span className="px-2 text-base text-bg-800">무상</span></div>
+      <div className="w-17.5 shrink-0"><span className="px-2 text-base text-bg-800">명찰</span></div>
     </div>
   );
 

@@ -4,6 +4,7 @@ import { Toast } from "@components/atoms/Toast";
 import { GENDER_OPTIONS_MF } from "@/constants/gender";
 import { updateStudent } from "@/api/student";
 import { formatShortDate } from "@/utils/dateUtils";
+import { formatGender } from "@/utils/genderUtils";
 
 // ============================================================================
 // 타입 정의
@@ -358,7 +359,7 @@ export const StudentModal = ({
 
   const hasSchool = admissionSchool.trim() !== "";
 
-  const genderLabel = gender === "M" ? "남" : gender === "F" ? "여" : gender;
+  const genderLabel = formatGender(gender);
 
   // ============================================================================
   // 가격 계산

@@ -75,6 +75,9 @@ export interface OrderUniformItem {
   customization: string;
   reservation: boolean;
   name_tag: number | null;
+  has_name_tag?: boolean;
+  name_tag_price?: number | null;
+  name_tag_attach_price?: number | null;
 }
 
 export interface OrderSupplyItem {
@@ -128,6 +131,60 @@ export async function getOrderDetail(orderId: number): Promise<OrderDetail> {
   return response.data.data;
 }
 
+export interface StaffOrderUniformItem {
+  item_id: string;
+  name: string;
+  season: string;
+  selected_size: number;
+  purchase_count: number;
+  customization: string;
+  has_name_tag?: boolean;
+}
+
+export interface StaffOrderSupplyItem {
+  item_id: string;
+  name: string;
+  selected_size: string;
+  purchase_count: number;
+}
+
+export interface StaffOrderNameTag {
+  order_quantity: number;
+  attach_quantity: number;
+}
+
+export interface UpdateStaffOrderRequest {
+  uniform_items: StaffOrderUniformItem[];
+  supply_items: StaffOrderSupplyItem[];
+  notes: string;
+  name_tag?: StaffOrderNameTag;
+}
+
+/**
+ * 주문 수정 (스태프)
+ * PUT /api/v1/staff/orders/:id
+ */
+export async function updateStaffOrder(
+  orderId: number,
+  data: UpdateStaffOrderRequest,
+): Promise<void> {
+  await apiClient.put<ApiResponse<void>>(
+    `/api/v1/staff/orders/${orderId}`,
+    data,
+  );
+}
+
+/**
+ * 학생 ID로 주문 상세 조회
+ * GET /api/v1/orders/student/:id
+ */
+export async function getOrderDetailByStudentId(studentId: number): Promise<OrderDetail> {
+  const response = await apiClient.get<ApiResponse<OrderDetail>>(
+    `/api/v1/orders/student/${studentId}`,
+  );
+  return response.data.data;
+}
+
 // ============================================================================
 // 주문/재고 현황 타입
 // ============================================================================
@@ -139,12 +196,37 @@ export interface InventoryOrder {
   status: OrderInventoryStatus;
 }
 
+export interface StockRound {
+  round_number: number;
+  total_in: number;
+}
+
 export interface InventorySizeStat {
+  inventory_id?: number;
   size: string;
   stock: number;
   ordered: number;
   remaining: number;
   orders: InventoryOrder[];
+  rounds?: StockRound[];
+}
+
+export interface InventoryDetail {
+  id: number;
+  size: string;
+  quantity: number;
+  rounds: StockRound[];
+}
+
+/**
+ * 재고 상세 조회 (rounds 포함)
+ * GET /api/v1/inventories/:id
+ */
+export async function getInventoryDetail(inventoryId: number): Promise<InventoryDetail> {
+  const response = await apiClient.get<ApiResponse<InventoryDetail>>(
+    `/api/v1/inventories/${inventoryId}`,
+  );
+  return response.data.data;
 }
 
 export interface InventoryProduct {
@@ -185,6 +267,7 @@ export interface StockUpdateItem {
   product_id: number;
   size: string;
   stock: number;
+  round_number?: number;
 }
 
 export interface UpdateStockRequest {

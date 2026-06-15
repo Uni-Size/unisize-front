@@ -13,6 +13,7 @@ import { getStudents, getStudentDetail, deleteStudent, getOrderHistory, updateAd
 import type { AdminStudent } from '@/api/student';
 import { getApiErrorMessage } from '@/utils/errorUtils';
 import { formatDate } from '@/utils/dateUtils';
+import { formatGender } from '@/utils/genderUtils';
 import { downloadCSV } from '@/utils/csvUtils';
 
 interface StudentRow {
@@ -51,7 +52,7 @@ export const StudentListPage = () => {
     category: `${student.admission_grade}학년`,
     school: student.admission_school ?? '',
     name: student.name,
-    gender: student.gender === 'M' ? '남' : student.gender === 'F' ? '여' : student.gender === 'U' ? '공용' : student.gender,
+    gender: formatGender(student.gender),
     studentPhone: student.student_phone || '-',
     parentPhone: student.guardian_phone || '-',
     governmentPurchase: student.is_eligible_for_public_purchase ? 'O' : 'X',
@@ -273,7 +274,7 @@ export const StudentListPage = () => {
           `${s.admission_grade}학년`,
           s.school_name,
           s.name,
-          s.gender === 'M' ? '남' : s.gender === 'F' ? '여' : s.gender === 'U' ? '공용' : s.gender,
+          formatGender(s.gender),
           s.student_phone,
           s.guardian_phone,
           s.government_purchase ? 'O' : 'X',

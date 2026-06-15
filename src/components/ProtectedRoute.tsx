@@ -15,9 +15,13 @@ export default function ProtectedRoute({ children, requiredRole, loginPath }: Pr
     return <Navigate to={loginPath} state={{ from: location }} replace />;
   }
 
-  if (requiredRole && staff?.role !== requiredRole) {
-    const redirectPath = staff?.role === 'admin' ? '/admin' : '/staff';
-    return <Navigate to={redirectPath} replace />;
+  if (requiredRole) {
+    const role = staff?.role;
+    const allowed = role === requiredRole || (requiredRole === 'staff' && role === 'admin');
+    if (!allowed) {
+      const redirectPath = role === 'admin' ? '/admin' : '/staff';
+      return <Navigate to={redirectPath} replace />;
+    }
   }
 
   return <>{children}</>;

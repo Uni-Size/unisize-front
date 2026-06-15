@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../stores/authStore';
 import { getStaffProfile, getMyPaymentPending } from '../../../api/staff';
 import { getRegisterStudents, startMeasurement } from '../../../api/student';
+import { formatGender } from '../../../utils/genderUtils';
 import type { StaffProfile, PaymentPendingOrder } from '../../../api/staff';
 import type { RegisterStudent, StartMeasurementResponse } from '../../../api/student';
 import { StudentTable, MeasurementConfirmModal } from '../../../components/staff';
@@ -217,7 +218,7 @@ export const MyPage = () => {
                         <span className="break-keep">{formatDateTime(order.measurement_end_time)}</span>
                       </td>
                       <td className="px-2 py-3 text-sm text-gray-900 border-b border-gray-200 text-center">{order.student_name}</td>
-                      <td className="px-2 py-3 text-sm text-gray-900 border-b border-gray-200 text-center">{order.gender === 'M' ? '남' : '여'}</td>
+                      <td className="px-2 py-3 text-sm text-gray-900 border-b border-gray-200 text-center">{formatGender(order.gender)}</td>
                       <td className="px-2 py-3 text-sm text-gray-900 border-b border-gray-200 text-center font-bold">{order.school_name}</td>
                       <td className="px-2 py-3 text-sm text-gray-900 border-b border-gray-200 text-center">{order.category_summary}</td>
                       <td className="px-2 py-3 text-sm text-gray-900 border-b border-gray-200 text-center">

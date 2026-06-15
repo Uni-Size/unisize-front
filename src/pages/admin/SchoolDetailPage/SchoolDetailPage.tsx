@@ -21,6 +21,7 @@ import { getTargetYear } from "@/utils/schoolUtils";
 import { getApiErrorMessage } from "@/utils/errorUtils";
 import { formatDate } from "@/utils/dateUtils";
 import { downloadCSV } from "@/utils/csvUtils";
+import { formatGender } from "@/utils/genderUtils";
 import { getOrderInventory, updateInventoryStock } from "@/api/order";
 import type { InventoryProduct } from "@/api/order";
 import { StockAddModal } from "@components/organisms/StockAddModal";
@@ -69,14 +70,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     category: `${student.admission_grade}학년`,
     school: student.admission_school ?? '',
     name: student.name,
-    gender:
-      student.gender === "M"
-        ? "남"
-        : student.gender === "F"
-          ? "여"
-          : student.gender === "U"
-            ? "공용"
-            : student.gender,
+    gender: formatGender(student.gender),
     studentPhone: student.student_phone,
     parentPhone: student.guardian_phone,
     governmentPurchase: student.is_eligible_for_public_purchase ? "O" : "X",
@@ -258,7 +252,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
           `${s.admission_grade}학년`,
           s.school_name,
           s.name,
-          s.gender === "M" ? "남" : s.gender === "F" ? "여" : s.gender === "U" ? "공용" : s.gender,
+          formatGender(s.gender),
           s.student_phone,
           s.guardian_phone,
           s.government_purchase ? "O" : "X",
@@ -580,7 +574,7 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
     downloadCSV([], csvRows, `${schoolName}_주문예약`);
   };
 
-  const handleStockSubmit = async (items: { product_id: number; size: string; stock: number }[]) => {
+  const handleStockSubmit = async (items: { product_id: number; size: string; stock: number; round_number?: number }[]) => {
     await updateInventoryStock(schoolName, { items });
     fetchInventory();
   };

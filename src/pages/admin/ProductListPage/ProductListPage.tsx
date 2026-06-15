@@ -11,7 +11,7 @@ import type {
   SchoolPrice,
   ProductAddData,
 } from "@components/organisms/ProductAddModal";
-import type { ProductDetailData } from "@components/organisms/ProductDetailModal";
+import type { ProductDetailData, ProductSchoolDetail } from "@components/organisms/ProductDetailModal";
 import { Table } from "@components/atoms/Table";
 import { Input } from "@components/atoms/Input";
 import { Button } from "@components/atoms/Button";
@@ -233,6 +233,18 @@ export const ProductListPage = () => {
   const handleOpenDetailModal = async (product: ProductRow) => {
     try {
       const detail = await getProduct(Number(product.id));
+      const rawSchools: ProductSchoolDetail[] = (detail.schools ?? []).map((s) => ({
+        school_name: s.school_name,
+        display_name: s.display_name,
+        price: s.price,
+        quantity: s.quantity,
+      }));
+      const schools: SchoolPrice[] = rawSchools.map((s, i) => ({
+        schoolId: String(i),
+        schoolName: s.school_name,
+        price: s.price,
+        year: "",
+      }));
       const detailData: ProductDetailData = {
         id: product.id,
         season: detail.season ?? "",
@@ -243,10 +255,13 @@ export const ProductListPage = () => {
         isRepairable: detail.is_repair ? "yes" : "no",
         isRepairRequired: detail.is_repair_required ? "required" : "optional",
         sizeType: apiSizesToSizeType(detail.sizes),
-        schools: [],
+        schools,
+        rawSchools,
+        createdAt: detail.created_at,
+        updatedAt: detail.updated_at,
       };
       setSelectedProduct(detailData);
-      setSelectedSchools([]);
+      setSelectedSchools(schools);
       setIsDetailModalOpen(true);
     } catch (err) {
       console.error("상품 상세 조회 실패:", err);
@@ -596,9 +611,6 @@ export const ProductListPage = () => {
         product={selectedProduct}
         onUpdate={handleUpdateProduct}
         onOpenSchoolModal={() => handleOpenSchoolModal()}
-        selectedSchools={selectedSchools}
-        onRemoveSchool={handleRemoveSchool}
-        onSchoolPriceChange={handleSchoolPriceChange}
       />
 
       <SchoolSelectModal
