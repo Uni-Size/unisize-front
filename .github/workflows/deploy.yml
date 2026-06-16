@@ -34,6 +34,29 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p ${{ secrets.SSH_PORT || '2022' }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
+      - name: Pre-flight connectivity check
+        run: |
+          HOST="${{ secrets.SSH_HOST }}"
+          PORT="${{ secrets.SSH_PORT || '2022' }}"
+
+          echo "🔎 Resolving DNS for ${HOST}..."
+          if ! getent hosts "${HOST}" && ! nslookup "${HOST}" >/dev/null 2>&1; then
+            echo "⚠️ DNS resolution failed or host is an IP literal — continuing anyway"
+          fi
+
+          echo "🔎 Checking TCP reachability to ${HOST}:${PORT} (10s timeout)..."
+          if timeout 10 bash -c "cat < /dev/null > /dev/tcp/${HOST}/${PORT}" 2>/dev/null; then
+            echo "✅ Port ${PORT} is reachable on ${HOST}"
+          else
+            echo "❌ Cannot reach ${HOST}:${PORT} from GitHub Actions runner."
+            echo "   Likely causes:"
+            echo "   - Home server is offline or router port-forwarding is misconfigured"
+            echo "   - Dynamic public IP changed and SSH_HOST secret is stale"
+            echo "   - Firewall/ISP is blocking inbound connections on this port"
+            echo "   This is a network/infra issue, not a code issue — verify the server and SSH_HOST/SSH_PORT secrets."
+            exit 1
+          fi
+
       - name: Deploy to server
         run: |
           echo "🚀 Starting deployment..."
