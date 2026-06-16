@@ -673,7 +673,6 @@ export const StudentModal = ({
           <tbody>
             {grouped.map((group) =>
               group.items.map((item, idx) => {
-                const rowTotal = item.unitPrice != null ? item.unitPrice * item.quantity : null;
                 return (
                   <tr key={item.id}>
                     {idx === 0 && group.category && (

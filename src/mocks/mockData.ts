@@ -161,17 +161,17 @@ export const MOCK_SCHOOL_DETAIL: SchoolDetailResponse = {
   ],
   uniforms: {
     winter: [
-      { id: 1, product_id: 1, category: "동복 상의", gender: "M", display_name: "남자 동복 상의", contract_price: 85000, free_support_count: 1 },
-      { id: 2, product_id: 2, category: "동복 하의", gender: "M", display_name: "남자 동복 바지", contract_price: 65000, free_support_count: 1 },
-      { id: 3, product_id: 3, category: "동복 상의", gender: "F", display_name: "여자 동복 상의", contract_price: 85000, free_support_count: 1 },
-      { id: 4, product_id: 4, category: "동복 하의", gender: "F", display_name: "여자 동복 치마", contract_price: 65000, free_support_count: 1 },
-      { id: 5, product_id: 11, category: "외투", gender: "U", display_name: "공용 패딩", contract_price: 120000, free_support_count: 0 },
+      { id: 1, product_id: 1, category: "동복 상의", gender: "M", display_name: "남자 동복 상의", contract_price: 85000, free_support_count: 1, has_name_tag: false, name_tag_price: null, name_tag_attach_price: null, name_tag_min_unit: null },
+      { id: 2, product_id: 2, category: "동복 하의", gender: "M", display_name: "남자 동복 바지", contract_price: 65000, free_support_count: 1, has_name_tag: false, name_tag_price: null, name_tag_attach_price: null, name_tag_min_unit: null },
+      { id: 3, product_id: 3, category: "동복 상의", gender: "F", display_name: "여자 동복 상의", contract_price: 85000, free_support_count: 1, has_name_tag: false, name_tag_price: null, name_tag_attach_price: null, name_tag_min_unit: null },
+      { id: 4, product_id: 4, category: "동복 하의", gender: "F", display_name: "여자 동복 치마", contract_price: 65000, free_support_count: 1, has_name_tag: false, name_tag_price: null, name_tag_attach_price: null, name_tag_min_unit: null },
+      { id: 5, product_id: 11, category: "외투", gender: "U", display_name: "공용 패딩", contract_price: 120000, free_support_count: 0, has_name_tag: false, name_tag_price: null, name_tag_attach_price: null, name_tag_min_unit: null },
     ],
     summer: [
-      { id: 6, product_id: 5, category: "하복 상의", gender: "M", display_name: "남자 하복 상의", contract_price: 45000, free_support_count: 1 },
-      { id: 7, product_id: 6, category: "하복 하의", gender: "M", display_name: "남자 하복 바지", contract_price: 40000, free_support_count: 1 },
-      { id: 8, product_id: 7, category: "하복 상의", gender: "F", display_name: "여자 하복 상의", contract_price: 45000, free_support_count: 1 },
-      { id: 9, product_id: 8, category: "하복 하의", gender: "F", display_name: "여자 하복 치마", contract_price: 40000, free_support_count: 1 },
+      { id: 6, product_id: 5, category: "하복 상의", gender: "M", display_name: "남자 하복 상의", contract_price: 45000, free_support_count: 1, has_name_tag: false, name_tag_price: null, name_tag_attach_price: null, name_tag_min_unit: null },
+      { id: 7, product_id: 6, category: "하복 하의", gender: "M", display_name: "남자 하복 바지", contract_price: 40000, free_support_count: 1, has_name_tag: false, name_tag_price: null, name_tag_attach_price: null, name_tag_min_unit: null },
+      { id: 8, product_id: 7, category: "하복 상의", gender: "F", display_name: "여자 하복 상의", contract_price: 45000, free_support_count: 1, has_name_tag: false, name_tag_price: null, name_tag_attach_price: null, name_tag_min_unit: null },
+      { id: 9, product_id: 8, category: "하복 하의", gender: "F", display_name: "여자 하복 치마", contract_price: 40000, free_support_count: 1, has_name_tag: false, name_tag_price: null, name_tag_attach_price: null, name_tag_min_unit: null },
     ],
   },
 };
@@ -262,12 +262,12 @@ export const MOCK_STUDENT_ORDERS: StudentOrdersData = {
   has_order: true,
   recommended_uniforms: {
     winter: [
-      { product: "남자 동복 상의", recommended_size: "170", quantity: 1, price: 85000, supported_quantity: 1, available_sizes: [{ size: "160", in_stock: true, stock_count: 5 }, { size: "165", in_stock: true, stock_count: 3 }, { size: "170", in_stock: true, stock_count: 2 }], gender: "M" },
-      { product: "남자 동복 바지", recommended_size: "80", quantity: 1, price: 65000, supported_quantity: 1, available_sizes: [{ size: "75", in_stock: true, stock_count: 4 }, { size: "80", in_stock: true, stock_count: 6 }, { size: "85", in_stock: false, stock_count: 0 }], gender: "M" },
+      { product: "남자 동복 상의", recommended_size: "170", quantity: 1, price: 85000, supported_quantity: 1, available_sizes: [{ size: "160", in_stock: true, stock_count: 5 }, { size: "165", in_stock: true, stock_count: 3 }, { size: "170", in_stock: true, stock_count: 2 }], gender: "male" },
+      { product: "남자 동복 바지", recommended_size: "80", quantity: 1, price: 65000, supported_quantity: 1, available_sizes: [{ size: "75", in_stock: true, stock_count: 4 }, { size: "80", in_stock: true, stock_count: 6 }, { size: "85", in_stock: false, stock_count: 0 }], gender: "male" },
     ],
     summer: [
-      { product: "남자 하복 상의", recommended_size: "170", quantity: 1, price: 45000, supported_quantity: 1, available_sizes: [{ size: "165", in_stock: true, stock_count: 7 }, { size: "170", in_stock: true, stock_count: 2 }], gender: "M" },
-      { product: "남자 하복 바지", recommended_size: "80", quantity: 1, price: 40000, supported_quantity: 1, available_sizes: [{ size: "75", in_stock: true, stock_count: 3 }, { size: "80", in_stock: true, stock_count: 5 }], gender: "M" },
+      { product: "남자 하복 상의", recommended_size: "170", quantity: 1, price: 45000, supported_quantity: 1, available_sizes: [{ size: "165", in_stock: true, stock_count: 7 }, { size: "170", in_stock: true, stock_count: 2 }], gender: "male" },
+      { product: "남자 하복 바지", recommended_size: "80", quantity: 1, price: 40000, supported_quantity: 1, available_sizes: [{ size: "75", in_stock: true, stock_count: 3 }, { size: "80", in_stock: true, stock_count: 5 }], gender: "male" },
     ],
   },
   orders: [
