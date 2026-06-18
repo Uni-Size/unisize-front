@@ -1,6 +1,6 @@
 import type { StaffInfo } from "@/stores/authStore";
 import type { SchoolListResponse, SchoolDetailResponse } from "@/api/school";
-import type { GetStudentsResponse, RegisterStudentsResponse, StudentOrdersData } from "@/api/student";
+import type { GetStudentsResponse, RegisterStudentsResponse, StudentOrdersData, AdminStudent } from "@/api/student";
 import type { StaffListResponse } from "@/api/staff";
 import type { PaymentPendingListResponse } from "@/api/order";
 import type { ProductsData } from "@/api/product";
@@ -139,6 +139,10 @@ export const MOCK_SCHOOL_DETAIL: SchoolDetailResponse = {
   school_type: "중",
   is_permanent: true,
   is_active: true,
+  has_name_tag: false,
+  name_tag_price: null,
+  name_tag_attach_price: null,
+  name_tag_min_unit: null,
   created_at: "2024-01-20T00:00:00Z",
   updated_at: "2026-02-01T00:00:00Z",
   years: [
@@ -182,7 +186,7 @@ export const MOCK_SCHOOL_DETAIL: SchoolDetailResponse = {
 // ============================================================================
 
 export const MOCK_STUDENTS: GetStudentsResponse = {
-  data: [
+  data: ([
     // 세종중 1학년 신입 - 남, 방문수령, 주관구매X
     { id: 1, name: "김민준", gender: "M", birth_date: "2012-04-15", student_phone: "010-1234-5678", guardian_phone: "010-9876-5432", previous_school: "행복초등학교", admission_year: 2026, admission_grade: 1, admission_school: "세종중학교", school_name: "세종중학교", class_name: "1반", student_number: "1", address: "서울시 강남구 테헤란로 1", privacy_consent: true, delivery: false, grade: 1, checked_in_at: "2026-01-10T09:10:00Z", government_purchase: false, is_eligible_for_public_purchase: false, created_at: "2026-01-10T09:10:00Z", updated_at: "2026-01-10T09:30:00Z" },
     // 세종중 1학년 신입 - 여, 배송, 주관구매O
@@ -207,7 +211,7 @@ export const MOCK_STUDENTS: GetStudentsResponse = {
     { id: 11, name: "임재원", gender: "M", birth_date: "2008-05-20", student_phone: "010-9003-4567", guardian_phone: "010-3000-4000", previous_school: "", admission_year: 2025, admission_grade: 2, admission_school: "미래고등학교", school_name: "미래고등학교", class_name: "2반", student_number: "1", address: "서울시 구로구 구로대로 11", privacy_consent: true, delivery: false, grade: 2, checked_in_at: "2026-01-22T09:30:00Z", government_purchase: false, is_eligible_for_public_purchase: false, created_at: "2026-01-22T09:30:00Z", updated_at: "2026-01-22T10:00:00Z" },
     // 하늘고 1학년 신입 - 여, 주관구매O
     { id: 12, name: "조유나", gender: "F", birth_date: "2009-08-07", student_phone: "010-9004-5678", guardian_phone: "010-4000-5000", previous_school: "세종중학교", admission_year: 2026, admission_grade: 1, admission_school: "하늘고등학교", school_name: "하늘고등학교", class_name: "1반", student_number: "1", address: "경기도 수원시 팔달구 인계로 12", privacy_consent: true, delivery: true, grade: 1, checked_in_at: "2026-01-23T14:00:00Z", government_purchase: false, is_eligible_for_public_purchase: true, created_at: "2026-01-23T14:00:00Z", updated_at: "2026-01-23T14:30:00Z" },
-  ],
+  ] as AdminStudent[]),
   meta: { page: 1, limit: 10, total: 12, total_pages: 2 },
 };
 
@@ -262,12 +266,12 @@ export const MOCK_STUDENT_ORDERS: StudentOrdersData = {
   has_order: true,
   recommended_uniforms: {
     winter: [
-      { product: "남자 동복 상의", recommended_size: "170", quantity: 1, price: 85000, supported_quantity: 1, available_sizes: [{ size: "160", in_stock: true, stock_count: 5 }, { size: "165", in_stock: true, stock_count: 3 }, { size: "170", in_stock: true, stock_count: 2 }], gender: "male" },
-      { product: "남자 동복 바지", recommended_size: "80", quantity: 1, price: 65000, supported_quantity: 1, available_sizes: [{ size: "75", in_stock: true, stock_count: 4 }, { size: "80", in_stock: true, stock_count: 6 }, { size: "85", in_stock: false, stock_count: 0 }], gender: "male" },
+      { product_id: 1, product_name: "남자 동복 상의", recommended_size: "170", purchase_quantity: 1, price: 85000, supported_quantity: 1, available_sizes: [{ size: "160", in_stock: true, stock_count: 5 }, { size: "165", in_stock: true, stock_count: 3 }, { size: "170", in_stock: true, stock_count: 2 }], gender: "male" },
+      { product_id: 2, product_name: "남자 동복 바지", recommended_size: "80", purchase_quantity: 1, price: 65000, supported_quantity: 1, available_sizes: [{ size: "75", in_stock: true, stock_count: 4 }, { size: "80", in_stock: true, stock_count: 6 }, { size: "85", in_stock: false, stock_count: 0 }], gender: "male" },
     ],
     summer: [
-      { product: "남자 하복 상의", recommended_size: "170", quantity: 1, price: 45000, supported_quantity: 1, available_sizes: [{ size: "165", in_stock: true, stock_count: 7 }, { size: "170", in_stock: true, stock_count: 2 }], gender: "male" },
-      { product: "남자 하복 바지", recommended_size: "80", quantity: 1, price: 40000, supported_quantity: 1, available_sizes: [{ size: "75", in_stock: true, stock_count: 3 }, { size: "80", in_stock: true, stock_count: 5 }], gender: "male" },
+      { product_id: 5, product_name: "남자 하복 상의", recommended_size: "170", purchase_quantity: 1, price: 45000, supported_quantity: 1, available_sizes: [{ size: "165", in_stock: true, stock_count: 7 }, { size: "170", in_stock: true, stock_count: 2 }], gender: "male" },
+      { product_id: 6, product_name: "남자 하복 바지", recommended_size: "80", purchase_quantity: 1, price: 40000, supported_quantity: 1, available_sizes: [{ size: "75", in_stock: true, stock_count: 3 }, { size: "80", in_stock: true, stock_count: 5 }], gender: "male" },
     ],
   },
   orders: [

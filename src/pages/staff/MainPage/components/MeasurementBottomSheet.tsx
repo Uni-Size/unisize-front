@@ -118,7 +118,6 @@ const SignatureCanvas = ({ onSign, initialSignature }: { onSign: (dataUrl: strin
   // 터치/마우스 좌표를 canvas 내부 좌표로 변환 (CSS 크기 기준)
   const getPos = (e: React.TouchEvent | React.MouseEvent, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
     const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
     // getBoundingClientRect는 CSS 픽셀 기준이므로 dpr 보정 불필요
@@ -465,13 +464,6 @@ export const MeasurementBottomSheet = ({
   const renderSupplySection = () => {
     if (supplies.length === 0) return null;
 
-    const grouped = supplies.reduce<{ category: string; items: MeasurementSupplyItem[] }[]>((acc, item) => {
-      const existing = acc.find((g) => g.category === item.category);
-      if (existing) existing.items.push(item);
-      else acc.push({ category: item.category, items: [item] });
-      return acc;
-    }, []);
-
     return (
       <div className="flex-1 rounded-2xl overflow-hidden border border-gray-200">
         <table className="w-full border-collapse text-sm">
@@ -681,9 +673,6 @@ export const MeasurementBottomSheet = ({
   const renderConfirmTable = () => {
     const hasSupply = supplies.some((s) => s.quantity > 0);
     const hasNameTag = nameTag.orderQuantity > 0 || nameTag.attachQuantity > 0;
-    const tdR = 'px-3 py-2.5 text-sm text-right tabular-nums';
-    const tdL = 'px-3 py-2.5 text-sm text-left';
-
     return (
       <div className="flex flex-col gap-5">
         {/* 동복 */}

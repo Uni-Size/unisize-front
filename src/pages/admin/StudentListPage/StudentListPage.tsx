@@ -143,8 +143,6 @@ export const StudentListPage = () => {
 
   const fetchStudentDetail = async (studentId: number): Promise<StudentDetailData> => {
     const detail = await getStudentDetail(studentId);
-    const order = detail.order;
-
     const adminOrders = detail.orders ?? [];
     const orderSnapshots: import('@components/organisms/StudentModal').OrderSnapshot[] = adminOrders.map(
       (order: import('@/api/student').AdminStudentOrder) => {
@@ -276,12 +274,12 @@ export const StudentListPage = () => {
         list.map((s, i) => [
           i + 1,
           `${s.admission_grade}학년`,
-          s.school_name,
+          s.school_name ?? '',
           s.name,
           formatGender(s.gender),
           s.student_phone,
           s.guardian_phone,
-          s.government_purchase ? 'O' : 'X',
+          s.is_eligible_for_public_purchase ? 'O' : 'X',
           s.created_at ?? '',
         ]),
         '학생목록',

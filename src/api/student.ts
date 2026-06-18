@@ -474,6 +474,10 @@ export interface AdminStudent {
   created_at: string;
   updated_at: string;
   orders?: AdminStudentOrder[];
+  class_name?: string;
+  student_number?: string;
+  grade?: number;
+  government_purchase?: boolean;
 }
 
 export interface GetStudentsParams {

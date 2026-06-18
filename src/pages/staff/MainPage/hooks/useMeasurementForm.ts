@@ -176,14 +176,14 @@ export function useMeasurementForm() {
       };
       if (season === 'winter') {
         setWinterUniforms((prev) => {
-          const idx = prev.findLastIndex((i) => i.productId === source.productId);
+          const idx = prev.reduce((r, item, n) => (item.productId === source.productId ? n : r), -1);
           const next = [...prev];
           next.splice(idx + 1, 0, newRow);
           return next;
         });
       } else {
         setSummerUniforms((prev) => {
-          const idx = prev.findLastIndex((i) => i.productId === source.productId);
+          const idx = prev.reduce((r, item, n) => (item.productId === source.productId ? n : r), -1);
           const next = [...prev];
           next.splice(idx + 1, 0, newRow);
           return next;
@@ -221,7 +221,7 @@ export function useMeasurementForm() {
       selectedSize: '',
     };
     setSupplies((prev) => {
-      const idx = prev.findLastIndex((i) => i.productId === source.productId);
+      const idx = prev.reduce((r, item, n) => (item.productId === source.productId ? n : r), -1);
       const next = [...prev];
       next.splice(idx + 1, 0, newRow);
       return next;
