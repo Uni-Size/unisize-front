@@ -155,22 +155,14 @@ export function StudentTable({
                     {header.isPlaceholder ? null : (
                       <div
                         className={`flex items-center justify-center gap-1 ${
-                          header.column.getCanSort()
-                            ? 'cursor-pointer hover:bg-gray-100'
-                            : ''
+                          header.column.getCanSort() ? 'cursor-pointer hover:bg-gray-100' : ''
                         }`}
                         onClick={header.column.getToggleSortingHandler()}
                       >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                        {flexRender(header.column.columnDef.header, header.getContext())}
                         {header.column.getCanSort() && (
                           <span className="text-xs text-gray-400">
-                            {{
-                              asc: ' ▲',
-                              desc: ' ▼',
-                            }[header.column.getIsSorted() as string] ?? ' ↕'}
+                            {{ asc: ' ▲', desc: ' ▼' }[header.column.getIsSorted() as string] ?? ' ↕'}
                           </span>
                         )}
                       </div>
@@ -184,11 +176,7 @@ export function StudentTable({
             {table.getRowModel().rows.map((row, index) => (
               <tr
                 key={row.id}
-                ref={
-                  lastElementRef && index === students.length - 1
-                    ? lastElementRef
-                    : null
-                }
+                ref={lastElementRef && index === students.length - 1 ? lastElementRef : null}
                 className="transition-colors duration-150 hover:bg-gray-50"
               >
                 {row.getVisibleCells().map((cell) => (

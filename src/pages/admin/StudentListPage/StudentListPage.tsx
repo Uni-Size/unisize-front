@@ -115,22 +115,23 @@ export const StudentListPage = () => {
     const summerUniforms: import('@components/organisms/StudentModal').UniformItem[] = [];
 
     for (const item of orderItems) {
-      const season = item.product?.season?.toUpperCase() ?? '';
+      const productName = item.product?.name ?? '';
+      const nameUpper = productName.toUpperCase();
+      const isWinter = nameUpper.includes('동복') || nameUpper.includes('WINTER');
       const uniform: import('@components/organisms/StudentModal').UniformItem = {
         id: String(item.id),
-        name: item.product?.name ?? '',
-        size: item.size,
-        supportedQuantity: item.supportedQuantity,
-        additionalQuantity: item.quantity - item.supportedQuantity,
-        unitPrice: item.unitPrice,
-        repair: item.customization ?? '',
+        name: productName,
+        size: item.selected_size,
+        supportedQuantity: item.supported_quantity,
+        additionalQuantity: item.purchase_quantity - item.supported_quantity,
+        unitPrice: item.unit_price,
+        repair: '',
         reservation: false,
-        received: item.receivedAt !== null,
-        nameTag: null,
-        attachCount: 0,
+        received: false,
+        nameTag: item.name_tag_count || null,
+        attachCount: item.name_tag_attach ? 1 : 0,
       };
-      // season: "W" = 동복, "S" = 하복
-      if (season === 'W' || season === 'WINTER' || season === '동복') {
+      if (isWinter) {
         winterUniforms.push(uniform);
       } else {
         summerUniforms.push(uniform);
@@ -142,19 +143,21 @@ export const StudentListPage = () => {
 
   const fetchStudentDetail = async (studentId: number): Promise<StudentDetailData> => {
     const detail = await getStudentDetail(studentId);
-    const adminOrders = detail.orders ?? [];
+    const order = detail.order;
 
+    const adminOrders = detail.orders ?? [];
     const orderSnapshots: import('@components/organisms/StudentModal').OrderSnapshot[] = adminOrders.map(
       (order: import('@/api/student').AdminStudentOrder) => {
-        const { winterUniforms, summerUniforms } = parseAdminOrderItems(order.orderItems ?? []);
+        const { winterUniforms, summerUniforms } = parseAdminOrderItems(order.order_items ?? []);
         return {
           orderId: order.id,
-          date: order.orderDate ?? order.createdAt,
+          date: order.order_date ?? order.created_at,
+          status: order.order_status,
           winterUniforms,
           summerUniforms,
           supplies: [],
           history: [],
-          modifiedDate: formatDate(order.updatedAt),
+          modifiedDate: formatDate(order.updated_at),
         };
       },
     );
@@ -176,9 +179,9 @@ export const StudentListPage = () => {
     return {
       id: String(detail.id),
       orderId: firstSnapshot?.orderId,
-      admissionSchool: detail.admission_school ?? detail.school_name,
-      previousSchool: detail.previous_school,
-      classNumber: detail.class_name || '',
+      admissionSchool: detail.admission_school ?? detail.school_name ?? '',
+      previousSchool: detail.previous_school ?? '',
+      classNumber: '',
       name: detail.name,
       gender: detail.gender,
       studentPhone: detail.student_phone,
@@ -191,6 +194,7 @@ export const StudentListPage = () => {
       supplies: [],
       nameTag: { orderQuantity: 0, attachQuantity: 0 },
       history: firstHistory,
+      isManuallySupported: detail.is_manually_supported,
     };
   };
 

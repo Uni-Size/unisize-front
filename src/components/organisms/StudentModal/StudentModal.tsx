@@ -47,6 +47,7 @@ export interface HistoryItem {
 export interface OrderSnapshot {
   orderId: number;
   date: string;
+  status?: string;
   winterUniforms: UniformItem[];
   summerUniforms: UniformItem[];
   supplies: SupplyItem[];
@@ -72,6 +73,8 @@ export interface StudentDetailData {
   supplies: SupplyItem[];
   nameTag: NameTagInfo;
   history?: HistoryItem[];
+  isManuallySupported?: boolean;
+  isSupported?: boolean;
 }
 
 export interface StudentFormInput {

@@ -57,17 +57,17 @@ export const CompletePage = () => {
   const data: Record<SeasonType, UniformData[]> = {
     동복:
       studentData.recommended_uniforms?.winter?.map((item) => ({
-        item: item.product,
+        item: item.product_name,
         size: item.recommended_size,
-        count: item.quantity,
+        count: item.supported_quantity,
         selectableWith: item.selectable_with,
         gender: item.gender,
       })) || [],
     하복:
       studentData.recommended_uniforms?.summer?.map((item) => ({
-        item: item.product,
+        item: item.product_name,
         size: item.recommended_size,
-        count: item.quantity,
+        count: item.supported_quantity,
         selectableWith: item.selectable_with,
         gender: item.gender,
       })) || [],

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
 import { AdminLayout } from "@components/templates/AdminLayout";
 import { AdminHeader } from "@components/organisms/AdminHeader";
-import { StudentModal } from "@components/organisms/StudentModal";
+import { InvoiceModal } from "@components/organisms/InvoiceModal";
 import type { StudentDetailData } from "@components/organisms/StudentModal";
 import { Table } from "@components/atoms/Table";
 import { Pagination } from "@components/atoms/Pagination";
@@ -14,9 +14,9 @@ import {
   type PaymentPendingListResponse,
 } from "@/api/order";
 import { getStudentDetail, getOrderHistory } from "@/api/student";
-import type { AdminStudentOrder, AdminOrderItem } from "@/api/student";
+import type { AdminOrderItem, AdminStudentOrder } from "@/api/student";
 import { completePayment } from "@/api/staff";
-import { getApiErrorMessage } from "@/utils/errorUtils";
+import { getApiErrorMessage, getApiErrorString } from "@/utils/errorUtils";
 import { formatDate, formatDateTime } from "@/utils/dateUtils";
 import { formatGender } from "@/utils/genderUtils";
 
@@ -58,9 +58,9 @@ export const MainPage = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] =
     useState<StudentDetailData | null>(null);
-  const [selectedRemainingAmount, setSelectedRemainingAmount] = useState(0);
   const [detailLoading, setDetailLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async (page: number) => {
     setLoading(true);
@@ -90,21 +90,23 @@ export const MainPage = () => {
     const winterUniforms: import("@components/organisms/StudentModal").UniformItem[] = [];
     const summerUniforms: import("@components/organisms/StudentModal").UniformItem[] = [];
     for (const item of orderItems) {
-      const season = item.product?.season?.toUpperCase() ?? "";
+      const productName = item.product?.name ?? "";
+      const nameUpper = productName.toUpperCase();
+      const isWinter = nameUpper.includes("동복") || nameUpper.includes("WINTER");
       const uniform: import("@components/organisms/StudentModal").UniformItem = {
         id: String(item.id),
-        name: item.product?.name ?? "",
-        size: item.size,
-        supportedQuantity: item.supportedQuantity,
-        additionalQuantity: item.quantity - item.supportedQuantity,
-        unitPrice: item.unitPrice,
-        repair: item.customization ?? "",
+        name: productName,
+        size: item.selected_size,
+        supportedQuantity: item.supported_quantity,
+        additionalQuantity: item.purchase_quantity - item.supported_quantity,
+        unitPrice: item.unit_price,
+        repair: "",
         reservation: false,
-        received: item.receivedAt !== null,
-        nameTag: null,
-        attachCount: 0,
+        received: false,
+        nameTag: item.name_tag_count || null,
+        attachCount: item.name_tag_attach ? 1 : 0,
       };
-      if (season === "W" || season === "WINTER") {
+      if (isWinter) {
         winterUniforms.push(uniform);
       } else {
         summerUniforms.push(uniform);
@@ -116,22 +118,22 @@ export const MainPage = () => {
   const handleDetailClick = async (e: React.MouseEvent, row: PendingRow) => {
     e.stopPropagation();
     setDetailLoading(true);
-    setSelectedRemainingAmount(row.remainingAmountRaw);
     try {
       const detail = await getStudentDetail(row.studentId);
       const adminOrders = detail.orders ?? [];
 
       const orderSnapshots: import("@components/organisms/StudentModal").OrderSnapshot[] =
         adminOrders.map((order: AdminStudentOrder) => {
-          const { winterUniforms, summerUniforms } = parseOrderItems(order.orderItems ?? []);
+          const { winterUniforms, summerUniforms } = parseOrderItems(order.order_items ?? []);
           return {
             orderId: order.id,
-            date: order.orderDate ?? order.createdAt,
+            date: order.order_date,
+            status: order.order_status,
             winterUniforms,
             summerUniforms,
             supplies: [],
             history: [],
-            modifiedDate: formatDate(order.updatedAt),
+            modifiedDate: formatDate(order.updated_at),
           };
         });
 
@@ -152,9 +154,9 @@ export const MainPage = () => {
       const detailData: StudentDetailData = {
         id: String(detail.id),
         orderId: targetSnapshot?.orderId,
-        admissionSchool: detail.admission_school ?? detail.school_name,
-        previousSchool: detail.previous_school,
-        classNumber: detail.class_name || "",
+        admissionSchool: detail.admission_school ?? detail.school_name ?? "",
+        previousSchool: detail.previous_school ?? "",
+        classNumber: "",
         name: detail.name,
         gender: detail.gender,
         studentPhone: detail.student_phone,
@@ -167,6 +169,7 @@ export const MainPage = () => {
         supplies: [],
         nameTag: { orderQuantity: 0, attachQuantity: 0 },
         history,
+        isManuallySupported: detail.is_manually_supported,
       };
 
       setSelectedStudent(detailData);
@@ -240,19 +243,19 @@ export const MainPage = () => {
         </div>
       </div>
 
-      <StudentModal
+      <InvoiceModal
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
-        mode="view"
         student={selectedStudent}
-        onPaymentComplete={async (orderId) => {
+        onPaymentComplete={async (orderId: number) => {
+          const amount = orders.find((o) => o.orderId === orderId)?.remainingAmountRaw ?? 0;
           try {
-            await completePayment(Number(orderId), { amount: selectedRemainingAmount, method: "cash" });
+            await completePayment(orderId, { amount, method: "cash" });
             setIsDetailOpen(false);
             setPaymentSuccess(true);
             fetchOrders(currentPage);
           } catch (err) {
-            alert(getApiErrorMessage(err, "결제 처리 중 오류가 발생했습니다."));
+            setPaymentError(getApiErrorString(err, "결제 처리 중 오류가 발생했습니다."));
           }
         }}
       />
@@ -262,6 +265,13 @@ export const MainPage = () => {
           message="결제가 완료되었습니다."
           variant="success"
           onClose={() => setPaymentSuccess(false)}
+        />
+      )}
+      {paymentError && (
+        <Toast
+          message={paymentError}
+          variant="error"
+          onClose={() => setPaymentError(null)}
         />
       )}
     </AdminLayout>

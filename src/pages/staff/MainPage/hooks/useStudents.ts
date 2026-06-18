@@ -11,47 +11,37 @@ export function useStudents() {
   const [hasMore, setHasMore] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
 
-  const fetchStudents = useCallback(
-    async (pageNum: number, isInitial = false) => {
-      try {
-        if (isInitial) {
-          setIsLoading(true);
-        } else {
-          setIsFetchingMore(true);
-        }
-        setError(null);
-
-        const response = await getRegisterStudents({
-          page: pageNum,
-          limit: 20,
-        });
-
-        if (response.success && response.data && Array.isArray(response.data.students)) {
-          setStudents((prev) =>
-            isInitial
-              ? response.data.students
-              : [...prev, ...response.data.students]
-          );
-          setTotal(response.data.total || 0);
-          setHasMore(response.meta?.page < response.meta?.total_pages);
-        } else {
-          setError(
-            response.error?.message || '데이터를 불러오는데 실패했습니다.'
-          );
-        }
-      } catch (err) {
-        setError('서버 연결에 실패했습니다.');
-        console.error('Failed to fetch students:', err);
-      } finally {
-        if (isInitial) {
-          setIsLoading(false);
-        } else {
-          setIsFetchingMore(false);
-        }
+  const fetchStudents = useCallback(async (pageNum: number, isInitial = false) => {
+    try {
+      if (isInitial) {
+        setIsLoading(true);
+      } else {
+        setIsFetchingMore(true);
       }
-    },
-    []
-  );
+      setError(null);
+
+      const response = await getRegisterStudents({ page: pageNum, limit: 20 });
+
+      if (response.success && response.data && Array.isArray(response.data.students)) {
+        setStudents((prev) =>
+          isInitial ? response.data.students : [...prev, ...response.data.students],
+        );
+        setTotal(response.data.total || 0);
+        setHasMore(response.meta?.page < response.meta?.total_pages);
+      } else {
+        setError(response.error?.message || '데이터를 불러오는데 실패했습니다.');
+      }
+    } catch (err) {
+      setError('서버 연결에 실패했습니다.');
+      console.error('Failed to fetch students:', err);
+    } finally {
+      if (isInitial) {
+        setIsLoading(false);
+      } else {
+        setIsFetchingMore(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     fetchStudents(1, true);
@@ -64,7 +54,7 @@ export function useStudents() {
   }, [page, fetchStudents]);
 
   const loadMore = useCallback(() => {
-    setPage((prevPage) => prevPage + 1);
+    setPage((prev) => prev + 1);
   }, []);
 
   const refresh = useCallback(() => {

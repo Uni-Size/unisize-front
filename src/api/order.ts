@@ -1,6 +1,87 @@
 import { apiClient } from "@/lib/apiClient";
 import type { ApiResponse } from "./auth";
 
+// ============================================================================
+// 주문 목록 조회 (status 필터)
+// ============================================================================
+
+export interface PendingOrderStudent {
+  id: number;
+  name: string;
+  gender: string;
+}
+
+export interface PendingOrderItem {
+  id: number;
+  order_id: number;
+  product_id: number;
+  size: string;
+  quantity: number;
+  supported_quantity: number;
+  unit_price: number;
+  subtotal: number;
+  name_tag_count: number;
+  name_tag_name: string;
+  name_tag_attach: boolean;
+  created_at: string;
+}
+
+export interface PendingOrder {
+  id: number;
+  order_number: string;
+  student_id: number;
+  student: PendingOrderStudent;
+  total_amount: number;
+  status: string;
+  status_display: string;
+  order_date: string;
+  delivery_date: string | null;
+  notes: string;
+  order_items: PendingOrderItem[];
+  can_cancel: boolean;
+  can_modify: boolean;
+  is_completed: boolean;
+  is_cancelled: boolean;
+  signature: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GetOrdersResponse {
+  orders: PendingOrder[];
+  total: number;
+}
+
+export interface GetOrdersParams {
+  student_id?: number;
+  status?: string;
+  start_date?: string;
+  end_date?: string;
+  page?: number;
+  limit?: number;
+}
+
+/**
+ * 주문 목록 조회
+ * GET /api/v1/orders
+ */
+export async function getOrders(params?: GetOrdersParams): Promise<{
+  orders: PendingOrder[];
+  meta: { page: number; limit: number; total: number; total_pages: number };
+}> {
+  const response = await apiClient.get<ApiResponse<GetOrdersResponse>>(
+    "/api/v1/orders",
+    { params },
+  );
+  const { orders, total } = response.data.data;
+  const page = params?.page ?? 1;
+  const limit = params?.limit ?? 20;
+  return {
+    orders,
+    meta: { page, limit, total, total_pages: Math.ceil(total / limit) },
+  };
+}
+
 export interface PaymentPendingOrder {
   order_id: number;
   order_number: string;
@@ -158,6 +239,46 @@ export interface UpdateStaffOrderRequest {
   supply_items: StaffOrderSupplyItem[];
   notes: string;
   name_tag?: StaffOrderNameTag;
+}
+
+export interface AdminOrderUniformItem {
+  item_id: string;
+  name: string;
+  season: string;
+  selected_size: string;
+  purchase_count: number;
+  is_reserved: boolean;
+  customization: string;
+  name_tag_count: number;
+  name_tag_name: string;
+  name_tag_attach: boolean;
+}
+
+export interface AdminOrderSupplyItem {
+  item_id: string | number;
+  name: string;
+  selected_size: string;
+  purchase_count: number;
+}
+
+export interface UpdateAdminOrderRequest {
+  uniform_items: AdminOrderUniformItem[];
+  supply_items: AdminOrderSupplyItem[];
+  notes: string;
+}
+
+/**
+ * 주문 수정 (어드민)
+ * PUT /api/v1/admin/orders/:id
+ */
+export async function updateAdminOrder(
+  orderId: number,
+  data: UpdateAdminOrderRequest,
+): Promise<void> {
+  await apiClient.put<ApiResponse<void>>(
+    `/api/v1/admin/orders/${orderId}`,
+    data,
+  );
 }
 
 /**

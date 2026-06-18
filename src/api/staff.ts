@@ -64,6 +64,8 @@ export interface StaffItem {
 export interface GetStaffListParams {
   page?: number;
   limit?: number;
+  search?: string;
+  role?: string;
 }
 
 export interface StaffListResponse {

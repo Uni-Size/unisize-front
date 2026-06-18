@@ -45,9 +45,9 @@ interface StudentApiRequest {
 }
 
 export interface RecommendedSizeItem {
-  product: string;
+  product_name: string;
   recommended_size: string;
-  quantity: number;
+  supported_quantity: number;
   is_selectable?: boolean;
   selectable_with?: string[];
   gender: "male" | "female" | "unisex";
@@ -141,10 +141,12 @@ export interface UniformProduct {
 }
 
 export interface RecommendedUniformItem {
-  product: string;
+  product_id: number;
+  item_id?: string;
+  product_name: string;
   recommended_size: string;
   supported_quantity: number;
-  quantity: number;
+  purchase_quantity: number;
   price: number;
   available_sizes: Array<{
     size: string;
@@ -152,18 +154,25 @@ export interface RecommendedUniformItem {
     stock_count: number;
   }>;
   selectable_with?: string[];
-  gender: "male" | "female" | "unisex";
+  gender: string;
   is_customization_required?: boolean;
   customization?: string;
+  is_reserved?: boolean;
+  has_name_tag?: boolean;
+  name_tag_count?: number;
+  name_tag_name?: string;
+  name_tag_attach?: boolean;
 }
 
 export interface SupplyItemResponse {
   product_id: number;
   name: string;
-  category: string;
-  season: string;
+  category?: string;
+  season?: string;
   price: number;
-  quantity: number;
+  quantity?: number;
+  purchase_quantity?: number;
+  available_sizes?: { size: string; in_stock: boolean; stock_count: number }[];
 }
 
 export interface StartMeasurementResponse {
@@ -190,6 +199,7 @@ export interface StartMeasurementResponse {
   registered_at: string | null;
   measurement_start_at: string | null;
   measurement_end_at: string | null;
+  signature?: string;
 }
 
 export interface StudentMeasurementData {
@@ -229,11 +239,14 @@ export interface CompleteMeasurementRequest {
 export interface MeasurementOrderItem {
   item_id: string;
   name: string;
-  season: "winter" | "summer" | "all";
-  selected_size: number;
-  customization: string;
+  season: "동복" | "하복";
+  selected_size: string | number;
   purchase_count: number;
-  has_name_tag?: boolean;
+  is_reserved?: boolean;
+  customization?: string;
+  name_tag_count?: number;
+  name_tag_name?: string;
+  name_tag_attach?: boolean;
 }
 
 export interface SupplyOrderItem {
@@ -308,6 +321,35 @@ export async function getRegisterStudents(params?: {
   return response.data;
 }
 
+/**
+ * 측정 페이지 데이터 조회 (측정 중 재진입)
+ * GET /api/v1/students/:id/measurement-page
+ */
+export async function getMeasurementPage(studentId: number): Promise<StartMeasurementResponse> {
+  const response = await apiClient.get<ApiResponse<StartMeasurementResponse>>(
+    `/api/v1/students/${studentId}/measurement-page`,
+  );
+  if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+    return (response.data as ApiResponse<StartMeasurementResponse>).data;
+  }
+  return response.data as StartMeasurementResponse;
+}
+
+/**
+ * 측정 중인 학생 리스트 조회
+ * GET /api/v1/students/measuring
+ */
+export async function getMeasuringStudents(params?: {
+  page?: number;
+  limit?: number;
+}): Promise<RegisterStudentsResponse> {
+  const response = await apiClient.get<RegisterStudentsResponse>(
+    "/api/v1/students/measuring",
+    { params },
+  );
+  return response.data;
+}
+
 // ============================================================================
 // 측정 관련 API
 // ============================================================================
@@ -350,15 +392,15 @@ export async function submitMeasurementOrder(
 
 /**
  * 측정 완료
- * POST /api/v1/students/:studentId/complete-measurement
+ * POST /api/v1/students/:studentId/finalize-measurement
  */
 export async function completeMeasurement(
   studentId: number,
-  orderData: CompleteMeasurementRequest,
+  body: { signature: string },
 ): Promise<void> {
   await apiClient.post(
-    `/api/v1/students/${studentId}/complete-measurement`,
-    orderData,
+    `/api/v1/students/${studentId}/finalize-measurement`,
+    body,
   );
 }
 
@@ -371,60 +413,64 @@ export interface AdminOrderItemProduct {
   name: string;
   category: string;
   gender: string;
-  season: string;
   price: number;
 }
 
 export interface AdminOrderItem {
   id: number;
-  orderId: number;
-  productId: number;
-  size: string;
-  quantity: number;
-  supportedQuantity: number;
-  unitPrice: number;
-  subtotal: number;
-  customization: string;
-  deliveryStatus: string;
-  receivedAt: string | null;
+  order_id: number;
+  product_id: number;
   product?: AdminOrderItemProduct;
+  selected_size: string;
+  purchase_quantity: number;
+  supported_quantity: number;
+  unit_price: number;
+  subtotal: number;
+  name_tag_count: number;
+  name_tag_name: string;
+  name_tag_attach: boolean;
+  created_at: string;
 }
 
 export interface AdminStudentOrder {
   id: number;
-  orderNumber: string;
-  studentId: number;
-  totalAmount: number;
-  status: string;
-  orderType: string;
-  orderDate: string;
+  order_number: string;
+  student_id: number;
+  total_amount: number;
+  order_status: string;
+  order_status_display: string;
+  order_date: string;
+  delivery_date: string | null;
   notes: string;
-  createdAt: string;
-  updatedAt: string;
-  orderItems?: AdminOrderItem[];
+  order_items: AdminOrderItem[];
+  can_cancel_order: boolean;
+  can_modify_order: boolean;
+  is_order_completed: boolean;
+  is_order_cancelled: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AdminStudent {
   id: number;
   name: string;
-  gender: string;
   birth_date: string;
+  gender: string;
   student_phone: string;
   guardian_phone: string;
+  address: string | null;
+  delivery: boolean;
+  privacy_consent: boolean;
   previous_school: string;
   admission_year: number;
   admission_grade: number;
   admission_school?: string;
-  school_name: string;
-  class_name: string;
-  student_number: string;
-  address: string;
-  privacy_consent: boolean;
-  delivery: boolean;
-  grade: number;
+  school_name?: string;
   checked_in_at: string;
-  government_purchase: boolean;
   is_eligible_for_public_purchase: boolean;
+  is_manually_supported: boolean;
+  student_type: string;
+  has_confirmed_order: boolean;
   created_at: string;
   updated_at: string;
   orders?: AdminStudentOrder[];
@@ -436,6 +482,8 @@ export interface GetStudentsParams {
   school?: string;
   grade?: number;
   search?: string;
+  student_type?: string;
+  public_purchase?: boolean;
 }
 
 export interface GetStudentsResponse {
@@ -513,6 +561,19 @@ export async function updateStudent(
     data,
   );
   return response.data.data;
+}
+
+/**
+ * 지원 대상 지정/해제
+ * PATCH /api/v1/admin/students/:id/support
+ */
+export async function updateStudentSupport(
+  studentId: number,
+  supported: boolean,
+): Promise<void> {
+  await apiClient.patch(`/api/v1/admin/students/${studentId}/support`, {
+    supported,
+  });
 }
 
 // ============================================================================

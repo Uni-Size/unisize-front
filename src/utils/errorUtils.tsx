@@ -9,6 +9,17 @@ interface ApiErrorResponse {
   };
 }
 
+export const getApiErrorString = (err: unknown, fallback: string): string => {
+  const axiosErr = err as AxiosError<ApiErrorResponse>;
+  const apiError = axiosErr?.response?.data?.error;
+  if (apiError?.message) {
+    return apiError.code ? `[${apiError.code}] ${apiError.message}` : apiError.message;
+  }
+  if (axiosErr?.code === "ECONNABORTED") return "서버 응답 시간이 초과되었습니다.";
+  if (axiosErr?.message === "Network Error") return "서버에 연결할 수 없습니다.";
+  return fallback;
+};
+
 export const getApiErrorMessage = (
   err: unknown,
   fallback: string,

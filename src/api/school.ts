@@ -91,6 +91,10 @@ export interface SchoolDetailResponse {
   school_type: SchoolType;
   is_permanent: boolean;
   is_active: boolean;
+  has_name_tag: boolean;
+  name_tag_price: number | null;
+  name_tag_attach_price: number | null;
+  name_tag_min_unit: number | null;
   created_at: string;
   updated_at: string;
   years: SchoolDetailYear[];
@@ -122,6 +126,10 @@ export interface UpdateSchoolYearInfo {
 export interface UpdateSchoolRequest {
   school_name: string;
   is_permanent?: boolean;
+  has_name_tag?: boolean;
+  name_tag_price?: number | null;
+  name_tag_attach_price?: number | null;
+  name_tag_min_unit?: number | null;
   years?: UpdateSchoolYearInfo[];
   uniforms?: {
     winter?: UniformItem[];

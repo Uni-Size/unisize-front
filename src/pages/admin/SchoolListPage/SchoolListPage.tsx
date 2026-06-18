@@ -246,13 +246,7 @@ export const SchoolListPage = () => {
     originalName: string,
     data: Parameters<typeof updateSupportedSchool>[1],
   ) => {
-    try {
-      await updateSupportedSchool(originalName, data);
-      handleCloseDetailModal();
-      fetchSchools(buildParams());
-    } catch (err) {
-      alert(getApiErrorMessage(err, "학교 수정에 실패했습니다."));
-    }
+    await updateSupportedSchool(originalName, data);
   };
 
   // 클라이언트 측 검색어 필터 (서버 필터 후 추가 필터링)
@@ -555,7 +549,7 @@ export const SchoolListPage = () => {
         isOpen={isDetailModalOpen}
         onClose={handleCloseDetailModal}
         school={selectedSchool}
-        onUpdate={handleCloseDetailModal}
+        onUpdate={() => fetchSchools(buildParams())}
         onSubmit={handleUpdateSchool}
         onAddNewProduct={() => setIsProductAddModalOpen(true)}
       />

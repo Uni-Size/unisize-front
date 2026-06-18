@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { startMeasurement } from '../../../api/student';
+import {
+  startMeasurement,
+  submitMeasurementOrder,
+  completeMeasurement,
+} from '../../../api/student';
 import type { RegisterStudent, StartMeasurementResponse } from '../../../api/student';
 import { useAuthStore } from '../../../stores/authStore';
 import { logout } from '../../../api/auth';
-import { StudentTable, ConfirmModal } from './components';
-import { useStudents, useInfiniteScroll } from './hooks';
+import { StudentTable, ConfirmModal, MeasurementBottomSheet } from './components';
+import { useStudents, useInfiniteScroll, useMeasurementForm } from './hooks';
 import Toast from '../../../components/ui/Toast';
 import { useToast } from '../../../hooks/useToast';
 import { AxiosError } from 'axios';
@@ -13,12 +17,13 @@ import { AxiosError } from 'axios';
 export const MainPage = () => {
   const navigate = useNavigate();
   const { staff, clearAuth } = useAuthStore();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] =
-    useState<RegisterStudent | null>(null);
-  const [, setMeasurementData] =
-    useState<StartMeasurementResponse | null>(null);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isMeasurementOpen, setIsMeasurementOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<RegisterStudent | null>(null);
+  const [measurementData, setMeasurementData] = useState<StartMeasurementResponse | null>(null);
   const { toast, showToast, hideToast } = useToast();
+
+  const form = useMeasurementForm();
 
   const {
     students,
@@ -51,46 +56,82 @@ export const MainPage = () => {
 
   const handleDetailClick = (student: RegisterStudent) => {
     setSelectedStudent(student);
-    setIsModalOpen(true);
+    setIsConfirmOpen(true);
   };
 
   const handleStartMeasurement = async () => {
     if (!selectedStudent) return;
-
     try {
       const data = await startMeasurement(selectedStudent.id);
       setMeasurementData(data);
-      setIsModalOpen(false);
-      // TODO: 측정 시트 열기
-      console.log('측정 데이터:', data);
-      showToast('측정이 시작되었습니다.');
+      form.initFromResponse(data);
+      setIsConfirmOpen(false);
+      setIsMeasurementOpen(true);
       refresh();
     } catch (error) {
       console.error('Failed to start measurement:', error);
-
       if (error instanceof AxiosError && error.response?.status === 409) {
-        setIsModalOpen(false);
+        setIsConfirmOpen(false);
         showToast('다른 직원이 이미 측정을 시작했습니다.');
         refresh();
       }
     }
   };
 
-  const handleCancelModal = () => {
-    setSelectedStudent(null);
-    setIsModalOpen(false);
+  const buildOrderPayload = () => ({
+    uniform_items: [...form.winterUniforms, ...form.summerUniforms].map((u) => ({
+      item_id: u.name,
+      name: u.name,
+      season: u.season === 'winter' ? '동복' : '하복' as '동복' | '하복',
+      selected_size: u.selectedSize || 0,
+      purchase_count: u.supportedQuantity + u.additionalQuantity,
+      is_reserved: u.reservation,
+      customization: u.repair || undefined,
+      name_tag_count: u.nameTagCount || undefined,
+      name_tag_attach: u.attachCount > 0 || undefined,
+    })),
+    supply_items: form.supplies
+      .filter((s) => s.quantity > 0)
+      .map((s) => ({
+        item_id: s.productId,
+        name: s.name,
+        selected_size: s.selectedSize || '',
+        purchase_count: s.quantity,
+      })),
+    name_tag: {
+      order_quantity: form.nameTag.orderQuantity,
+      attach_quantity: form.nameTag.attachQuantity,
+    },
+    notes: '',
+  });
+
+  const handleTempSave = async () => {
+    if (!selectedStudent) return;
+    await submitMeasurementOrder(selectedStudent.id, buildOrderPayload());
   };
 
-  useEffect(() => {
-    if (isModalOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isModalOpen]);
+  const handleNext = async () => {
+    if (!selectedStudent) return;
+    await submitMeasurementOrder(selectedStudent.id, buildOrderPayload());
+  };
+
+  const handleMeasurementClose = () => {
+    setIsMeasurementOpen(false);
+    setMeasurementData(null);
+    setSelectedStudent(null);
+    form.reset();
+  };
+
+  const handleConfirm = async (signature: string) => {
+    if (!selectedStudent) return;
+    await completeMeasurement(selectedStudent.id, { signature });
+    setIsMeasurementOpen(false);
+    setMeasurementData(null);
+    setSelectedStudent(null);
+    form.reset();
+    showToast('확정 완료되었습니다.');
+    refresh();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -112,13 +153,37 @@ export const MainPage = () => {
         </div>
       </header>
 
-      {isModalOpen && selectedStudent && (
+      {isConfirmOpen && selectedStudent && (
         <ConfirmModal
           student={selectedStudent}
-          onCancel={handleCancelModal}
+          onCancel={() => { setSelectedStudent(null); setIsConfirmOpen(false); }}
           onConfirm={handleStartMeasurement}
         />
       )}
+
+      <MeasurementBottomSheet
+        isOpen={isMeasurementOpen}
+        onClose={handleMeasurementClose}
+        onTempSave={handleTempSave}
+        onError={showToast}
+        onNext={handleNext}
+        student={selectedStudent}
+        measurementData={measurementData}
+        winterUniforms={form.winterUniforms}
+        summerUniforms={form.summerUniforms}
+        supplies={form.supplies}
+        nameTag={form.nameTag}
+        onUpdateUniform={form.updateUniform}
+        onAddUniformFromProduct={form.addUniformFromProduct}
+        onAddUniformRow={form.addUniformRow}
+        onRemoveUniformRow={form.removeUniformRow}
+        onUpdateSupply={form.updateSupply}
+        onAddSupplyRow={form.addSupplyRow}
+        onRemoveSupplyRow={form.removeSupplyRow}
+        onUpdateNameTagOrderQuantity={form.updateNameTagOrderQuantity}
+        onUpdateNameTagAttachQuantity={form.updateNameTagAttachQuantity}
+        onConfirm={handleConfirm}
+      />
 
       <main className="px-5 pb-5">
         <StudentTable
