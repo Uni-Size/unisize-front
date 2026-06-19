@@ -208,7 +208,6 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         orderId: firstSnapshot?.orderId,
         admissionSchool: detail.admission_school ?? detail.school_name ?? "",
         previousSchool: detail.previous_school ?? "",
-        classNumber: "",
         name: detail.name,
         gender: detail.gender,
         studentPhone: detail.student_phone,

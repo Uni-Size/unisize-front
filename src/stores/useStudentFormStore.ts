@@ -9,6 +9,7 @@ interface BodyMeasurements {
 }
 
 interface FormData {
+  studentType: 'new' | 'transfer' | 'existing' | '';
   previousSchool: string;
   admissionYear: number;
   admissionGrade: number;
@@ -35,6 +36,7 @@ interface FormStore {
 }
 
 const initialFormData: FormData = {
+  studentType: '',
   previousSchool: '',
   admissionYear: getTargetYear(),
   admissionGrade: 1,

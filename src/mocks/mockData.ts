@@ -211,7 +211,7 @@ export const MOCK_STUDENTS: GetStudentsResponse = {
     { id: 11, name: "임재원", gender: "M", birth_date: "2008-05-20", student_phone: "010-9003-4567", guardian_phone: "010-3000-4000", previous_school: "", admission_year: 2025, admission_grade: 2, admission_school: "미래고등학교", school_name: "미래고등학교", class_name: "2반", student_number: "1", address: "서울시 구로구 구로대로 11", privacy_consent: true, delivery: false, grade: 2, checked_in_at: "2026-01-22T09:30:00Z", government_purchase: false, is_eligible_for_public_purchase: false, created_at: "2026-01-22T09:30:00Z", updated_at: "2026-01-22T10:00:00Z" },
     // 하늘고 1학년 신입 - 여, 주관구매O
     { id: 12, name: "조유나", gender: "F", birth_date: "2009-08-07", student_phone: "010-9004-5678", guardian_phone: "010-4000-5000", previous_school: "세종중학교", admission_year: 2026, admission_grade: 1, admission_school: "하늘고등학교", school_name: "하늘고등학교", class_name: "1반", student_number: "1", address: "경기도 수원시 팔달구 인계로 12", privacy_consent: true, delivery: true, grade: 1, checked_in_at: "2026-01-23T14:00:00Z", government_purchase: false, is_eligible_for_public_purchase: true, created_at: "2026-01-23T14:00:00Z", updated_at: "2026-01-23T14:30:00Z" },
-  ] as AdminStudent[]),
+  ] as unknown as AdminStudent[]),
   meta: { page: 1, limit: 10, total: 12, total_pages: 2 },
 };
 

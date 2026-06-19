@@ -303,6 +303,51 @@ export async function addStudent(
 }
 
 // ============================================================================
+// 재학생 체크인 API
+// ============================================================================
+
+export interface CheckinResponse {
+  id: number;
+  name: string;
+  birth_date: string | null;
+  gender: string;
+  student_phone: string;
+  guardian_phone: string;
+  address: string;
+  previous_school: string;
+  admission_year: number;
+  admission_grade: number;
+  admission_school: string;
+  checked_in_at: string;
+  is_eligible_for_public_purchase: boolean;
+  is_manually_supported: boolean;
+  student_type: string;
+  has_confirmed_order: boolean;
+  body_measurements: {
+    height: number | null;
+    weight: number | null;
+    shoulder: number | null;
+    waist: number | null;
+  } | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * 전화번호로 재학생 체크인
+ * POST /api/v1/students/checkin (인증 불필요)
+ */
+export async function checkinByPhone(
+  phone: string,
+): Promise<CheckinResponse> {
+  const response = await apiClient.post<ApiResponse<CheckinResponse>>(
+    '/api/v1/students/checkin',
+    { phone },
+  );
+  return response.data.data;
+}
+
+// ============================================================================
 // 학생 리스트 조회 API
 // ============================================================================
 
@@ -459,8 +504,6 @@ export interface AdminStudent {
   student_phone: string;
   guardian_phone: string;
   address: string | null;
-  delivery: boolean;
-  privacy_consent: boolean;
   previous_school: string;
   admission_year: number;
   admission_grade: number;
@@ -473,8 +516,13 @@ export interface AdminStudent {
   has_confirmed_order: boolean;
   created_at: string;
   updated_at: string;
+  body_measurements?: {
+    height: number | null;
+    weight: number | null;
+    shoulder: number | null;
+    waist: number | null;
+  } | null;
   orders?: AdminStudentOrder[];
-  class_name?: string;
   student_number?: string;
   grade?: number;
   government_purchase?: boolean;
@@ -544,12 +592,19 @@ export async function deleteStudent(id: number): Promise<void> {
 export interface UpdateStudentRequest {
   name?: string;
   gender?: string;
-  student_phone?: string;
-  guardian_phone?: string;
-  address?: string;
-  class_name?: string;
-  previous_school?: string;
+  birth_date?: string;
   admission_school?: string;
+  previous_school?: string;
+  admission_year?: number;
+  admission_grade?: number;
+  phone?: string;
+  parent_phone?: string;
+  address?: string;
+  height?: number;
+  weight?: number;
+  shoulder?: number;
+  waist?: number;
+
 }
 
 /**

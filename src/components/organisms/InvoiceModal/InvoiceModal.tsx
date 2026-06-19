@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal, Select } from "@components/atoms";
 import { Toast } from "@components/atoms/Toast";
 import { formatGender } from "@/utils/genderUtils";
-import { formatShortDate } from "@/utils/dateUtils";
+import { formatDate } from "@/utils/dateUtils";
 import { updateAdminOrder } from "@/api/order";
 import { getApiErrorString } from "@/utils/errorUtils";
 import type {
@@ -275,7 +275,12 @@ export const InvoiceModal = ({
                   const rowTotal = item.unitPrice != null ? item.unitPrice * totalQty : null;
                   return (
                     <tr key={item.id} className={item.isDeleted ? "bg-red-050 [&_td]:text-red-700" : ""}>
-                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">{item.name}</td>
+                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
+                        {item.name}
+                        {item.nameTagName && (
+                          <span className="ml-1 text-xs text-gray-400">({item.nameTagName})</span>
+                        )}
+                      </td>
                       <td className="p-1 border border-gray-200 text-center text-gray-700 align-middle">
                         {readOnly ? (
                           <span>{item.size || "-"}</span>
@@ -568,9 +573,6 @@ export const InvoiceModal = ({
                 <div className="flex-1 flex items-center">
                   <ViewField label="출신학교" value={student.previousSchool} />
                 </div>
-                <div className="flex-[0_0_140px] flex items-center">
-                  <ViewField label="반" value={student.classNumber} />
-                </div>
               </div>
             </div>
             <div className="flex items-stretch">
@@ -602,7 +604,7 @@ export const InvoiceModal = ({
                   }`}
                   onClick={() => handleDateTabClick(key)}
                 >
-                  {formatShortDate(key)}
+                  {formatDate(key)}
                 </button>
               ))}
             </div>

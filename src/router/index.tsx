@@ -13,12 +13,14 @@ import {
 } from '@pages/admin';
 import {
   OnboardingPage,
+  StudentTypePage,
   SchoolInputPage,
   StudentInfoPage,
   MeasurementGuidePage,
   MeasurementInputPage,
   CompletePage,
   ExistingStudentPage,
+  ExistingLookupPage,
 } from '@pages/register';
 import {
   LoginPage as StaffLoginPage,
@@ -54,6 +56,10 @@ export const router = createBrowserRouter([
       },
       {
         path: 'school',
+        element: <StudentTypePage />,
+      },
+      {
+        path: 'school-info',
         element: <SchoolInputPage />,
       },
       {
@@ -75,6 +81,10 @@ export const router = createBrowserRouter([
       {
         path: 'existing',
         element: <ExistingStudentPage />,
+      },
+      {
+        path: 'existing-lookup',
+        element: <ExistingLookupPage />,
       },
     ],
   },

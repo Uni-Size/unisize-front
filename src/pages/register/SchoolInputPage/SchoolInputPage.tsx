@@ -48,7 +48,7 @@ export const SchoolInputPage = () => {
     formData.admissionSchool !== '';
 
   const handleBack = () => {
-    navigate('/register');
+    navigate('/register/school');
   };
 
   const handleNext = () => {

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Select } from "@components/atoms";
 import { Toast } from "@components/atoms/Toast";
+import type { ToastVariant } from "@components/atoms/Toast";
 import { GENDER_OPTIONS_MF } from "@/constants/gender";
 import { updateStudent } from "@/api/student";
-import { formatShortDate } from "@/utils/dateUtils";
+import { formatDate } from "@/utils/dateUtils";
 import { formatGender } from "@/utils/genderUtils";
 
 // ============================================================================
@@ -21,6 +22,7 @@ export interface UniformItem {
   reservation: boolean;
   received: boolean;
   nameTag: number | null;
+  nameTagName?: string;
   attachCount: number;
   isDeleted?: boolean;
 }
@@ -60,11 +62,20 @@ export interface StudentDetailData {
   orderId?: number; // 선택된 주문 ID (수정 API 호출용)
   admissionSchool: string;
   previousSchool: string;
-  classNumber: string;
   name: string;
   gender: string;
+  birthDate?: string;
+  admissionYear?: number;
+  admissionGrade?: number;
   studentPhone?: string;
   guardianPhone?: string;
+  address?: string;
+  height?: number;
+  weight?: number;
+  shoulder?: number;
+  waist?: number;
+  studentType?: string;
+  isEligibleForPublicPurchase?: boolean;
   registeredDate?: string; // 학생 created_at
   modifiedDate?: string; // 주문 last_modified_date
   orderSnapshots?: OrderSnapshot[]; // 전체 주문 탭 데이터
@@ -80,7 +91,6 @@ export interface StudentDetailData {
 export interface StudentFormInput {
   admissionSchool: string;
   previousSchool: string;
-  classNumber: string;
   name: string;
   gender: string;
   studentPhone: string;
@@ -166,16 +176,23 @@ export const StudentModal = ({
   // view 모드에서 수정 버튼 클릭 시 편집 상태
   const [isEditing, setIsEditing] = useState(false);
   const isView = mode === "view" && !isEditing;
-  const [toast, setToast] = useState<{ message: string; variant: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; variant: ToastVariant } | null>(null);
 
   // 학생 정보 폼 state
   const [admissionSchool, setAdmissionSchool] = useState("");
   const [previousSchool, setPreviousSchool] = useState("");
-  const [classNumber, setClassNumber] = useState("");
   const [name, setName] = useState("");
   const [gender, setGender] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [admissionYear, setAdmissionYear] = useState<number | "">("");
+  const [admissionGrade, setAdmissionGrade] = useState<number | "">("");
   const [studentPhone, setStudentPhone] = useState("");
   const [guardianPhone, setGuardianPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [height, setHeight] = useState<number | "">("");
+  const [weight, setWeight] = useState<number | "">("");
+  const [shoulder, setShoulder] = useState<number | "">("");
+  const [waist, setWaist] = useState<number | "">("");
 
   // 교복 state
   const [winterUniforms, setWinterUniforms] = useState<UniformItem[]>([]);
@@ -216,37 +233,80 @@ export const StudentModal = ({
     }
   };
 
+  // 편집 시작 시점의 원본 값 (변경 감지용)
+  const originalStudentRef = React.useRef<{
+    admissionSchool: string; previousSchool: string;
+    name: string; gender: string; birthDate: string;
+    admissionYear: number | ""; admissionGrade: number | "";
+    studentPhone: string; guardianPhone: string; address: string;
+    height: number | ""; weight: number | ""; shoulder: number | ""; waist: number | "";
+  } | null>(null);
+  const originalOrderRef = React.useRef<{
+    winterUniforms: UniformItem[]; summerUniforms: UniformItem[]; supplies: SupplyItem[];
+  } | null>(null);
+
   // edit/view 모드에서 기존 데이터로 초기화
   useEffect(() => {
     if ((mode === "edit" || mode === "view") && student) {
-      setAdmissionSchool(student.admissionSchool ?? "");
-      setPreviousSchool(student.previousSchool ?? "");
-      setClassNumber(student.classNumber ?? "");
-      setName(student.name ?? "");
-      setGender(student.gender ?? "");
-      setStudentPhone(student.studentPhone ?? "");
-      setGuardianPhone(student.guardianPhone ?? "");
+      const sPhone = student.studentPhone ?? "";
+      const gPhone = student.guardianPhone ?? "";
+      const aSchool = student.admissionSchool ?? "";
+      const pSchool = student.previousSchool ?? "";
+      const n = student.name ?? "";
+      const g = student.gender ?? "";
+      const bd = student.birthDate ?? "";
+      const ay: number | "" = student.admissionYear ?? "";
+      const ag: number | "" = student.admissionGrade ?? "";
+      const addr = student.address ?? "";
+      const h: number | "" = student.height ?? "";
+      const w: number | "" = student.weight ?? "";
+      const sh: number | "" = student.shoulder ?? "";
+      const ws: number | "" = student.waist ?? "";
+
+      setAdmissionSchool(aSchool);
+      setPreviousSchool(pSchool);
+      setName(n);
+      setGender(g);
+      setBirthDate(bd);
+      setAdmissionYear(ay);
+      setAdmissionGrade(ag);
+      setStudentPhone(sPhone);
+      setGuardianPhone(gPhone);
+      setAddress(addr);
+      setHeight(h);
+      setWeight(w);
+      setShoulder(sh);
+      setWaist(ws);
+      const initialSupplies = student.supplies.length > 0 ? student.supplies : defaultSupplies;
       setWinterUniforms(student.winterUniforms);
       setSummerUniforms(student.summerUniforms);
-      setSupplies(
-        student.supplies.length > 0 ? student.supplies : defaultSupplies,
-      );
+      setSupplies(initialSupplies);
       setNameTag(student.nameTag);
       setActiveDateIndex(0);
       setActiveOrderId(student.orderId);
       setActiveHistory(student.history ?? []);
       setIsEditing(false);
+
+      originalStudentRef.current = { admissionSchool: aSchool, previousSchool: pSchool, name: n, gender: g, birthDate: bd, admissionYear: ay, admissionGrade: ag, studentPhone: sPhone, guardianPhone: gPhone, address: addr, height: h, weight: w, shoulder: sh, waist: ws };
+      originalOrderRef.current = { winterUniforms: student.winterUniforms, summerUniforms: student.summerUniforms, supplies: initialSupplies };
     }
   }, [mode, student]);
 
   const resetForm = () => {
     setAdmissionSchool("");
     setPreviousSchool("");
-    setClassNumber("");
     setName("");
     setGender("");
+    setBirthDate("");
+    setAdmissionYear("");
+    setAdmissionGrade("");
     setStudentPhone("");
     setGuardianPhone("");
+    setAddress("");
+    setHeight("");
+    setWeight("");
+    setShoulder("");
+    setWaist("");
     setWinterUniforms([]);
     setSummerUniforms([]);
     setSupplies(defaultSupplies.map((s) => ({ ...s, size: "", quantity: 0 })));
@@ -265,7 +325,6 @@ export const StudentModal = ({
     const formData: StudentFormInput = {
       admissionSchool,
       previousSchool,
-      classNumber,
       name,
       gender,
       studentPhone,
@@ -279,20 +338,47 @@ export const StudentModal = ({
     if (isEditing) {
       const studentId = student?.id ? Number(student.id) : undefined;
       try {
-        if (studentId) {
+        const orig = originalStudentRef.current;
+        const studentChanged = !orig ||
+          orig.name !== name || orig.gender !== gender ||
+          orig.birthDate !== birthDate || orig.admissionYear !== admissionYear || orig.admissionGrade !== admissionGrade ||
+          orig.studentPhone !== studentPhone || orig.guardianPhone !== guardianPhone ||
+          orig.address !== address || orig.previousSchool !== previousSchool ||
+          orig.admissionSchool !== admissionSchool ||
+          orig.height !== height || orig.weight !== weight || orig.shoulder !== shoulder || orig.waist !== waist;
+
+        const origOrder = originalOrderRef.current;
+        const orderChanged = !origOrder ||
+          JSON.stringify(origOrder.winterUniforms) !== JSON.stringify(winterUniforms) ||
+          JSON.stringify(origOrder.summerUniforms) !== JSON.stringify(summerUniforms) ||
+          JSON.stringify(origOrder.supplies) !== JSON.stringify(supplies);
+
+        if (!studentChanged && !orderChanged) {
+          setToast({ message: '수정된 내용이 없습니다.', variant: 'info' });
+          return;
+        }
+
+        if (studentId && studentChanged) {
           await updateStudent(studentId, {
             name,
             ...(gender ? { gender } : {}),
-            student_phone: studentPhone,
-            guardian_phone: guardianPhone,
-            class_name: classNumber,
+            birth_date: birthDate || undefined,
+            admission_year: admissionYear !== "" ? admissionYear : undefined,
+            admission_grade: admissionGrade !== "" ? admissionGrade : undefined,
+            phone: studentPhone,
+            parent_phone: guardianPhone,
+            address: address || undefined,
             previous_school: previousSchool,
             admission_school: admissionSchool,
+            height: height !== "" ? height : undefined,
+            weight: weight !== "" ? weight : undefined,
+            shoulder: shoulder !== "" ? shoulder : undefined,
+            waist: waist !== "" ? waist : undefined,
           });
           onStudentUpdated?.();
         }
         const targetOrderId = activeOrderId ?? student?.orderId;
-        if (targetOrderId) {
+        if (targetOrderId && orderChanged) {
           onEditSave?.(targetOrderId, formData);
         }
         setToast({ message: '저장되었습니다.', variant: 'success' });
@@ -916,34 +1002,18 @@ export const StudentModal = ({
               )}
             </div>
             <div className="flex-[1_1_0%] min-w-0 flex items-center" style={{ marginRight: "80px" }}>
-              <div className="flex-1 flex items-center">
-                {isView ? (
-                  <ViewField label="출신학교" value={previousSchool} />
-                ) : (
-                  <EditField label="출신학교">
-                    <input
-                      className="flex-1 px-4 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none placeholder:text-bg-400"
-                      placeholder="출신 학교"
-                      value={previousSchool}
-                      onChange={(e) => setPreviousSchool(e.target.value)}
-                    />
-                  </EditField>
-                )}
-              </div>
-              <div className="flex-[0_0_140px] flex items-center">
-                {isView ? (
-                  <ViewField label="반" value={classNumber} />
-                ) : (
-                  <EditField label="반" labelWidth="70px">
-                    <input
-                      className="w-20 px-4 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none placeholder:text-bg-400"
-                      placeholder="반"
-                      value={classNumber}
-                      onChange={(e) => setClassNumber(e.target.value)}
-                    />
-                  </EditField>
-                )}
-              </div>
+              {isView ? (
+                <ViewField label="출신학교" value={previousSchool} />
+              ) : (
+                <EditField label="출신학교">
+                  <input
+                    className="flex-1 px-4 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none placeholder:text-bg-400"
+                    placeholder="출신 학교"
+                    value={previousSchool}
+                    onChange={(e) => setPreviousSchool(e.target.value)}
+                  />
+                </EditField>
+              )}
             </div>
           </div>
 
@@ -1020,6 +1090,126 @@ export const StudentModal = ({
               )}
             </div>
           </div>
+
+          {/* 추가 학생 정보 (뷰 + 편집 공통) */}
+          {(isView || isEditing) && (
+            <>
+              <div className="flex items-stretch">
+                <div className="flex-1 min-w-0 flex items-center">
+                  {isView ? (
+                    <ViewField label="생년월일" value={birthDate || "-"} />
+                  ) : (
+                    <EditField label="생년월일">
+                      <input
+                        type="date"
+                        className="flex-1 px-4 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none"
+                        value={birthDate}
+                        onChange={(e) => setBirthDate(e.target.value)}
+                      />
+                    </EditField>
+                  )}
+                </div>
+                <div className="flex-[1_1_0%] min-w-0 flex items-center" style={{ marginRight: "80px" }}>
+                  {isView ? (
+                    <ViewField label="입학년도/학년" value={admissionYear !== "" ? `${admissionYear}년 ${admissionGrade}학년` : "-"} />
+                  ) : (
+                    <EditField label="입학년도/학년">
+                      <input
+                        type="number"
+                        className="w-20 px-4 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="년도"
+                        value={admissionYear}
+                        onChange={(e) => setAdmissionYear(e.target.value === "" ? "" : Number(e.target.value))}
+                      />
+                      <span className="text-sm text-gray-400 px-1">/</span>
+                      <input
+                        type="number"
+                        className="w-12 px-2 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="학년"
+                        value={admissionGrade}
+                        onChange={(e) => setAdmissionGrade(e.target.value === "" ? "" : Number(e.target.value))}
+                      />
+                    </EditField>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-stretch">
+                <div className="flex-1 min-w-0 flex items-center">
+                  {isView ? (
+                    <ViewField label="주소" value={address || "-"} />
+                  ) : (
+                    <EditField label="주소">
+                      <input
+                        className="flex-1 px-4 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none placeholder:text-bg-400"
+                        placeholder="주소"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                      />
+                    </EditField>
+                  )}
+                </div>
+                <div className="flex-[1_1_0%] min-w-0 flex items-center" style={{ marginRight: "80px" }}>
+                  <ViewField label="구분" value={student?.studentType ?? "-"} />
+                </div>
+              </div>
+              <div className="flex items-stretch">
+                <div className="flex-1 min-w-0 flex items-center">
+                  <ViewField label="주관구매" value={student?.isEligibleForPublicPurchase != null ? (student.isEligibleForPublicPurchase ? "O" : "X") : "-"} />
+                </div>
+                <div className="flex-[1_1_0%] min-w-0 flex items-center" style={{ marginRight: "80px" }} />
+              </div>
+              <div className="flex items-stretch">
+                <div className="flex-1 min-w-0 flex items-center">
+                  {isView ? (
+                    <ViewField label="키 / 몸무게" value={height !== "" || weight !== "" ? `${height !== "" ? height : "-"} cm / ${weight !== "" ? weight : "-"} kg` : "-"} />
+                  ) : (
+                    <EditField label="키 / 몸무게">
+                      <input
+                        type="number"
+                        className="w-16 px-2 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="키"
+                        value={height}
+                        onChange={(e) => setHeight(e.target.value === "" ? "" : Number(e.target.value))}
+                      />
+                      <span className="text-sm text-gray-400 px-1">cm /</span>
+                      <input
+                        type="number"
+                        className="w-16 px-2 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="몸무게"
+                        value={weight}
+                        onChange={(e) => setWeight(e.target.value === "" ? "" : Number(e.target.value))}
+                      />
+                      <span className="text-sm text-gray-400 px-1">kg</span>
+                    </EditField>
+                  )}
+                </div>
+                <div className="flex-[1_1_0%] min-w-0 flex items-center" style={{ marginRight: "80px" }}>
+                  {isView ? (
+                    <ViewField label="어깨 / 허리" value={shoulder !== "" || waist !== "" ? `${shoulder !== "" ? shoulder : "-"} cm / ${waist !== "" ? waist : "-"} cm` : "-"} />
+                  ) : (
+                    <EditField label="어깨 / 허리">
+                      <input
+                        type="number"
+                        className="w-16 px-2 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="어깨"
+                        value={shoulder}
+                        onChange={(e) => setShoulder(e.target.value === "" ? "" : Number(e.target.value))}
+                      />
+                      <span className="text-sm text-gray-400 px-1">cm /</span>
+                      <input
+                        type="number"
+                        className="w-16 px-2 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="허리"
+                        value={waist}
+                        onChange={(e) => setWaist(e.target.value === "" ? "" : Number(e.target.value))}
+                      />
+                      <span className="text-sm text-gray-400 px-1">cm</span>
+                    </EditField>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* 날짜 탭 + 동복 테이블 */}
@@ -1038,7 +1228,7 @@ export const StudentModal = ({
                     }`}
                     onClick={() => handleDateTabClick(i)}
                   >
-                    {formatShortDate(snapshot.date)}
+                    {formatDate(snapshot.date)}
                   </button>
                 ))}
               </div>

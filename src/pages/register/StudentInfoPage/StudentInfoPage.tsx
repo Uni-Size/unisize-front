@@ -82,7 +82,7 @@ export const StudentInfoPage = () => {
 
       <h2 className="text-2xl font-bold text-center mb-14 text-bg-900 leading-[1.4]">
         {formData.admissionSchool}에
-        {formData.admissionGrade === 1 ? ' 입학하는' : ' 전학오는'} <br />
+        {formData.studentType === 'transfer' ? ' 전학오는' : ' 입학하는'} <br />
         학생의 정보를 알려주세요
       </h2>
 

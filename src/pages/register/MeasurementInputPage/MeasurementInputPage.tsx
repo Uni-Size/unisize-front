@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStudentFormStore } from '@/stores/useStudentFormStore';
 import { useStudentResponseStore } from '@/stores/useStudentResponseStore';
-import { addStudent } from '@/api/student';
+import { addStudent, startMeasurement } from '@/api/student';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 
@@ -16,9 +16,19 @@ const VALIDATION_RANGES = {
 export const MeasurementInputPage = () => {
   const navigate = useNavigate();
   const { formData, setBodyMeasurements, resetFormData } = useStudentFormStore();
-  const { setStudentData } = useStudentResponseStore();
+  const { setStudentData, checkinData } = useStudentResponseStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (checkinData?.body_measurements) {
+      const m = checkinData.body_measurements;
+      if (m.height) setBodyMeasurements('height', m.height);
+      if (m.weight) setBodyMeasurements('weight', m.weight);
+      if (m.shoulder) setBodyMeasurements('shoulder', m.shoulder);
+      if (m.waist) setBodyMeasurements('waist', m.waist);
+    }
+  }, [checkinData]);
 
   const isFormValid =
     formData.body.height > 0 &&
@@ -37,10 +47,16 @@ export const MeasurementInputPage = () => {
     setError('');
 
     try {
-      const result = await addStudent(formData);
-      setStudentData(result);
-      resetFormData();
-      navigate('/register/complete');
+      if (checkinData) {
+        await startMeasurement(checkinData.id);
+        resetFormData();
+        navigate('/register/complete');
+      } else {
+        const result = await addStudent(formData);
+        setStudentData(result);
+        resetFormData();
+        navigate('/register/complete');
+      }
     } catch (err) {
       console.error('학생 등록 실패:', err);
 
