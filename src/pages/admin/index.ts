@@ -8,4 +8,3 @@ export * from './StudentListPage';
 export * from './StaffListPage';
 export * from './StaffApprovalPage';
 export * from './SchoolDetailPage';
-export * from './InventoryTestPage';
