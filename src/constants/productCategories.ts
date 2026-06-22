@@ -1,7 +1,3 @@
-// ============================================================================
-// 교복 카테고리 구조
-// ============================================================================
-
 export interface CategoryOption {
   value: string;
   label: string;
@@ -33,13 +29,13 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
   {
     label: '하의',
     options: [
-      { value: 'full_elastic_long', label: '온고무줄긴바지', group: '하의' },
-      { value: 'half_elastic_long', label: '반고무줄긴바지', group: '하의' },
-      { value: 'adjuster_long', label: '조절기긴바지', group: '하의' },
-      { value: 'full_elastic_short', label: '온고무줄반바지', group: '하의' },
-      { value: 'half_elastic_short', label: '반고무줄반바지', group: '하의' },
-      { value: 'adjuster_short', label: '조절기반바지', group: '하의' },
-      { value: 'life_short', label: '생활복반바지', group: '하의' },
+      { value: 'pants_full_elastic', label: '온고무줄긴바지', group: '하의' },
+      { value: 'pants_half_elastic', label: '반고무줄긴바지', group: '하의' },
+      { value: 'pants_adjuster', label: '조절기긴바지', group: '하의' },
+      { value: 'shorts_full_elastic', label: '온고무줄반바지', group: '하의' },
+      { value: 'shorts_half_elastic', label: '반고무줄반바지', group: '하의' },
+      { value: 'shorts_adjuster', label: '조절기반바지', group: '하의' },
+      { value: 'shorts_life', label: '생활복반바지', group: '하의' },
       { value: 'skirt', label: '치마', group: '하의' },
     ],
   },
@@ -52,17 +48,14 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
   },
 ];
 
-// 플랫 옵션 목록 (Select 컴포넌트용)
 export const CATEGORY_OPTIONS: CategoryOption[] = CATEGORY_GROUPS.flatMap(
   (group) => group.options,
 );
 
-// value -> label 매핑
 export const CATEGORY_LABEL_MAP: Record<string, string> = Object.fromEntries(
   CATEGORY_OPTIONS.map((opt) => [opt.value, opt.label]),
 );
 
-// value -> group 매핑
 export const CATEGORY_GROUP_MAP: Record<string, string> = Object.fromEntries(
   CATEGORY_OPTIONS.map((opt) => [opt.value, opt.group]),
 );

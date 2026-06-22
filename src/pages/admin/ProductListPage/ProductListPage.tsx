@@ -104,6 +104,7 @@ export const ProductListPage = () => {
   const [selectedProduct, setSelectedProduct] =
     useState<ProductDetailData | null>(null);
   const [selectedSchools, setSelectedSchools] = useState<SchoolPrice[]>([]);
+  const [pendingSchool, setPendingSchool] = useState<ProductSchoolDetail | null>(null);
 
   const fetchProducts = useCallback(
     async (
@@ -175,21 +176,17 @@ export const ProductListPage = () => {
     setSelectedSchools([]);
   };
 
-  const apiSizesToSizeType = (sizes?: { size_type: string; size_step?: number }[]): string => {
-    const first = sizes?.[0];
-    if (!first) return "";
-    if (first.size_type === "numeric") return first.size_step === 3 ? "numeric_3" : "numeric_5";
-    if (first.size_type === "alpha") return "alpha";
-    if (first.size_type === "free") return "free";
+  const apiSizeTypeToUi = (size_type?: string): string => {
+    if (size_type === "numeric") return "numeric_5";
+    if (size_type === "alpha") return "alpha";
+    if (size_type === "free") return "free";
     return "";
   };
 
-  const sizeTypeToApiSizes = (sizeType: string) => {
-    if (!sizeType) return undefined;
-    if (sizeType === "numeric_5") return [{ size: "numeric", size_type: "numeric" as const, size_step: 5 as const }];
-    if (sizeType === "numeric_3") return [{ size: "numeric", size_type: "numeric" as const, size_step: 3 as const }];
-    if (sizeType === "alpha") return [{ size: "alpha", size_type: "alpha" as const }];
-    if (sizeType === "free") return [{ size: "free", size_type: "free" as const }];
+  const uiSizeTypeToApi = (sizeType: string): "numeric" | "alpha" | "free" | undefined => {
+    if (sizeType === "numeric_5" || sizeType === "numeric_3") return "numeric";
+    if (sizeType === "alpha") return "alpha";
+    if (sizeType === "free") return "free";
     return undefined;
   };
 
@@ -203,7 +200,10 @@ export const ProductListPage = () => {
         name: data.displayName,
         price: data.originalPrice,
         season: data.season || undefined,
-        sizes: sizeTypeToApiSizes(data.sizeType),
+        size_type: uiSizeTypeToApi(data.sizeType),
+        schools: data.schools.length > 0
+          ? data.schools.map((s) => ({ school_id: Number(s.schoolId), price: s.price }))
+          : undefined,
       });
       handleCloseAddModal();
       fetchProducts(currentPage, categoryFilter, genderFilter, seasonFilter, searchTerm);
@@ -234,6 +234,7 @@ export const ProductListPage = () => {
     try {
       const detail = await getProduct(Number(product.id));
       const rawSchools: ProductSchoolDetail[] = (detail.schools ?? []).map((s) => ({
+        school_id: s.school_id,
         school_name: s.school_name,
         display_name: s.display_name,
         price: s.price,
@@ -254,9 +255,10 @@ export const ProductListPage = () => {
         originalPrice: detail.price,
         isRepairable: detail.is_repair ? "yes" : "no",
         isRepairRequired: detail.is_repair_required ? "required" : "optional",
-        sizeType: apiSizesToSizeType(detail.sizes),
+        sizeType: apiSizeTypeToUi(detail.size_type),
         schools,
         rawSchools,
+        inventory: detail.inventory ?? [],
         createdAt: detail.created_at,
         updatedAt: detail.updated_at,
       };
@@ -272,6 +274,7 @@ export const ProductListPage = () => {
     setIsDetailModalOpen(false);
     setSelectedProduct(null);
     setSelectedSchools([]);
+    setPendingSchool(null);
   };
 
   const handleUpdateProduct = async (data: ProductDetailData) => {
@@ -284,7 +287,10 @@ export const ProductListPage = () => {
         name: data.displayName,
         price: data.originalPrice,
         season: data.season || undefined,
-        sizes: sizeTypeToApiSizes(data.sizeType),
+        size_type: uiSizeTypeToApi(data.sizeType),
+        schools: data.rawSchools && data.rawSchools.length > 0
+          ? data.rawSchools.map((s) => ({ school_id: Number(s.school_id), price: s.price }))
+          : undefined,
       });
       handleCloseDetailModal();
       fetchProducts(currentPage, categoryFilter, genderFilter, seasonFilter, searchTerm);
@@ -307,13 +313,17 @@ export const ProductListPage = () => {
     price: number,
     year: string,
   ) => {
-    const newSchool: SchoolPrice = { schoolId, schoolName, price, year };
-    setSelectedSchools((prev) => {
-      if (prev.find((s) => s.schoolId === schoolId && s.year === year)) {
-        return prev;
-      }
-      return [...prev, newSchool];
-    });
+    if (isDetailModalOpen) {
+      setPendingSchool({ school_name: schoolName, display_name: schoolName, price, quantity: 1 });
+    } else {
+      const newSchool: SchoolPrice = { schoolId, schoolName, price, year };
+      setSelectedSchools((prev) => {
+        if (prev.find((s) => s.schoolId === schoolId && s.year === year)) {
+          return prev;
+        }
+        return [...prev, newSchool];
+      });
+    }
   };
 
   const handleRemoveSchool = (schoolId: string) => {
@@ -611,6 +621,7 @@ export const ProductListPage = () => {
         product={selectedProduct}
         onUpdate={handleUpdateProduct}
         onOpenSchoolModal={() => handleOpenSchoolModal()}
+        pendingSchool={pendingSchool}
       />
 
       <SchoolSelectModal

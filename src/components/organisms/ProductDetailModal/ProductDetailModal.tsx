@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Modal, Select, Input } from "@components/atoms";
+import { Toast } from "@components/atoms/Toast";
 import type { SchoolPrice } from "../ProductAddModal";
 import {
   CATEGORY_GROUPS,
@@ -14,6 +15,8 @@ import {
   getSeasonLabel,
 } from "@/constants/product";
 import { formatDateTime } from "@/utils/dateUtils";
+import { addInventory, type ProductInventory, type ProductSize } from "@/api/product";
+import { getApiErrorString } from "@/utils/errorUtils";
 
 export interface ProductSchoolDetail {
   school_name: string;
@@ -34,6 +37,8 @@ export interface ProductDetailData {
   sizeType: string;
   schools: SchoolPrice[];
   rawSchools?: ProductSchoolDetail[];
+  sizes?: ProductSize[];
+  inventory?: ProductInventory[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -44,6 +49,7 @@ export interface ProductDetailModalProps {
   product: ProductDetailData | null;
   onUpdate: (data: ProductDetailData) => void;
   onOpenSchoolModal?: () => void;
+  pendingSchool?: ProductSchoolDetail | null;
 }
 
 // ============================================================================
@@ -78,6 +84,7 @@ const ProductDetailModalContent = ({
   onClose,
   onUpdate,
   onOpenSchoolModal,
+  pendingSchool,
   isOpen,
 }: ProductDetailModalProps & { product: ProductDetailData }) => {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -96,6 +103,25 @@ const ProductDetailModalContent = ({
   const [editSchools, setEditSchools] = useState<ProductSchoolDetail[]>(
     product.rawSchools ?? [],
   );
+  const [inventory, setInventory] = useState<ProductInventory[]>(
+    product.inventory ?? [],
+  );
+  const [addStockInputs, setAddStockInputs] = useState<Record<string, string>>({});
+  const [addRoundInputs, setAddRoundInputs] = useState<Record<string, string>>({});
+  const [stockSaving, setStockSaving] = useState(false);
+  const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
+
+  const prevPendingSchool = useRef<ProductSchoolDetail | null | undefined>(null);
+  useEffect(() => {
+    if (pendingSchool && pendingSchool !== prevPendingSchool.current) {
+      prevPendingSchool.current = pendingSchool;
+      setEditSchools((prev) =>
+        prev.find((s) => s.school_name === pendingSchool.school_name)
+          ? prev
+          : [...prev, pendingSchool]
+      );
+    }
+  }, [pendingSchool]);
 
   const handleClose = () => {
     setIsEditMode(false);
@@ -133,7 +159,37 @@ const ProductDetailModalContent = ({
     value: string,
   ) => options.find((opt) => opt.value === value)?.label ?? value;
 
+  const handleAddStock = async (size: string) => {
+    const qty = Number(addStockInputs[size]);
+    if (!qty || qty <= 0) return;
+    setStockSaving(true);
+    try {
+      const round = addRoundInputs[size] ? Number(addRoundInputs[size]) : undefined;
+      const result = await addInventory({
+        product_id: Number(product.id),
+        size,
+        quantity: qty,
+        round_number: round,
+      });
+      setInventory((prev) => {
+        const existing = prev.find((i) => i.size === size);
+        if (existing) {
+          return prev.map((i) => i.size === size ? { ...i, quantity: i.quantity + qty, rounds: result.rounds } : i);
+        }
+        return [...prev, result];
+      });
+      setAddStockInputs((prev) => ({ ...prev, [size]: "" }));
+      setAddRoundInputs((prev) => ({ ...prev, [size]: "" }));
+      setToast({ message: "재고가 추가되었습니다.", variant: "success" });
+    } catch (err) {
+      setToast({ message: getApiErrorString(err, "재고 추가에 실패했습니다."), variant: "error" });
+    } finally {
+      setStockSaving(false);
+    }
+  };
+
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
@@ -174,6 +230,18 @@ const ProductDetailModalContent = ({
       }
     >
       <div className="flex flex-col gap-4 w-full">
+        {/* 등록일 / 수정일 */}
+        <div className="flex justify-end gap-4">
+          <div className="flex items-center gap-1.5 text-xs text-bg-400">
+            <span>등록일</span>
+            <span>{formatDateTime(product.createdAt) || "-"}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-bg-400">
+            <span>최종 수정일</span>
+            <span>{formatDateTime(product.updatedAt) || "-"}</span>
+          </div>
+        </div>
+
         {/* 시즌 / 카테고리 / 성별 */}
         <div className="flex gap-2 items-start">
           <div className="flex-1 min-w-0">
@@ -279,7 +347,7 @@ const ProductDetailModalContent = ({
               />
             )}
           </div>
-          <div className="flex-1 min-w-0">
+          <div className={`flex-1 min-w-0 ${isEditMode && isRepairable !== "yes" ? "opacity-30 pointer-events-none" : ""}`}>
             {isEditMode ? (
               <Select
                 label="수선 필수 여부"
@@ -289,7 +357,7 @@ const ProductDetailModalContent = ({
                 onChange={setIsRepairRequired}
                 fullWidth
               />
-            ) : (
+            ) : product.isRepairable === "yes" ? (
               <FieldView
                 label="수선 필수 여부"
                 value={getOptionLabel(
@@ -297,7 +365,7 @@ const ProductDetailModalContent = ({
                   product.isRepairRequired,
                 )}
               />
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -321,25 +389,6 @@ const ProductDetailModalContent = ({
             )}
           </div>
           <div className="flex-1 min-w-0" />
-        </div>
-
-        {/* ID / 등록일 / 수정일 */}
-        <div className="flex gap-2 items-start">
-          <div className="flex-1 min-w-0">
-            <FieldView label="상품 ID" value={product.id} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <FieldView
-              label="등록일"
-              value={formatDateTime(product.createdAt) || "-"}
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <FieldView
-              label="수정일"
-              value={formatDateTime(product.updatedAt) || "-"}
-            />
-          </div>
         </div>
 
         {/* 사용 학교 */}
@@ -419,8 +468,74 @@ const ProductDetailModalContent = ({
             </p>
           )}
         </div>
+
+        {/* 재고 */}
+        <div className="flex flex-col gap-2">
+          <span className="text-15 font-normal text-gray-700">재고</span>
+          {product.sizes && product.sizes.length > 0 ? (
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <table className="w-full text-14 text-gray-700">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="px-4 py-2.5 text-left font-medium">사이즈</th>
+                    <th className="px-4 py-2.5 text-right font-medium">현재 재고</th>
+                    <th className="px-4 py-2.5 text-right font-medium">추가 수량</th>
+                    <th className="px-4 py-2.5 text-right font-medium">차수</th>
+                    <th className="px-4 py-2.5 text-center font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {product.sizes.map((s) => {
+                    const inv = inventory.find((i) => i.size === s.size);
+                    return (
+                      <tr key={s.size} className="border-b border-gray-100 last:border-b-0">
+                        <td className="px-4 py-2.5 font-medium">{s.size}</td>
+                        <td className="px-4 py-2.5 text-right">{inv?.quantity ?? 0}</td>
+                        <td className="px-4 py-2.5 text-right">
+                          <input
+                            type="number"
+                            className="w-20 border border-gray-200 rounded px-2 py-1 text-14 text-gray-700 text-right outline-none focus:border-gray-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            placeholder="0"
+                            value={addStockInputs[s.size] ?? ""}
+                            onChange={(e) => setAddStockInputs((prev) => ({ ...prev, [s.size]: e.target.value }))}
+                          />
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <input
+                            type="number"
+                            className="w-16 border border-gray-200 rounded px-2 py-1 text-14 text-gray-700 text-right outline-none focus:border-gray-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            placeholder="-"
+                            value={addRoundInputs[s.size] ?? ""}
+                            onChange={(e) => setAddRoundInputs((prev) => ({ ...prev, [s.size]: e.target.value }))}
+                          />
+                        </td>
+                        <td className="px-4 py-2.5 text-center">
+                          <button
+                            className="px-3 py-1 bg-primary-900 text-bg-050 text-xs font-medium rounded border-none cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                            disabled={stockSaving || !addStockInputs[s.size] || Number(addStockInputs[s.size]) <= 0}
+                            onClick={() => handleAddStock(s.size)}
+                          >
+                            추가
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-15 text-gray-400 text-center py-2">
+              등록된 사이즈가 없습니다
+            </p>
+          )}
+        </div>
       </div>
     </Modal>
+    {toast && (
+      <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} />
+    )}
+    </>
   );
 };
 

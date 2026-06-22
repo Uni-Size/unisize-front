@@ -192,7 +192,7 @@ export const ProductAddModal = ({
               fullWidth
             />
           </div>
-          <div className="flex-1 min-w-0">
+          <div className={`flex-1 min-w-0 ${isRepairable !== "yes" ? "opacity-30 pointer-events-none" : ""}`}>
             <Select
               label="수선 필수 여부"
               placeholder="선택사항"

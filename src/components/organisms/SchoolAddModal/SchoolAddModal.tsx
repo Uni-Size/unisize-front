@@ -1,11 +1,14 @@
 import { useState, useCallback } from "react";
 import { Modal, Select, Input } from "@components/atoms";
+import { Toast } from "@components/atoms/Toast";
 import { getAllProducts, type Product } from "@/api/product";
 import { GENDER_OPTIONS } from "@/constants/gender";
+import { CATEGORY_OPTIONS } from "@/constants/productCategories";
 import {
   addSupportedSchool,
   type UniformItem,
 } from "@/api/school";
+import { getApiErrorString } from "@/utils/errorUtils";
 
 export interface SchoolProductItem {
   id: string;
@@ -51,12 +54,7 @@ const yearOptions = Array.from({ length: 6 }, (_, i) => ({
   label: String(currentYear - 3 + i),
 }));
 
-const categoryOptions = [
-  { value: "상의", label: "상의" },
-  { value: "하의", label: "하의" },
-  { value: "후드", label: "후드" },
-  { value: "아우터", label: "아우터" },
-];
+const categoryOptions = CATEGORY_OPTIONS;
 
 const genderOptions = GENDER_OPTIONS;
 
@@ -77,6 +75,7 @@ export const SchoolAddModal = ({
   const [productsCache, setProductsCache] = useState<Record<string, Product[]>>(
     {},
   );
+  const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
 
   const fetchProducts = useCallback(
     async (season: string, category: string, gender: string) => {
@@ -195,7 +194,7 @@ export const SchoolAddModal = ({
       onSubmit();
       handleClose();
     } catch (error) {
-      console.error("학교 추가 실패:", error);
+      setToast({ message: getApiErrorString(error, "학교 추가 중 오류가 발생했습니다."), variant: "error" });
     }
   };
 
@@ -422,6 +421,7 @@ export const SchoolAddModal = ({
   );
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
@@ -491,7 +491,7 @@ export const SchoolAddModal = ({
           <div className="flex-1 min-w-0">
             <Input
               label="측정기간"
-              placeholder="2025.01.01"
+              type="date"
               value={measurementStartDate}
               onChange={(e) => setMeasurementStartDate(e.target.value)}
               fullWidth
@@ -503,7 +503,7 @@ export const SchoolAddModal = ({
           <div className="flex-none w-45 min-w-0">
             <Input
               label=" "
-              placeholder="2025.01.10"
+              type="date"
               value={measurementEndDate}
               onChange={(e) => setMeasurementEndDate(e.target.value)}
               fullWidth
@@ -572,5 +572,9 @@ export const SchoolAddModal = ({
         </div>
       </div>
     </Modal>
+    {toast && (
+      <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} />
+    )}
+    </>
   );
 };

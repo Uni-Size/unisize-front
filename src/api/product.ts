@@ -7,9 +7,27 @@ import type { ApiResponse } from "./auth";
 
 export interface ProductSize {
   size: string;
-  size_type: "numeric" | "alpha" | "free";
-  size_step?: 3 | 5;
   display_order?: number;
+}
+
+export interface ProductInventory {
+  id?: number;
+  size: string;
+  quantity: number;
+  rounds?: { round_number: number; total_in: number }[];
+}
+
+export interface AddInventoryRequest {
+  product_id: number;
+  size: string;
+  quantity: number;
+  round_number?: number;
+}
+
+export interface UpdateInventoryRequest {
+  quantity: number;
+  round_number?: number;
+  reason?: string;
 }
 
 export interface ProductSchool {
@@ -28,8 +46,10 @@ export interface Product {
   price: number;
   is_repair: boolean;
   is_repair_required: boolean;
+  size_type?: "numeric" | "alpha" | "free";
   sizes?: ProductSize[];
   schools?: ProductSchool[];
+  inventory?: ProductInventory[];
   created_at: string;
   updated_at: string;
 }
@@ -50,14 +70,16 @@ export interface GetProductsParams {
 }
 
 export interface CreateProductRequest {
+  name: string;
   category: string;
   gender: string;
+  season?: string;
+  price: number;
   is_repair?: boolean;
   is_repair_required?: boolean;
-  name: string;
-  price: number;
-  season?: string;
+  size_type?: "numeric" | "alpha" | "free";
   sizes?: ProductSize[];
+  schools?: { school_id: number; price: number }[];
 }
 
 export interface UpdateProductRequest {
@@ -68,6 +90,7 @@ export interface UpdateProductRequest {
   price?: number;
   is_repair?: boolean;
   is_repair_required?: boolean;
+  size_type?: "numeric" | "alpha" | "free";
   sizes?: ProductSize[];
   schools?: { school_id: number; price: number }[];
 }
@@ -75,28 +98,6 @@ export interface UpdateProductRequest {
 // ============================================================================
 // 상품 조회 API
 // ============================================================================
-
-/**
- * 전체 상품 조회 (학교 품목 추가용)
- * GET /api/v1/products
- */
-export async function getAllProducts(params?: GetProductsParams): Promise<ProductsData> {
-  const queryParams = new URLSearchParams();
-
-  if (params?.page) queryParams.append("page", params.page.toString());
-  if (params?.limit) queryParams.append("limit", params.limit.toString());
-  if (params?.category) queryParams.append("category", params.category);
-  if (params?.gender) queryParams.append("gender", params.gender);
-  if (params?.season) queryParams.append("season", params.season);
-  if (params?.search) queryParams.append("search", params.search);
-  if (params?.active_only !== undefined) queryParams.append("active_only", params.active_only.toString());
-
-  const queryString = queryParams.toString();
-  const url = queryString ? `/api/v1/products?${queryString}` : "/api/v1/products";
-
-  const response = await apiClient.get<ApiResponse<ProductsData>>(url);
-  return response.data.data;
-}
 
 /**
  * 상품 리스트 조회
@@ -119,6 +120,9 @@ export async function getProducts(params?: GetProductsParams): Promise<ProductsD
   const response = await apiClient.get<ApiResponse<ProductsData>>(url);
   return response.data.data;
 }
+
+// getAllProducts는 getProducts와 동일 — 하나로 통합
+export const getAllProducts = getProducts;
 
 // ============================================================================
 // 상품 관리 API
@@ -165,4 +169,32 @@ export async function updateProduct(id: number, data: UpdateProductRequest): Pro
  */
 export async function deleteProduct(id: number): Promise<void> {
   await apiClient.delete(`/api/v1/products/${id}`);
+}
+
+// ============================================================================
+// 재고 API
+// ============================================================================
+
+/**
+ * 재고 추가
+ * POST /api/v1/inventory
+ */
+export async function addInventory(data: AddInventoryRequest): Promise<ProductInventory> {
+  const response = await apiClient.post<ApiResponse<ProductInventory>>(
+    "/api/v1/inventory",
+    data,
+  );
+  return response.data.data;
+}
+
+/**
+ * 재고 수정
+ * PUT /api/v1/inventory/:id
+ */
+export async function updateInventory(id: number, data: UpdateInventoryRequest): Promise<ProductInventory> {
+  const response = await apiClient.put<ApiResponse<ProductInventory>>(
+    `/api/v1/inventory/${id}`,
+    data,
+  );
+  return response.data.data;
 }
