@@ -91,7 +91,6 @@ export interface SchoolDetailUniform {
   name_tag_attach_price: number | null;
   name_tag_min_unit: number | null;
   is_selectable?: boolean;
-  free_support_count: number;
   selectable_with?: { product_id: number; display_name: string; free_support_count?: number }[];
 }
 
