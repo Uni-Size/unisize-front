@@ -319,16 +319,73 @@ export const SchoolDetailModal = ({
     if (!product.productApiId) return;
     setSelectableSaving(true);
     try {
-      await updateProductSelectable(Number(product.productApiId), school!.school_name, {
+      const myProductId = Number(product.productApiId);
+      const siblingProductIds = (product.selectable_with ?? []).map((s) => s.product_id);
+
+      // 내 쪽 저장
+      await updateProductSelectable(myProductId, school!.school_name, {
         is_selectable: product.is_selectable ?? false,
-        selectable_with: (product.selectable_with ?? []).map((s) => s.product_id),
+        selectable_with: siblingProductIds,
       });
+
+      // 상대방도 양쪽 참조가 되도록 저장
+      await Promise.all(
+        siblingProductIds.map((sibId) =>
+          updateProductSelectable(sibId, school!.school_name, {
+            is_selectable: true,
+            selectable_with: [myProductId],
+          }),
+        ),
+      );
+
       setToast({ message: "교체 가능 설정이 저장되었습니다.", variant: "success" });
     } catch (err) {
       setToast({ message: getApiErrorString(err, "교체 가능 설정 저장에 실패했습니다."), variant: "error" });
     } finally {
       setSelectableSaving(false);
     }
+  };
+
+  // 교체 가능 품목 토글 시 상대방 품목의 selectable_with도 동기화
+  const toggleSelectableWith = (
+    season: "winter" | "summer",
+    productId: string,
+    target: { product_id: number; display_name: string },
+    add: boolean,
+  ) => {
+    const myProductId = Number(
+      (season === "winter" ? winterProducts : summerProducts).find((p) => p.id === productId)?.productApiId,
+    );
+
+    const syncBoth = (prev: EditableProduct[]): EditableProduct[] =>
+      prev.map((p) => {
+        // 내 품목: selectable_with 업데이트
+        if (p.id === productId) {
+          const current = p.selectable_with ?? [];
+          return {
+            ...p,
+            selectable_with: add
+              ? [...current, target]
+              : current.filter((s) => s.product_id !== target.product_id),
+          };
+        }
+        // 상대방 품목: 나를 역참조하도록 동기화
+        if (p.productApiId === String(target.product_id)) {
+          const current = p.selectable_with ?? [];
+          const meRef = { product_id: myProductId, display_name: p.displayName };
+          return {
+            ...p,
+            is_selectable: add ? true : p.is_selectable,
+            selectable_with: add
+              ? current.some((s) => s.product_id === myProductId) ? current : [...current, meRef]
+              : current.filter((s) => s.product_id !== myProductId),
+          };
+        }
+        return p;
+      });
+
+    if (season === "winter") setWinterProducts(syncBoth);
+    else setSummerProducts(syncBoth);
   };
 
   const updateProductField = (
@@ -425,8 +482,7 @@ export const SchoolDetailModal = ({
                           key={p.id}
                           className={`px-2.5 py-1 text-13 rounded border cursor-pointer ${selected ? "bg-primary-900 text-white border-primary-900" : "bg-white text-gray-700 border-gray-200 hover:border-primary-300"}`}
                           onClick={() => {
-                            const prev = product.selectable_with ?? [];
-                            updateProductField(season, product.id, "selectable_with", selected ? prev.filter((s) => s.product_id !== p.id) : [...prev, { product_id: p.id, display_name: p.name }]);
+                            toggleSelectableWith(season, product.id, { product_id: p.id, display_name: p.name }, !selected);
                           }}
                         >
                           {p.name}

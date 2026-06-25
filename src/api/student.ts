@@ -531,6 +531,14 @@ export interface AdminStudentOrder {
 
 export type StudentType = '신입' | '재학' | '전학';
 
+export interface SupportAllowance {
+  product_id: number;
+  display_name: string;
+  total: number;
+  used: number;
+  remaining: number;
+}
+
 export interface AdminStudent {
   id: number;
   name: string;
@@ -559,6 +567,7 @@ export interface AdminStudent {
     winter: RecommendedUniformItem[];
     summer: RecommendedUniformItem[];
   };
+  support_allowances?: SupportAllowance[];
   orders?: AdminStudentOrder[];
   // 목록 조회 응답에서만 오는 필드
   school_name?: string;

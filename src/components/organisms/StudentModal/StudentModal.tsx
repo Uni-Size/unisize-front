@@ -94,6 +94,7 @@ export interface StudentDetailData {
   modifiedDate?: string; // 주문 last_modified_date
   orderSnapshots?: OrderSnapshot[]; // 전체 주문 탭 데이터
   availableUniforms?: AvailableUniform[]; // 학교에 등록된 품목 (편집 시 추가용)
+  supportAllowances?: { product_id: number; remaining: number }[]; // 품목별 무상지원 잔여
   nameTagMinUnit?: number;      // 명찰 주문 최소 단위
   nameTagPrice?: number | null; // 개당 가격
   nameTagAttachPrice?: number | null; // 부착 가격
@@ -938,14 +939,16 @@ export const StudentModal = ({
                           onChange={(e) => {
                             const found = addable.find((u) => String(u.productId) === e.target.value);
                             if (!found) return;
+                            const allowance = student?.supportAllowances?.find((a) => a.product_id === found.productId);
+                            const supportedQty = allowance?.remaining ?? 0;
                             const newItem: UniformItem = {
                               id: `new_${found.productId}_${Date.now()}`,
                               productId: found.productId,
                               name: found.name,
                               size: '',
                               availableSizes: found.availableSizes,
-                              supportedQuantity: 0,
-                              additionalQuantity: 1,
+                              supportedQuantity: supportedQty,
+                              additionalQuantity: supportedQty > 0 ? 0 : 1,
                               unitPrice: found.price,
                               repair: '',
                               reservation: false,

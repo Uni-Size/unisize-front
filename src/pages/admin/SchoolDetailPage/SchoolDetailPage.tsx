@@ -17,6 +17,7 @@ import { Button } from "@components/atoms/Button";
 import { Pagination } from "@components/atoms/Pagination";
 import type { Column } from "@components/atoms/Table";
 import { getStudents, getStudentDetail, deleteStudent, getOrderHistory, updateAdminOrder, createStudent } from "@/api/student";
+import { updateAdminOrder as updateAdminOrderNew, type AdminOrderUniformItem } from "@/api/order";
 import type { AdminStudent, AdminStudentOrder, AdminOrderItem } from "@/api/student";
 import { getSchoolDetail } from "@/api/school";
 import { getSupportedSchoolsByYear } from "@/api/school";
@@ -159,7 +160,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     try {
       const uniformItems = [
         ...data.winterUniforms.filter((u) => !u.isDeleted).map((u) => ({
-          item_id: u.productId as number,
+          item_id: String(u.productId),
           name: u.name,
           season: '동복',
           selected_size: Number(u.size),
@@ -167,7 +168,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
           customization: u.repair,
         })),
         ...data.summerUniforms.filter((u) => !u.isDeleted).map((u) => ({
-          item_id: u.productId as number,
+          item_id: String(u.productId),
           name: u.name,
           season: '하복',
           selected_size: Number(u.size),
@@ -198,59 +199,32 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
   const handleOrderUpdate = async (orderId: number, data: StudentFormInput) => {
     const origSnapshot = selectedStudent?.orderSnapshots?.find(s => s.orderId === orderId);
 
-    const mapUniform = (u: typeof data.winterUniforms[0], season: string) => ({
+    const mapUniform = (u: typeof data.winterUniforms[0], season: string): AdminOrderUniformItem => ({
       item_id: u.productId!,
       name: u.name,
       season,
       selected_size: u.size,
       purchase_count: u.supportedQuantity + u.additionalQuantity,
+      delivery_status: u.itemStatus as AdminOrderUniformItem['delivery_status'] || undefined,
       customization: u.repair || undefined,
-      is_reserved: u.reservation || undefined,
       name_tag_count: (u.nameTag ?? 0) > 0 ? (u.nameTag ?? 0) : undefined,
       name_tag_attach: u.attachCount > 0 ? true : undefined,
     });
 
-    const uniformChanged = (curr: UniformItem[], orig: UniformItem[]): boolean => {
-      if (curr.length !== orig.length) return true;
-      return curr.some((u, i) => {
-        const o = orig[i];
-        return u.id !== o.id ||
-          u.size !== o.size ||
-          (u.supportedQuantity + u.additionalQuantity) !== (o.supportedQuantity + o.additionalQuantity) ||
-          u.supportedQuantity !== o.supportedQuantity ||
-          u.repair !== o.repair ||
-          u.reservation !== o.reservation ||
-          u.received !== o.received ||
-          (u.nameTag ?? 0) !== (o.nameTag ?? 0) ||
-          u.attachCount !== o.attachCount ||
-          u.isDeleted !== o.isDeleted;
-      });
-    };
-
-    const origWinter = origSnapshot?.winterUniforms ?? [];
-    const origSummer = origSnapshot?.summerUniforms ?? [];
-    const origAll = origSnapshot?.allUniforms ?? [];
     const origDate = origSnapshot?.date ? origSnapshot.date.slice(0, 10) : '';
-
-    const unifsChanged = uniformChanged(data.winterUniforms, origWinter) ||
-      uniformChanged(data.summerUniforms, origSummer) ||
-      uniformChanged(data.allUniforms ?? [], origAll);
+    const dateChanged = data.orderDate && data.orderDate !== origDate;
 
     const suppliesChanged = data.supplies.some((s, i) => {
       const o = origSnapshot?.supplies?.[i];
       return !o || s.size !== o.size || s.quantity !== o.quantity;
     });
 
-    const dateChanged = data.orderDate && data.orderDate !== origDate;
-
     const payload: import('@/api/order').UpdateAdminOrderRequest = {
-      ...(unifsChanged ? {
-        uniform_items: [
-          ...data.winterUniforms.filter((u) => !u.isDeleted && u.productId != null).map((u) => mapUniform(u, '동복')),
-          ...data.summerUniforms.filter((u) => !u.isDeleted && u.productId != null).map((u) => mapUniform(u, '하복')),
-          ...(data.allUniforms ?? []).filter((u) => !u.isDeleted && u.productId != null).map((u) => mapUniform(u, '사계절')),
-        ],
-      } : {}),
+      uniform_items: [
+        ...data.winterUniforms.filter((u) => !u.isDeleted && u.productId != null).map((u) => mapUniform(u, '동복')),
+        ...data.summerUniforms.filter((u) => !u.isDeleted && u.productId != null).map((u) => mapUniform(u, '하복')),
+        ...(data.allUniforms ?? []).filter((u) => !u.isDeleted && u.productId != null).map((u) => mapUniform(u, '사계절')),
+      ],
       ...(suppliesChanged ? {
         supply_items: data.supplies.filter((s) => s.quantity > 0).map((s) => ({
           item_id: s.name,
@@ -262,9 +236,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
       ...(dateChanged ? { order_date: data.orderDate } : {}),
     };
 
-    if (Object.keys(payload).length === 0) return;
-
-    await updateAdminOrder(orderId, payload);
+    await updateAdminOrderNew(orderId, payload);
     fetchStudents(currentPage);
   };
 
@@ -472,6 +444,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         modifiedDate: firstSnapshot?.modifiedDate,
         orderSnapshots,
         availableUniforms,
+        supportAllowances: detail.support_allowances?.map((a) => ({ product_id: a.product_id, remaining: a.remaining })),
         nameTagMinUnit,
         nameTagPrice,
         nameTagAttachPrice,

@@ -285,11 +285,11 @@ export interface AdminOrderUniformItem {
   season: string;
   selected_size: string;
   purchase_count: number;
-  is_reserved: boolean;
-  customization: string;
-  name_tag_count: number;
-  name_tag_name: string;
-  name_tag_attach: boolean;
+  delivery_status?: DeliveryStatus;
+  customization?: string;
+  name_tag_count?: number;
+  name_tag_name?: string;
+  name_tag_attach?: boolean;
 }
 
 export interface AdminOrderSupplyItem {
