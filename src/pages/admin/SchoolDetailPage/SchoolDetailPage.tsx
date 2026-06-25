@@ -421,6 +421,33 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
           ]
         : [];
 
+      // 주문도 없고 recommended_uniforms도 없을 때 support_allowances remaining >= 1 품목을 초기 리스트로
+      if (!firstSnapshot && recWinter.length === 0 && recSummer.length === 0 && recAll.length === 0) {
+        const pendingAllowances = (detail.support_allowances ?? []).filter(a => a.remaining >= 1);
+        for (const allowance of pendingAllowances) {
+          const avail = availableUniforms.find(u => u.productId === allowance.product_id);
+          if (!avail) continue;
+          const item: import('@components/organisms/StudentModal').UniformItem = {
+            id: `allowance-${allowance.product_id}`,
+            productId: allowance.product_id,
+            name: allowance.display_name,
+            size: '',
+            availableSizes: avail.availableSizes,
+            supportedQuantity: allowance.remaining,
+            additionalQuantity: 0,
+            unitPrice: avail.price,
+            repair: '',
+            reservation: false,
+            received: false,
+            nameTag: 0,
+            attachCount: 0,
+            seasonCode: avail.season === 'summer' ? 'S' : 'W',
+          };
+          if (avail.season === 'summer') recSummer.push(item);
+          else recWinter.push(item);
+        }
+      }
+
       const detailData: StudentDetailData = {
         id: String(detail.id),
         orderId: firstSnapshot?.orderId,

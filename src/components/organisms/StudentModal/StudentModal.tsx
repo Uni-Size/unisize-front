@@ -673,7 +673,7 @@ export const StudentModal = ({
       if (i.isDeleted || i.unitPrice == null) return sum;
       return sum + i.unitPrice * (i.supportedQuantity + i.additionalQuantity);
     }, 0);
-    const colSpan = showPrice ? 10 : 8;
+    const colSpan = showPrice ? 8 : 7;
 
     return (
       <div>
@@ -686,30 +686,22 @@ export const StudentModal = ({
               <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-25">
                 사이즈
               </th>
-              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">
-                지원
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-36">
+                지원+추가=총개수
               </th>
-              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">
-                총 개수
-              </th>
-              {showPrice && (
-                <>
-                  <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-22">
-                    단가
-                  </th>
-                  <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-24">
-                    총금액
-                  </th>
-                </>
-              )}
               <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
+                부착/명찰
+              </th>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-36">
                 수선
               </th>
+              {showPrice && (
+                <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-24">
+                  금액
+                </th>
+              )}
               <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
                 상태
-              </th>
-              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
-                명찰/부착
               </th>
               <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
                 품목상태
@@ -786,45 +778,57 @@ export const StudentModal = ({
                           />
                         )}
                       </td>
+                      {/* 지원+추가=총개수 */}
+                      <td className="p-1 border border-gray-200 text-center text-gray-700 align-middle">
+                        <div className="flex items-center justify-center gap-0.5 text-sm">
+                          <span className="text-gray-400 tabular-nums">{item.supportedQuantity}</span>
+                          <span className="text-gray-300 text-xs">+</span>
+                          {isTableView ? (
+                            <span className="tabular-nums">{item.additionalQuantity}</span>
+                          ) : (
+                            <input
+                              type="number"
+                              className="w-10 px-1 py-1 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              value={item.additionalQuantity}
+                              onChange={(e) => handleUniformChange(season, item.id, "additionalQuantity", Math.max(0, Number(e.target.value)))}
+                              min={0}
+                            />
+                          )}
+                          <span className="text-gray-300 text-xs">=</span>
+                          <span className="font-medium tabular-nums">{totalQty}</span>
+                        </div>
+                      </td>
+                      {/* 부착/명찰 */}
                       <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                         {isTableView ? (
-                          item.supportedQuantity
+                          <span className="text-xs">
+                            {item.attachCount > 0 || (item.nameTag ?? 0) > 0
+                              ? `${item.attachCount} / ${item.nameTag ?? 0}`
+                              : "-"}
+                          </span>
                         ) : (
-                          <input
-                            type="number"
-                            className="w-12.5 px-2 py-1 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            value={item.supportedQuantity}
-                            onChange={(e) => handleUniformChange(season, item.id, "supportedQuantity", Number(e.target.value))}
-                            min={0}
-                          />
+                          <div className="flex items-center justify-center gap-1 text-xs">
+                            <input
+                              type="number"
+                              className="w-8 px-1 py-0.5 border border-gray-200 rounded text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              value={item.attachCount}
+                              min={0}
+                              max={totalQty}
+                              onChange={(e) => handleUniformChange(season, item.id, "attachCount", Number(e.target.value))}
+                            />
+                            <span className="text-gray-400">/</span>
+                            <input
+                              type="number"
+                              className="w-8 px-1 py-0.5 border border-gray-200 rounded text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              value={item.nameTag ?? 0}
+                              min={0}
+                              max={totalQty}
+                              onChange={(e) => handleUniformChange(season, item.id, "nameTag", Number(e.target.value))}
+                            />
+                          </div>
                         )}
                       </td>
-                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                        {isTableView ? (
-                          <span>{totalQty}</span>
-                        ) : (
-                          <input
-                            type="number"
-                            className="w-12.5 px-2 py-1 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            value={totalQty}
-                            onChange={(e) => {
-                              const total = Math.max(0, Number(e.target.value));
-                              handleUniformChange(season, item.id, "additionalQuantity", Math.max(0, total - item.supportedQuantity));
-                            }}
-                            min={item.supportedQuantity}
-                          />
-                        )}
-                      </td>
-                      {showPrice && (
-                        <>
-                          <td className="p-2 border border-gray-200 text-right text-gray-500 align-middle tabular-nums pr-3">
-                            {item.unitPrice != null ? `${item.unitPrice.toLocaleString()}원` : "-"}
-                          </td>
-                          <td className="p-2 border border-gray-200 text-right text-gray-700 align-middle tabular-nums pr-3">
-                            {item.unitPrice != null ? `${rowTotal!.toLocaleString()}원` : "-"}
-                          </td>
-                        </>
-                      )}
+                      {/* 수선 */}
                       <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                         {isTableView ? (
                           <span>{item.repair || "-"}</span>
@@ -838,7 +842,18 @@ export const StudentModal = ({
                           />
                         )}
                       </td>
-                      {/* 예약/수령 토글 — 동시 불가 */}
+                      {/* 금액: 단가 > 총액 */}
+                      {showPrice && (
+                        <td className="p-2 border border-gray-200 text-right text-gray-700 align-middle tabular-nums pr-3">
+                          {item.unitPrice != null ? (
+                            <div className="flex flex-col items-end gap-0.5">
+                              <span className="text-gray-400 text-xs">{item.unitPrice.toLocaleString()}원</span>
+                              <span className="text-sm font-medium">{rowTotal!.toLocaleString()}원</span>
+                            </div>
+                          ) : "-"}
+                        </td>
+                      )}
+                      {/* 예약/수령 토글 */}
                       <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                         {isTableView ? (
                           <span>{item.reservation ? "예약" : item.received ? "수령" : "-"}</span>
@@ -864,36 +879,6 @@ export const StudentModal = ({
                             >
                               수령
                             </button>
-                          </div>
-                        )}
-                      </td>
-                      {/* 명찰/부착 합산 셀 */}
-                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                        {isTableView ? (
-                          <span className="text-xs">
-                            {(item.nameTag ?? 0) > 0 || item.attachCount > 0
-                              ? `${item.nameTag ?? 0} / ${item.attachCount}`
-                              : "-"}
-                          </span>
-                        ) : (
-                          <div className="flex items-center justify-center gap-1 text-xs">
-                            <input
-                              type="number"
-                              className="w-8 px-1 py-0.5 border border-gray-200 rounded text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              value={item.nameTag ?? 0}
-                              min={0}
-                              max={item.supportedQuantity + item.additionalQuantity}
-                              onChange={(e) => handleUniformChange(season, item.id, "nameTag", Number(e.target.value))}
-                            />
-                            <span className="text-gray-400">/</span>
-                            <input
-                              type="number"
-                              className="w-8 px-1 py-0.5 border border-gray-200 rounded text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              value={item.attachCount}
-                              min={0}
-                              max={item.supportedQuantity + item.additionalQuantity}
-                              onChange={(e) => handleUniformChange(season, item.id, "attachCount", Number(e.target.value))}
-                            />
                           </div>
                         )}
                       </td>
@@ -984,7 +969,7 @@ export const StudentModal = ({
                     <td className="px-3 py-2 border border-gray-200 text-right text-gray-900 tabular-nums">
                       {sectionTotal.toLocaleString()}원
                     </td>
-                    <td colSpan={4} className="border border-gray-200" />
+                    <td colSpan={2} className="border border-gray-200" />
                   </tr>
                 )}
               </>
