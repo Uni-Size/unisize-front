@@ -38,3 +38,17 @@ export function formatDateTime(value: string | null | undefined): string {
 
 /** @deprecated formatDate 를 사용하세요 */
 export const formatShortDate = formatDate;
+
+/**
+ * 날짜 문자열을 <input type="date"> 에 쓸 수 있는 "YYYY-MM-DD" 형식으로 변환
+ * 한국어 날짜 포맷(2026년 06월 25일 ...) 포함 처리
+ */
+export function toDateInputValue(value: string | null | undefined): string {
+  if (!value) return '';
+  const d = parseDate(value);
+  if (isNaN(d.getTime())) return '';
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}

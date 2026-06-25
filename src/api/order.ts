@@ -1,6 +1,44 @@
 import { apiClient } from "@/lib/apiClient";
 import type { ApiResponse } from "./auth";
 
+export type OrderStatus =
+  | 'pending'    // 대기중
+  | 'confirmed'  // 확인됨
+  | 'preparing'  // 준비중
+  | 'ready'      // 준비완료
+  | 'receive'    // 수령완료
+  | 'complete'   // 완료
+  | 'cancelled'; // 취소됨
+
+export type DeliveryStatus =
+  | 'pending'      // 출고 대기
+  | 'out_of_stock' // 재고 부족
+  | 'reserved'     // 예약
+  | 'shipped'      // 출고 완료
+  | 'delivered'    // 배송 완료
+  | 'receipt'      // 수령 완료
+  | 'cancelled';   // 취소됨
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  pending:   '대기중',
+  confirmed: '확인됨',
+  preparing: '준비중',
+  ready:     '준비완료',
+  receive:   '수령완료',
+  complete:  '완료',
+  cancelled: '취소됨',
+};
+
+export const DELIVERY_STATUS_LABELS: Record<DeliveryStatus, string> = {
+  pending:      '출고 대기',
+  out_of_stock: '재고 부족',
+  reserved:     '예약',
+  shipped:      '출고 완료',
+  delivered:    '배송 완료',
+  receipt:      '수령 완료',
+  cancelled:    '취소됨',
+};
+
 // ============================================================================
 // 주문 목록 조회 (status 필터)
 // ============================================================================
@@ -32,7 +70,7 @@ export interface PendingOrder {
   student_id: number;
   student: PendingOrderStudent;
   total_amount: number;
-  status: string;
+  status: OrderStatus;
   status_display: string;
   order_date: string;
   delivery_date: string | null;
@@ -42,7 +80,7 @@ export interface PendingOrder {
   can_modify: boolean;
   is_completed: boolean;
   is_cancelled: boolean;
-  signature: string;
+  signature?: string;
   created_at: string;
   updated_at: string;
 }
@@ -242,7 +280,7 @@ export interface UpdateStaffOrderRequest {
 }
 
 export interface AdminOrderUniformItem {
-  item_id: string;
+  item_id: number;
   name: string;
   season: string;
   selected_size: string;
@@ -262,9 +300,10 @@ export interface AdminOrderSupplyItem {
 }
 
 export interface UpdateAdminOrderRequest {
-  uniform_items: AdminOrderUniformItem[];
-  supply_items: AdminOrderSupplyItem[];
-  notes: string;
+  uniform_items?: AdminOrderUniformItem[];
+  supply_items?: AdminOrderSupplyItem[];
+  notes?: string;
+  order_date?: string;
 }
 
 /**
@@ -295,6 +334,69 @@ export async function updateStaffOrder(
   );
 }
 
+// ============================================================================
+// 주문 수정 / 상태 변경 (스펙 기반)
+// ============================================================================
+
+export interface UpdateOrderItemRequest {
+  id: number;
+  product_id: number;
+  size: string;
+  quantity: number;
+  unit_price: number;
+}
+
+export interface UpdateOrderRequest {
+  order_items?: UpdateOrderItemRequest[];
+  delivery_date?: string | null;
+  notes?: string;
+}
+
+/**
+ * 주문 수정
+ * PUT /api/v1/orders/:id
+ */
+export async function updateOrder(
+  orderId: number,
+  data: UpdateOrderRequest,
+): Promise<void> {
+  await apiClient.put<ApiResponse<void>>(`/api/v1/orders/${orderId}`, data);
+}
+
+/**
+ * 주문 상태 변경
+ * PUT /api/v1/orders/:id/status
+ */
+export async function updateOrderStatus(
+  orderId: number,
+  status: OrderStatus,
+): Promise<void> {
+  await apiClient.put<ApiResponse<void>>(`/api/v1/orders/${orderId}/status`, { status });
+}
+
+/**
+ * 주문 취소
+ * POST /api/v1/orders/:id/cancel
+ */
+export async function cancelOrder(orderId: number): Promise<void> {
+  await apiClient.post<ApiResponse<void>>(`/api/v1/orders/${orderId}/cancel`);
+}
+
+/**
+ * 품목별 출고 상태 변경
+ * PUT /api/v1/orders/:id/items/:item_id/delivery-status
+ */
+export async function updateItemDeliveryStatus(
+  orderId: number,
+  itemId: number,
+  status: DeliveryStatus,
+): Promise<void> {
+  await apiClient.put<ApiResponse<void>>(
+    `/api/v1/orders/${orderId}/items/${itemId}/delivery-status`,
+    { status },
+  );
+}
+
 /**
  * 학생 ID로 주문 상세 조회
  * GET /api/v1/orders/student/:id
@@ -310,7 +412,7 @@ export async function getOrderDetailByStudentId(studentId: number): Promise<Orde
 // 주문/재고 현황 타입
 // ============================================================================
 
-export type OrderInventoryStatus = 'pending' | 'out_of_stock' | 'reserved' | 'receipt' | 'delivered' | 'shipped';
+export type OrderInventoryStatus = DeliveryStatus;
 
 export interface InventoryOrder {
   name: string;

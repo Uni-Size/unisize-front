@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Modal, Select } from "@components/atoms";
 import { Toast } from "@components/atoms/Toast";
 import type { ToastVariant } from "@components/atoms/Toast";
 import { GENDER_OPTIONS_MF } from "@/constants/gender";
 import { updateStudent } from "@/api/student";
-import { formatDate } from "@/utils/dateUtils";
+import { getSchoolList } from "@/api/school";
+import { formatDate, toDateInputValue } from "@/utils/dateUtils";
 import { formatGender } from "@/utils/genderUtils";
 
 // ============================================================================
@@ -13,8 +14,10 @@ import { formatGender } from "@/utils/genderUtils";
 
 export interface UniformItem {
   id: string;
+  productId?: number;
   name: string;
   size: string;
+  availableSizes?: string[];
   supportedQuantity: number;
   additionalQuantity: number;
   unitPrice?: number;
@@ -24,7 +27,17 @@ export interface UniformItem {
   nameTag: number | null;
   nameTagName?: string;
   attachCount: number;
+  itemStatus?: string; // 품목별 상태
+  seasonCode?: 'W' | 'S' | 'A'; // W=동복 S=하복 A=사계절
   isDeleted?: boolean;
+}
+
+export interface AvailableUniform {
+  productId: number;
+  name: string;
+  season: 'winter' | 'summer' | 'all';
+  price?: number;
+  availableSizes: string[];
 }
 
 export interface SupplyItem {
@@ -52,6 +65,7 @@ export interface OrderSnapshot {
   status?: string;
   winterUniforms: UniformItem[];
   summerUniforms: UniformItem[];
+  allUniforms: UniformItem[];
   supplies: SupplyItem[];
   history: HistoryItem[];
   modifiedDate?: string;
@@ -79,8 +93,13 @@ export interface StudentDetailData {
   registeredDate?: string; // 학생 created_at
   modifiedDate?: string; // 주문 last_modified_date
   orderSnapshots?: OrderSnapshot[]; // 전체 주문 탭 데이터
+  availableUniforms?: AvailableUniform[]; // 학교에 등록된 품목 (편집 시 추가용)
+  nameTagMinUnit?: number;      // 명찰 주문 최소 단위
+  nameTagPrice?: number | null; // 개당 가격
+  nameTagAttachPrice?: number | null; // 부착 가격
   winterUniforms: UniformItem[];
   summerUniforms: UniformItem[];
+  allUniforms: UniformItem[];   // 사계절(A) 품목
   supplies: SupplyItem[];
   nameTag: NameTagInfo;
   history?: HistoryItem[];
@@ -90,16 +109,35 @@ export interface StudentDetailData {
 
 export interface StudentFormInput {
   admissionSchool: string;
+  admissionYear: number | "";
+  admissionGrade: number | "";
   previousSchool: string;
   name: string;
   gender: string;
+  birthDate: string;
   studentPhone: string;
   guardianPhone: string;
+  address: string;
+  height: number | "";
+  weight: number | "";
+  shoulder: number | "";
+  waist: number | "";
+  orderDate: string;
   winterUniforms: UniformItem[];
   summerUniforms: UniformItem[];
+  allUniforms: UniformItem[];
   supplies: SupplyItem[];
   nameTag: NameTagInfo;
 }
+
+export type OrderStatusValue =
+  | 'pending'    // 대기중
+  | 'confirmed'  // 확인됨
+  | 'preparing'  // 준비중
+  | 'ready'      // 준비완료
+  | 'receive'    // 수령완료
+  | 'complete'   // 완료
+  | 'cancelled'; // 취소됨
 
 export interface StudentModalProps {
   isOpen: boolean;
@@ -110,6 +148,9 @@ export interface StudentModalProps {
   onEditSave?: (orderId: number, data: StudentFormInput) => void;
   onStudentUpdated?: () => void;
   onPaymentComplete?: (orderId: number) => void;
+  onOrderCreate?: (studentId: number, data: StudentFormInput) => Promise<void>;
+  onOrderUpdate?: (orderId: number, data: StudentFormInput) => Promise<void>;
+  onStatusChange?: (orderId: number, status: OrderStatusValue) => Promise<void>;
 }
 
 // ============================================================================
@@ -172,11 +213,30 @@ export const StudentModal = ({
   onEditSave,
   onStudentUpdated,
   onPaymentComplete,
+  onOrderCreate,
+  onOrderUpdate,
+  onStatusChange,
 }: StudentModalProps) => {
   // view 모드에서 수정 버튼 클릭 시 편집 상태
   const [isEditing, setIsEditing] = useState(false);
-  const isView = mode === "view" && !isEditing;
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const [isOrderCreateMode, setIsOrderCreateMode] = useState(false);
+  const [isOrderEditMode, setIsOrderEditMode] = useState(false);
+  const [isChangingStatus, setIsChangingStatus] = useState(false);
+  const isView = mode === "view" && !isEditing && !isOrderCreateMode && !isOrderEditMode;
+  // 동복/하복 테이블은 주문 생성/수정 모드에서만 편집 가능
+  const isTableEditable = isOrderCreateMode || isOrderEditMode || mode === "add";
+  const isTableView = !isTableEditable;
+  const hasOrder = !!(student?.orderId || (student?.orderSnapshots && student.orderSnapshots.length > 0));
   const [toast, setToast] = useState<{ message: string; variant: ToastVariant } | null>(null);
+
+  // 학교 검색 state
+  const [schoolSuggestions, setSchoolSuggestions] = useState<string[]>([]);
+  const [allSchoolNames, setAllSchoolNames] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const schoolDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const schoolInputRef = useRef<HTMLInputElement>(null);
+  const suggestionRef = useRef<HTMLDivElement>(null);
 
   // 학생 정보 폼 state
   const [admissionSchool, setAdmissionSchool] = useState("");
@@ -194,9 +254,13 @@ export const StudentModal = ({
   const [shoulder, setShoulder] = useState<number | "">("");
   const [waist, setWaist] = useState<number | "">("");
 
+  // 구입일자 state (edit 모드용, 기본값 오늘)
+  const [orderDate, setOrderDate] = useState(() => new Date().toISOString().slice(0, 10));
+
   // 교복 state
   const [winterUniforms, setWinterUniforms] = useState<UniformItem[]>([]);
   const [summerUniforms, setSummerUniforms] = useState<UniformItem[]>([]);
+  const [allUniforms, setAllUniforms] = useState<UniformItem[]>([]);
 
   // 용품 state
   const [supplies, setSupplies] = useState<SupplyItem[]>(defaultSupplies);
@@ -219,9 +283,20 @@ export const StudentModal = ({
   const applyOrderSnapshot = (snapshot: OrderSnapshot) => {
     setWinterUniforms(snapshot.winterUniforms);
     setSummerUniforms(snapshot.summerUniforms);
+    setAllUniforms(snapshot.allUniforms ?? []);
     setSupplies(snapshot.supplies.length > 0 ? snapshot.supplies : defaultSupplies);
     setActiveOrderId(snapshot.orderId);
     setActiveHistory(snapshot.history);
+    const date = snapshot.date ? (toDateInputValue(snapshot.date) || snapshot.date.slice(0, 10)) : '';
+    if (date) setOrderDate(date);
+    // 수정 시 변경 감지를 위해 원본 저장
+    originalOrderRef.current = {
+      winterUniforms: snapshot.winterUniforms,
+      summerUniforms: snapshot.summerUniforms,
+      allUniforms: snapshot.allUniforms ?? [],
+      supplies: snapshot.supplies,
+      orderDate: date,
+    };
   };
 
   const handleDateTabClick = (index: number) => {
@@ -242,8 +317,53 @@ export const StudentModal = ({
     height: number | ""; weight: number | ""; shoulder: number | ""; waist: number | "";
   } | null>(null);
   const originalOrderRef = React.useRef<{
-    winterUniforms: UniformItem[]; summerUniforms: UniformItem[]; supplies: SupplyItem[];
+    winterUniforms: UniformItem[]; summerUniforms: UniformItem[]; allUniforms: UniformItem[]; supplies: SupplyItem[]; orderDate: string;
   } | null>(null);
+
+  // 모달 열릴 때 학교 전체 목록 로드
+  useEffect(() => {
+    if (!isOpen) return;
+    getSchoolList().then((res) => {
+      setAllSchoolNames(res.schools.map((s) => s.school_name));
+    }).catch(() => {});
+  }, [isOpen]);
+
+  // 입학학교 디바운스 검색
+  const handleAdmissionSchoolChange = useCallback((value: string) => {
+    setAdmissionSchool(value);
+    if (schoolDebounceRef.current) clearTimeout(schoolDebounceRef.current);
+    if (!value.trim()) {
+      setSchoolSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    schoolDebounceRef.current = setTimeout(() => {
+      const lower = value.toLowerCase();
+      const matched = allSchoolNames.filter((n) => n.toLowerCase().includes(lower)).slice(0, 8);
+      setSchoolSuggestions(matched);
+      setShowSuggestions(matched.length > 0);
+    }, 200);
+  }, [allSchoolNames]);
+
+  const handleSchoolSelect = (name: string) => {
+    setAdmissionSchool(name);
+    setShowSuggestions(false);
+    setSchoolSuggestions([]);
+  };
+
+  // 외부 클릭 시 드롭다운 닫기
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        schoolInputRef.current && !schoolInputRef.current.contains(e.target as Node) &&
+        suggestionRef.current && !suggestionRef.current.contains(e.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // edit/view 모드에서 기존 데이터로 초기화
   useEffect(() => {
@@ -280,12 +400,18 @@ export const StudentModal = ({
       const initialSupplies = student.supplies.length > 0 ? student.supplies : defaultSupplies;
       setWinterUniforms(student.winterUniforms);
       setSummerUniforms(student.summerUniforms);
+      setAllUniforms(student.allUniforms ?? []);
       setSupplies(initialSupplies);
       setNameTag(student.nameTag);
       setActiveDateIndex(0);
       setActiveOrderId(student.orderId);
       setActiveHistory(student.history ?? []);
+      const firstSnapshotDate = student.orderSnapshots?.[0]?.date;
+      setOrderDate(firstSnapshotDate ? (toDateInputValue(firstSnapshotDate) || firstSnapshotDate.slice(0, 10)) : new Date().toISOString().slice(0, 10));
       setIsEditing(false);
+      // 주문이 있고 onOrderUpdate가 제공된 경우 즉시 수정 모드
+      const hasSnapshots = (student.orderSnapshots?.length ?? 0) > 0;
+      setIsOrderEditMode(mode === "view" && hasSnapshots && !!onOrderUpdate);
 
       originalStudentRef.current = { admissionSchool: aSchool, previousSchool: pSchool, name: n, gender: g, birthDate: bd, admissionYear: ay, admissionGrade: ag, studentPhone: sPhone, guardianPhone: gPhone, address: addr, height: h, weight: w, shoulder: sh, waist: ws };
       originalOrderRef.current = { winterUniforms: student.winterUniforms, summerUniforms: student.summerUniforms, supplies: initialSupplies };
@@ -309,11 +435,24 @@ export const StudentModal = ({
     setWaist("");
     setWinterUniforms([]);
     setSummerUniforms([]);
+    setAllUniforms([]);
     setSupplies(defaultSupplies.map((s) => ({ ...s, size: "", quantity: 0 })));
     setNameTag({ orderQuantity: 0, attachQuantity: 0 });
     setActiveDateIndex(0);
     setActiveHistory([]);
     setIsEditing(false);
+    setIsOrderCreateMode(false);
+    setIsOrderEditMode(false);
+  };
+
+  const enterOrderCreateMode = () => {
+    setWinterUniforms([]);
+    setSummerUniforms([]);
+    setAllUniforms([]);
+    setSupplies(defaultSupplies.map((s) => ({ ...s, size: "", quantity: 0 })));
+    setNameTag({ orderQuantity: 0, attachQuantity: 0 });
+    setOrderDate(new Date().toISOString().slice(0, 10));
+    setIsOrderCreateMode(true);
   };
 
   const handleClose = () => {
@@ -324,13 +463,23 @@ export const StudentModal = ({
   const handleSubmit = async () => {
     const formData: StudentFormInput = {
       admissionSchool,
+      admissionYear,
+      admissionGrade,
       previousSchool,
       name,
       gender,
+      birthDate,
       studentPhone,
       guardianPhone,
+      address,
+      height,
+      weight,
+      shoulder,
+      waist,
+      orderDate,
       winterUniforms,
       summerUniforms,
+      allUniforms,
       supplies,
       nameTag,
     };
@@ -387,6 +536,34 @@ export const StudentModal = ({
         console.error("학생 정보 수정 실패:", err);
         setToast({ message: '저장에 실패했습니다.', variant: 'error' });
       }
+    } else if (isOrderEditMode) {
+      const orderId = activeOrderId ?? student?.orderId;
+      if (!orderId || !onOrderUpdate) return;
+      setIsCreatingOrder(true);
+      try {
+        await onOrderUpdate(orderId, formData);
+        setToast({ message: '주문이 수정되었습니다.', variant: 'success' });
+        setIsOrderEditMode(false);
+      } catch (err) {
+        console.error("주문 수정 실패:", err);
+        setToast({ message: '주문 수정에 실패했습니다.', variant: 'error' });
+      } finally {
+        setIsCreatingOrder(false);
+      }
+    } else if (isOrderCreateMode) {
+      const studentId = student?.id ? Number(student.id) : undefined;
+      if (!studentId || !onOrderCreate) return;
+      setIsCreatingOrder(true);
+      try {
+        await onOrderCreate(studentId, formData);
+        setToast({ message: '주문이 생성되었습니다.', variant: 'success' });
+        setIsOrderCreateMode(false);
+      } catch (err) {
+        console.error("주문 생성 실패:", err);
+        setToast({ message: '주문 생성에 실패했습니다.', variant: 'error' });
+      } finally {
+        setIsCreatingOrder(false);
+      }
     } else {
       onSubmit?.(formData);
       handleClose();
@@ -395,27 +572,29 @@ export const StudentModal = ({
 
   // 교복 아이템 변경
   const handleUniformChange = (
-    season: "winter" | "summer",
+    season: "winter" | "summer" | "all",
     itemId: string,
     field: keyof UniformItem,
     value: string | number | boolean,
   ) => {
-    const setter = season === "winter" ? setWinterUniforms : setSummerUniforms;
+    const setter = season === "winter" ? setWinterUniforms : season === "summer" ? setSummerUniforms : setAllUniforms;
     setter((prev) => {
       const next = prev.map((item) =>
         item.id === itemId ? { ...item, [field]: value } : item,
       );
 
-      const otherUniforms = season === "winter" ? summerUniforms : winterUniforms;
+      const allItems = [...winterUniforms, ...summerUniforms, ...allUniforms];
+      const others = allItems.filter(i => !next.some(n => n.id === i.id));
 
       if (field === "nameTag") {
-        const total = [...next, ...otherUniforms].reduce((sum, item) => sum + (item.nameTag ?? 0), 0);
-        const ceiled = total === 0 ? 0 : Math.ceil(total / 8) * 8;
+        const total = [...next, ...others].reduce((sum, item) => sum + (item.nameTag ?? 0), 0);
+        const unit = student?.nameTagMinUnit ?? 1;
+        const ceiled = total === 0 ? 0 : Math.ceil(total / unit) * unit;
         setNameTag((prev) => ({ ...prev, orderQuantity: Math.max(prev.orderQuantity, ceiled) }));
       }
 
       if (field === "attachCount") {
-        const total = [...next, ...otherUniforms].reduce((sum, item) => sum + (item.attachCount ?? 0), 0);
+        const total = [...next, ...others].reduce((sum, item) => sum + (item.attachCount ?? 0), 0);
         setNameTag((prev) => ({ ...prev, attachQuantity: total }));
       }
 
@@ -424,13 +603,16 @@ export const StudentModal = ({
   };
 
   // 교복 아이템 삭제 (삭제 표시)
-  const handleUniformDelete = (season: "winter" | "summer", itemId: string) => {
-    const setter = season === "winter" ? setWinterUniforms : setSummerUniforms;
-    setter((prev) =>
-      prev.map((item) =>
-        item.id === itemId ? { ...item, isDeleted: !item.isDeleted } : item,
-      ),
-    );
+  const handleUniformDelete = (season: "winter" | "summer" | "all", itemId: string) => {
+    const setter = season === "winter" ? setWinterUniforms : season === "summer" ? setSummerUniforms : setAllUniforms;
+    setter((prev) => {
+      const target = prev.find(i => i.id === itemId);
+      // 새로 추가한 아이템은 즉시 제거, 기존 아이템은 isDeleted 토글
+      if (target?.id.startsWith('new_')) {
+        return prev.filter(i => i.id !== itemId);
+      }
+      return prev.map(i => i.id === itemId ? { ...i, isDeleted: !i.isDeleted } : i);
+    });
   };
 
   // 용품 변경
@@ -468,11 +650,12 @@ export const StudentModal = ({
 
   const winterCalc = calcUniformSection(winterUniforms);
   const summerCalc = calcUniformSection(summerUniforms);
-  const hasPrice = winterUniforms.some(i => i.unitPrice != null) || summerUniforms.some(i => i.unitPrice != null);
+  const allCalc = calcUniformSection(allUniforms);
+  const hasPrice = [...winterUniforms, ...summerUniforms, ...allUniforms].some(i => i.unitPrice != null);
   const supplyCalcTotal = supplies.reduce((sum, i) => i.unitPrice != null ? sum + i.unitPrice * i.quantity : sum, 0);
   const hasSupplyPrice = supplies.some(i => i.unitPrice != null);
-  const grandTotal = winterCalc.total + summerCalc.total + supplyCalcTotal;
-  const grandSupported = winterCalc.supported + summerCalc.supported;
+  const grandTotal = winterCalc.total + summerCalc.total + allCalc.total + supplyCalcTotal;
+  const grandSupported = winterCalc.supported + summerCalc.supported + allCalc.supported;
   const grandPayable = grandTotal - grandSupported;
 
   // ============================================================================
@@ -482,14 +665,14 @@ export const StudentModal = ({
   const renderUniformTable = (
     title: string,
     items: UniformItem[],
-    season: "winter" | "summer",
+    season: "winter" | "summer" | "all",
   ) => {
     const showPrice = hasPrice;
     const sectionTotal = items.reduce((sum, i) => {
       if (i.isDeleted || i.unitPrice == null) return sum;
       return sum + i.unitPrice * (i.supportedQuantity + i.additionalQuantity);
     }, 0);
-    const colSpan = showPrice ? 11 : 9;
+    const colSpan = showPrice ? 10 : 8;
 
     return (
       <div>
@@ -503,10 +686,10 @@ export const StudentModal = ({
                 사이즈
               </th>
               <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">
-                지원수량
+                지원
               </th>
               <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-17.5">
-                추가수량
+                총 개수
               </th>
               {showPrice && (
                 <>
@@ -521,17 +704,14 @@ export const StudentModal = ({
               <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
                 수선
               </th>
-              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-15">
-                예약
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
+                상태
               </th>
-              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-15">
-                수령
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
+                명찰/부착
               </th>
-              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-15">
-                명찰
-              </th>
-              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-15">
-                부착
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
+                품목상태
               </th>
             </tr>
           </thead>
@@ -559,7 +739,7 @@ export const StudentModal = ({
                       className={item.isDeleted ? "bg-red-050 [&_td]:text-red-700" : ""}
                     >
                       <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle relative">
-                        {!isView && item.isDeleted && (
+                        {!isTableView && item.isDeleted && (
                           <button
                             className="inline-flex items-center justify-center px-2.5 py-1 bg-red-500 border-none rounded text-xs font-medium text-white cursor-pointer mr-2 hover:bg-red-600"
                             onClick={() => handleUniformDelete(season, item.id)}
@@ -567,7 +747,7 @@ export const StudentModal = ({
                             삭제
                           </button>
                         )}
-                        {!isView && !item.isDeleted && mode === "edit" && (
+                        {!isTableView && !item.isDeleted && (mode === "edit" || isOrderEditMode || isOrderCreateMode) && (
                           <button
                             className="absolute left-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center bg-transparent border border-gray-200 rounded text-sm text-red-700 cursor-pointer p-0 hover:bg-red-050 hover:border-red-700"
                             onClick={() => handleUniformDelete(season, item.id)}
@@ -579,11 +759,26 @@ export const StudentModal = ({
                         {item.name}
                       </td>
                       <td className="p-1 border border-gray-200 text-center text-gray-700 align-middle">
-                        {isView ? (
+                        {isTableView ? (
                           <span>{item.size || "-"}</span>
                         ) : (
                           <Select
-                            options={sizeOptions}
+                            options={(() => {
+                              // availableUniforms에서 productId로 전체 사이즈 목록 우선 사용
+                              const fromCatalog = item.productId != null
+                                ? (student?.availableUniforms ?? []).find(u => u.productId === item.productId)?.availableSizes
+                                : undefined;
+                              const base = (fromCatalog && fromCatalog.length > 0)
+                                ? fromCatalog
+                                : (item.availableSizes && item.availableSizes.length > 0)
+                                  ? item.availableSizes
+                                  : item.size ? [item.size] : [];
+                              // 현재 선택된 사이즈가 목록에 없으면 추가
+                              const all = item.size && !base.includes(item.size) ? [...base, item.size] : base;
+                              return [...new Set(all)]
+                                .sort((a, b) => Number(a) - Number(b) || a.localeCompare(b))
+                                .map(s => ({ value: s, label: s }));
+                            })()}
                             value={item.size}
                             onChange={(value) => handleUniformChange(season, item.id, "size", value)}
                             fullWidth
@@ -591,18 +786,31 @@ export const StudentModal = ({
                         )}
                       </td>
                       <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                        {item.supportedQuantity}
-                      </td>
-                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                        {isView ? (
-                          <span>{item.additionalQuantity}</span>
+                        {isTableView ? (
+                          item.supportedQuantity
                         ) : (
                           <input
                             type="number"
                             className="w-12.5 px-2 py-1 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            value={item.additionalQuantity}
-                            onChange={(e) => handleUniformChange(season, item.id, "additionalQuantity", Number(e.target.value))}
+                            value={item.supportedQuantity}
+                            onChange={(e) => handleUniformChange(season, item.id, "supportedQuantity", Number(e.target.value))}
                             min={0}
+                          />
+                        )}
+                      </td>
+                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
+                        {isTableView ? (
+                          <span>{totalQty}</span>
+                        ) : (
+                          <input
+                            type="number"
+                            className="w-12.5 px-2 py-1 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            value={totalQty}
+                            onChange={(e) => {
+                              const total = Math.max(0, Number(e.target.value));
+                              handleUniformChange(season, item.id, "additionalQuantity", Math.max(0, total - item.supportedQuantity));
+                            }}
+                            min={item.supportedQuantity}
                           />
                         )}
                       </td>
@@ -617,79 +825,154 @@ export const StudentModal = ({
                         </>
                       )}
                       <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                        {item.repair}
-                      </td>
-                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                        <input
-                          type="checkbox"
-                          className="w-4.5 h-4.5 accent-primary-900 cursor-pointer"
-                          checked={item.reservation}
-                          disabled={isView}
-                          onChange={(e) => handleUniformChange(season, item.id, "reservation", e.target.checked)}
-                        />
-                      </td>
-                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                        <input
-                          type="checkbox"
-                          className="w-4.5 h-4.5 accent-primary-900 cursor-pointer"
-                          checked={item.received}
-                          disabled={isView}
-                          onChange={(e) => handleUniformChange(season, item.id, "received", e.target.checked)}
-                        />
-                      </td>
-                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                        {isView ? (
-                          item.nameTag !== null ? item.nameTag : "-"
+                        {isTableView ? (
+                          <span>{item.repair || "-"}</span>
                         ) : (
-                          <div className="flex items-center justify-center gap-1">
+                          <input
+                            type="text"
+                            className="w-full px-2 py-1 border border-gray-200 rounded text-sm text-gray-700 bg-white outline-none focus:border-primary-900"
+                            value={item.repair}
+                            placeholder="수선 내용"
+                            onChange={(e) => handleUniformChange(season, item.id, "repair", e.target.value)}
+                          />
+                        )}
+                      </td>
+                      {/* 예약/수령 토글 — 동시 불가 */}
+                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
+                        {isTableView ? (
+                          <span>{item.reservation ? "예약" : item.received ? "수령" : "-"}</span>
+                        ) : (
+                          <div className="flex items-center justify-center rounded overflow-hidden border border-gray-200 text-xs">
                             <button
                               type="button"
-                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
-                              onClick={() => handleUniformChange(season, item.id, "nameTag", Math.max(0, (item.nameTag ?? 0) - 1))}
-                              disabled={(item.nameTag ?? 0) <= 0}
+                              className={`px-2 py-1 border-none cursor-pointer transition-colors ${item.reservation ? "bg-yellow-400 text-white font-medium" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+                              onClick={() => {
+                                handleUniformChange(season, item.id, "reservation", !item.reservation);
+                                if (!item.reservation) handleUniformChange(season, item.id, "received", false);
+                              }}
                             >
-                              −
+                              예약
                             </button>
-                            <span className="w-5 text-center text-sm text-gray-800 tabular-nums">{item.nameTag ?? 0}</span>
                             <button
                               type="button"
-                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
-                              onClick={() => handleUniformChange(season, item.id, "nameTag", (item.nameTag ?? 0) + 1)}
-                              disabled={(item.nameTag ?? 0) >= item.supportedQuantity + item.additionalQuantity}
+                              className={`px-2 py-1 border-none border-l border-gray-200 cursor-pointer transition-colors ${item.received ? "bg-green-500 text-white font-medium" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+                              onClick={() => {
+                                handleUniformChange(season, item.id, "received", !item.received);
+                                if (!item.received) handleUniformChange(season, item.id, "reservation", false);
+                              }}
                             >
-                              +
+                              수령
                             </button>
                           </div>
                         )}
                       </td>
+                      {/* 명찰/부착 합산 셀 */}
                       <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                        {isView ? (
-                          item.attachCount > 0 ? item.attachCount : "-"
+                        {isTableView ? (
+                          <span className="text-xs">
+                            {(item.nameTag ?? 0) > 0 || item.attachCount > 0
+                              ? `${item.nameTag ?? 0} / ${item.attachCount}`
+                              : "-"}
+                          </span>
                         ) : (
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              type="button"
-                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
-                              onClick={() => handleUniformChange(season, item.id, "attachCount", Math.max(0, (item.attachCount ?? 0) - 1))}
-                              disabled={(item.attachCount ?? 0) <= 0}
-                            >
-                              −
-                            </button>
-                            <span className="w-5 text-center text-sm text-gray-800 tabular-nums">{item.attachCount ?? 0}</span>
-                            <button
-                              type="button"
-                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
-                              onClick={() => handleUniformChange(season, item.id, "attachCount", (item.attachCount ?? 0) + 1)}
-                              disabled={(item.attachCount ?? 0) >= item.supportedQuantity + item.additionalQuantity}
-                            >
-                              +
-                            </button>
+                          <div className="flex items-center justify-center gap-1 text-xs">
+                            <input
+                              type="number"
+                              className="w-8 px-1 py-0.5 border border-gray-200 rounded text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              value={item.nameTag ?? 0}
+                              min={0}
+                              max={item.supportedQuantity + item.additionalQuantity}
+                              onChange={(e) => handleUniformChange(season, item.id, "nameTag", Number(e.target.value))}
+                            />
+                            <span className="text-gray-400">/</span>
+                            <input
+                              type="number"
+                              className="w-8 px-1 py-0.5 border border-gray-200 rounded text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              value={item.attachCount}
+                              min={0}
+                              max={item.supportedQuantity + item.additionalQuantity}
+                              onChange={(e) => handleUniformChange(season, item.id, "attachCount", Number(e.target.value))}
+                            />
                           </div>
+                        )}
+                      </td>
+                      {/* 품목별 상태 */}
+                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
+                        {isTableView ? (
+                          <span className="text-xs">{({
+                            pending: '출고 대기', out_of_stock: '재고 부족', reserved: '예약',
+                            shipped: '출고 완료', delivered: '배송 완료', receipt: '수령 완료', cancelled: '취소됨',
+                          } as Record<string, string>)[item.itemStatus ?? ''] ?? item.itemStatus ?? '-'}</span>
+                        ) : (
+                          <select
+                            className="w-full px-1 py-0.5 text-xs border border-gray-200 rounded outline-none focus:border-primary-900 text-gray-700 bg-white"
+                            value={item.itemStatus ?? ""}
+                            onChange={(e) => handleUniformChange(season, item.id, "itemStatus", e.target.value)}
+                          >
+                            <option value="">-</option>
+                            <option value="pending">출고 대기</option>
+                            <option value="out_of_stock">재고 부족</option>
+                            <option value="reserved">예약</option>
+                            <option value="shipped">출고 완료</option>
+                            <option value="delivered">배송 완료</option>
+                            <option value="receipt">수령 완료</option>
+                            <option value="cancelled">취소됨</option>
+                          </select>
                         )}
                       </td>
                     </tr>
                   );
                 })}
+                {(isEditing || isOrderCreateMode || isOrderEditMode) && (() => {
+                  const usedIds = new Set(items.filter(i => !i.isDeleted && i.productId != null).map(i => i.productId));
+                  const addable = (student?.availableUniforms ?? []).filter(
+                    (u) => (u.season === season || u.season === 'all') && !usedIds.has(u.productId),
+                  );
+                  if (addable.length === 0) return null;
+                  return (
+                    <tr>
+                      <td colSpan={colSpan} className="p-1 border border-gray-200">
+                        <select
+                          className="w-full px-2 py-1.5 border-none bg-transparent text-sm text-blue-600 outline-none cursor-pointer"
+                          value=""
+                          onChange={(e) => {
+                            const found = addable.find((u) => String(u.productId) === e.target.value);
+                            if (!found) return;
+                            const newItem: UniformItem = {
+                              id: `new_${found.productId}_${Date.now()}`,
+                              productId: found.productId,
+                              name: found.name,
+                              size: '',
+                              availableSizes: found.availableSizes,
+                              supportedQuantity: 0,
+                              additionalQuantity: 1,
+                              unitPrice: found.price,
+                              repair: '',
+                              reservation: false,
+                              received: false,
+                              nameTag: 0,
+                              attachCount: 0,
+                            };
+                            if (season === 'winter') {
+                              setWinterUniforms((prev) => [...prev, { ...newItem, seasonCode: 'W' }]);
+                            } else if (season === 'summer') {
+                              setSummerUniforms((prev) => [...prev, { ...newItem, seasonCode: 'S' }]);
+                            } else {
+                              setAllUniforms((prev) => [...prev, { ...newItem, seasonCode: 'A' }]);
+                            }
+                          }}
+                        >
+                          <option value="">+ 품목 추가</option>
+                          {addable.map((u) => (
+                            <option key={u.productId} value={String(u.productId)}>
+                              {u.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  );
+                })()}
                 {showPrice && (
                   <tr className="bg-bg-050 font-medium">
                     <td colSpan={5} className="px-3 py-2 border border-gray-200 text-right text-bg-700">
@@ -698,7 +981,7 @@ export const StudentModal = ({
                     <td className="px-3 py-2 border border-gray-200 text-right text-gray-900 tabular-nums">
                       {sectionTotal.toLocaleString()}원
                     </td>
-                    <td colSpan={5} className="border border-gray-200" />
+                    <td colSpan={4} className="border border-gray-200" />
                   </tr>
                 )}
               </>
@@ -781,7 +1064,7 @@ export const StudentModal = ({
                       </td>
                     )}
                     <td className="p-1 border border-gray-200 text-center text-gray-700 align-middle">
-                      {isView ? (
+                      {(isView || isOrderCreateMode || isOrderEditMode) ? (
                         <span>{item.size || "-"}</span>
                       ) : item.category === "스타킹" ? (
                         <span>-</span>
@@ -796,7 +1079,7 @@ export const StudentModal = ({
                       )}
                     </td>
                     <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                      {isView ? (
+                      {(isView || isOrderCreateMode || isOrderEditMode) ? (
                         <span>{item.quantity}</span>
                       ) : (
                         <input
@@ -839,6 +1122,14 @@ export const StudentModal = ({
   // ============================================================================
 
   const renderNameTagTable = () => {
+    const minUnit = student?.nameTagMinUnit ?? 1;
+    const nameTagPrice = student?.nameTagPrice;
+    const attachPrice = student?.nameTagAttachPrice;
+
+    const orderTotal = nameTagPrice != null ? (nameTag.orderQuantity / minUnit) * nameTagPrice : null;
+    const attachTotal = attachPrice != null ? nameTag.attachQuantity * attachPrice : null;
+    const showPrice = orderTotal != null || attachTotal != null;
+
     const Stepper = ({
       value,
       onChange,
@@ -850,7 +1141,7 @@ export const StudentModal = ({
         <button
           type="button"
           className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
-          onClick={() => onChange(Math.max(0, value - 1))}
+          onClick={() => onChange(Math.max(0, value - minUnit))}
           disabled={value <= 0}
         >
           −
@@ -859,7 +1150,7 @@ export const StudentModal = ({
         <button
           type="button"
           className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 text-base leading-none"
-          onClick={() => onChange(value + 1)}
+          onClick={() => onChange(value + minUnit)}
         >
           +
         </button>
@@ -875,11 +1166,21 @@ export const StudentModal = ({
               명찰
             </th>
             <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-24">
-              주문수량
+              주문수량{minUnit > 1 && <span className="text-xs font-normal text-bg-400 ml-1">({minUnit}개 단위)</span>}
             </th>
             <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-24">
               부착수량
             </th>
+            {showPrice && (
+              <>
+                <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-24">
+                  주문금액
+                </th>
+                <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-24">
+                  부착금액
+                </th>
+              </>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -888,16 +1189,15 @@ export const StudentModal = ({
               명찰
             </td>
             <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-              {isView ? (
+              {(isView || isOrderCreateMode || isOrderEditMode) ? (
                 <span>{nameTag.orderQuantity}</span>
               ) : (
                 <Stepper
                   value={nameTag.orderQuantity}
                   onChange={(v) => {
                     const itemTotal = [...winterUniforms, ...summerUniforms].reduce((sum, item) => sum + (item.nameTag ?? 0), 0);
-                    const minCeiled = itemTotal === 0 ? 0 : Math.ceil(itemTotal / 8) * 8;
-                    const newVal = v === 0 ? 0 : Math.ceil(v / 8) * 8;
-                    setNameTag((prev) => ({ ...prev, orderQuantity: Math.max(newVal, minCeiled) }));
+                    const minCeiled = itemTotal === 0 ? 0 : Math.ceil(itemTotal / minUnit) * minUnit;
+                    setNameTag((prev) => ({ ...prev, orderQuantity: Math.max(v, minCeiled) }));
                   }}
                 />
               )}
@@ -905,6 +1205,16 @@ export const StudentModal = ({
             <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
               <span>{nameTag.attachQuantity}</span>
             </td>
+            {showPrice && (
+              <>
+                <td className="p-2 border border-gray-200 text-right text-gray-700 align-middle tabular-nums pr-3">
+                  {orderTotal != null ? `${orderTotal.toLocaleString()}원` : '-'}
+                </td>
+                <td className="p-2 border border-gray-200 text-right text-gray-700 align-middle tabular-nums pr-3">
+                  {attachTotal != null ? `${attachTotal.toLocaleString()}원` : '-'}
+                </td>
+              </>
+            )}
           </tr>
         </tbody>
       </table>
@@ -916,7 +1226,7 @@ export const StudentModal = ({
   // 렌더링
   // ============================================================================
 
-  const title =
+  const titleText =
     mode === "add"
       ? "학생추가"
       : mode === "edit"
@@ -925,6 +1235,23 @@ export const StudentModal = ({
           ? `${student.admissionSchool} ${student.name}`
           : "학생 상세";
 
+  const title =
+    mode === "view" && !isEditing && !isOrderCreateMode && !isOrderEditMode && student ? (
+      <span className="flex items-center gap-1.5">
+        {titleText}
+        <button
+          type="button"
+          className="flex items-center justify-center w-6 h-6 bg-transparent border-none cursor-pointer text-bg-400 hover:text-bg-800 p-0 translate-y-px"
+          onClick={() => setIsEditing(true)}
+          title="학생 정보 수정"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M11.333 2a1.885 1.885 0 0 1 2.667 2.667L4.833 13.833 2 14l.167-2.833L11.333 2z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      </span>
+    ) : titleText;
+
   return (
     <>
     <Modal
@@ -932,18 +1259,9 @@ export const StudentModal = ({
       onClose={handleClose}
       title={title}
       width={1000}
-      titleExtra={
-        mode === "view" && !isEditing ? (
-          <button
-            className="px-5 py-2 bg-yellow-700 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
-            onClick={() => setIsEditing(true)}
-          >
-            수정
-          </button>
-        ) : undefined
-      }
+      titleExtra={undefined}
       actions={
-        mode === "view" && !isEditing ? (
+        mode === "view" && !isEditing && !isOrderCreateMode && !isOrderEditMode ? (
           <>
             <button
               className="px-6 py-2.5 bg-neutral-500 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
@@ -962,6 +1280,42 @@ export const StudentModal = ({
                 결제 완료
               </button>
             )}
+          </>
+        ) : isOrderEditMode ? (
+          <>
+            <button
+              className="px-6 py-2.5 bg-neutral-500 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              onClick={() => setIsOrderEditMode(false)}
+            >
+              취소
+            </button>
+            <button
+              className="px-6 py-2.5 bg-primary-900 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleSubmit}
+              disabled={isCreatingOrder}
+            >
+              {isCreatingOrder ? '저장 중...' : '주문 저장'}
+            </button>
+          </>
+        ) : isOrderCreateMode ? (
+          <>
+            <button
+              className="px-6 py-2.5 bg-neutral-500 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+              onClick={() => {
+                setIsOrderCreateMode(false);
+                const snap = student?.orderSnapshots?.[activeDateIndex];
+                if (snap) applyOrderSnapshot(snap);
+              }}
+            >
+              취소
+            </button>
+            <button
+              className="px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleSubmit}
+              disabled={isCreatingOrder}
+            >
+              {isCreatingOrder ? '생성 중...' : '주문 생성'}
+            </button>
           </>
         ) : (
           <>
@@ -988,21 +1342,43 @@ export const StudentModal = ({
         <div className="flex flex-col overflow-hidden [&_.input-wrapper]:flex-row [&_.input-wrapper]:items-center [&_.input-wrapper]:w-full [&_.input-wrapper]:gap-0 [&_.input-label]:flex-[0_0_120px] [&_.input-label]:px-4 [&_.input-label]:py-3 [&_.input-label]:text-15 [&_.input-label]:font-medium [&_.input-label]:text-bg-800 [&_.input-label]:bg-bg-050 [&_.input-label]:border-r [&_.input-label]:border-gray-200 [&_.input-label]:mb-0 [&_.input-label]:h-full [&_.input-label]:flex [&_.input-label]:items-center [&_.input]:border-none [&_.input]:rounded-none [&_.input]:h-12 [&_.input:focus]:shadow-none [&_.input:focus]:border-none [&_.select-wrapper]:flex-row [&_.select-wrapper]:items-center [&_.select-wrapper]:w-full [&_.select-wrapper]:gap-0 [&_.select-label]:flex-[0_0_120px] [&_.select-label]:px-4 [&_.select-label]:py-3 [&_.select-label]:text-15 [&_.select-label]:font-medium [&_.select-label]:text-bg-800 [&_.select-label]:bg-bg-050 [&_.select-label]:border-r [&_.select-label]:border-gray-200 [&_.select-label]:mb-0 [&_.select-label]:h-full [&_.select-label]:flex [&_.select-label]:items-center [&_.select]:border-none [&_.select]:rounded-none [&_.select]:h-12">
           <div className="flex items-stretch">
             <div className="flex-1 min-w-0 flex items-center">
-              {isView ? (
+              {(isView || isOrderCreateMode || isOrderEditMode) ? (
                 <ViewField label="입학학교" value={admissionSchool} />
               ) : (
                 <EditField label="입학학교">
-                  <input
-                    className="flex-1 px-4 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none placeholder:text-bg-400"
-                    placeholder="입학 학교"
-                    value={admissionSchool}
-                    onChange={(e) => setAdmissionSchool(e.target.value)}
-                  />
+                  <div className="relative flex-1">
+                    <input
+                      ref={schoolInputRef}
+                      className="w-full px-4 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none placeholder:text-bg-400"
+                      placeholder="입학 학교"
+                      value={admissionSchool}
+                      onChange={(e) => handleAdmissionSchoolChange(e.target.value)}
+                      onFocus={() => schoolSuggestions.length > 0 && setShowSuggestions(true)}
+                      autoComplete="off"
+                    />
+                    {showSuggestions && (
+                      <div
+                        ref={suggestionRef}
+                        className="absolute left-0 top-full z-50 w-full bg-white border border-gray-200 rounded-b-lg shadow-lg max-h-52 overflow-y-auto"
+                      >
+                        {schoolSuggestions.map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-bg-050 border-none bg-transparent cursor-pointer"
+                            onMouseDown={(e) => { e.preventDefault(); handleSchoolSelect(name); }}
+                          >
+                            {name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </EditField>
               )}
             </div>
             <div className="flex-[1_1_0%] min-w-0 flex items-center" style={{ marginRight: "80px" }}>
-              {isView ? (
+              {(isView || isOrderCreateMode || isOrderEditMode) ? (
                 <ViewField label="출신학교" value={previousSchool} />
               ) : (
                 <EditField label="출신학교">
@@ -1019,7 +1395,7 @@ export const StudentModal = ({
 
           <div className="flex items-stretch">
             <div className="flex-1 min-w-0 flex items-center">
-              {isView ? (
+              {(isView || isOrderCreateMode || isOrderEditMode) ? (
                 <ViewField label="이름" value={name} />
               ) : (
                 <EditField label="이름">
@@ -1036,7 +1412,7 @@ export const StudentModal = ({
               className="flex-[1_1_0%] min-w-0 flex items-center"
               style={{ marginRight: "80px" }}
             >
-              {isView ? (
+              {(isView || isOrderCreateMode || isOrderEditMode) ? (
                 <ViewField label="성별" value={genderLabel} />
               ) : (
                 <EditField label="성별">
@@ -1059,7 +1435,7 @@ export const StudentModal = ({
 
           <div className="flex items-stretch">
             <div className="flex-1 min-w-0 flex items-center">
-              {isView ? (
+              {(isView || isOrderCreateMode || isOrderEditMode) ? (
                 <ViewField label="학생 연락처" value={studentPhone} />
               ) : (
                 <EditField label="학생 연락처">
@@ -1076,7 +1452,7 @@ export const StudentModal = ({
               className="flex-[1_1_0%] min-w-0 flex items-center"
               style={{ marginRight: "80px" }}
             >
-              {isView ? (
+              {(isView || isOrderCreateMode || isOrderEditMode) ? (
                 <ViewField label="보호자 연락처" value={guardianPhone} />
               ) : (
                 <EditField label="보호자 연락처">
@@ -1091,12 +1467,12 @@ export const StudentModal = ({
             </div>
           </div>
 
-          {/* 추가 학생 정보 (뷰 + 편집 공통) */}
-          {(isView || isEditing) && (
+          {/* 추가 학생 정보 (추가 + 뷰 + 편집 공통) */}
+          {(mode === "add" || isView || isEditing || isOrderCreateMode || isOrderEditMode) && (
             <>
               <div className="flex items-stretch">
                 <div className="flex-1 min-w-0 flex items-center">
-                  {isView ? (
+                  {(isView || isOrderCreateMode || isOrderEditMode) ? (
                     <ViewField label="생년월일" value={birthDate || "-"} />
                   ) : (
                     <EditField label="생년월일">
@@ -1110,7 +1486,7 @@ export const StudentModal = ({
                   )}
                 </div>
                 <div className="flex-[1_1_0%] min-w-0 flex items-center" style={{ marginRight: "80px" }}>
-                  {isView ? (
+                  {(isView || isOrderCreateMode || isOrderEditMode) ? (
                     <ViewField label="입학년도/학년" value={admissionYear !== "" ? `${admissionYear}년 ${admissionGrade}학년` : "-"} />
                   ) : (
                     <EditField label="입학년도/학년">
@@ -1135,7 +1511,7 @@ export const StudentModal = ({
               </div>
               <div className="flex items-stretch">
                 <div className="flex-1 min-w-0 flex items-center">
-                  {isView ? (
+                  {(isView || isOrderCreateMode || isOrderEditMode) ? (
                     <ViewField label="주소" value={address || "-"} />
                   ) : (
                     <EditField label="주소">
@@ -1160,7 +1536,7 @@ export const StudentModal = ({
               </div>
               <div className="flex items-stretch">
                 <div className="flex-1 min-w-0 flex items-center">
-                  {isView ? (
+                  {(isView || isOrderCreateMode || isOrderEditMode) ? (
                     <ViewField label="키 / 몸무게" value={height !== "" || weight !== "" ? `${height !== "" ? height : "-"} cm / ${weight !== "" ? weight : "-"} kg` : "-"} />
                   ) : (
                     <EditField label="키 / 몸무게">
@@ -1184,7 +1560,7 @@ export const StudentModal = ({
                   )}
                 </div>
                 <div className="flex-[1_1_0%] min-w-0 flex items-center" style={{ marginRight: "80px" }}>
-                  {isView ? (
+                  {(isView || isOrderCreateMode || isOrderEditMode) ? (
                     <ViewField label="어깨 / 허리" value={shoulder !== "" || waist !== "" ? `${shoulder !== "" ? shoulder : "-"} cm / ${waist !== "" ? waist : "-"} cm` : "-"} />
                   ) : (
                     <EditField label="어깨 / 허리">
@@ -1212,41 +1588,143 @@ export const StudentModal = ({
           )}
         </div>
 
-        {/* 날짜 탭 + 동복 테이블 */}
-        <div className="flex flex-col gap-1">
-          {(mode === "view" || isEditing) &&
-            student?.orderSnapshots &&
-            student.orderSnapshots.length > 0 && (
-              <div className="flex gap-3">
-                {student.orderSnapshots.map((snapshot, i) => (
-                  <button
-                    key={snapshot.orderId}
-                    className={`text-sm px-1 py-0.5 border-none bg-transparent cursor-pointer ${
-                      i === activeDateIndex
-                        ? "font-bold text-bg-800"
-                        : "text-bg-400"
-                    }`}
-                    onClick={() => handleDateTabClick(i)}
-                  >
-                    {formatDate(snapshot.date)}
-                  </button>
-                ))}
+        {/* 날짜 탭 + 동복/하복/용품/명찰 — 수정 모드에서는 숨김 */}
+        {!isEditing && <div className="flex flex-col gap-1">
+          {mode === "view" && (() => {
+            const currentSnapshot = student?.orderSnapshots?.[activeDateIndex];
+            const orderId = activeOrderId ?? student?.orderId;
+            const STATUS_LABELS: Record<OrderStatusValue, string> = {
+              pending:   '대기중',
+              confirmed: '확인됨',
+              preparing: '준비중',
+              ready:     '준비완료',
+              receive:   '수령완료',
+              complete:  '완료',
+              cancelled: '취소됨',
+            };
+            const currentStatus = currentSnapshot?.status ?? '';
+            return (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {student?.orderSnapshots && student.orderSnapshots.length > 0
+                    ? (
+                      <>
+                        {student.orderSnapshots.map((snapshot, i) => {
+                          const isActive = i === activeDateIndex;
+                          // 수정 모드에서 활성 탭은 날짜 input으로 교체
+                          if (isOrderEditMode && isActive) {
+                            return (
+                              <input
+                                key={snapshot.orderId}
+                                type="date"
+                                className="px-1.5 py-0.5 text-sm border-b border-primary-900 bg-transparent outline-none text-bg-800 font-bold w-32"
+                                value={orderDate}
+                                onChange={(e) => setOrderDate(e.target.value)}
+                              />
+                            );
+                          }
+                          return (
+                            <button
+                              key={snapshot.orderId}
+                              className={`text-sm px-1 py-0.5 border-none bg-transparent cursor-pointer ${
+                                isActive ? "font-bold text-bg-800" : "text-bg-400"
+                              }`}
+                              onClick={() => {
+                                if (!isOrderCreateMode) {
+                                  handleDateTabClick(i);
+                                  if (onOrderUpdate) setIsOrderEditMode(true);
+                                }
+                              }}
+                            >
+                              {formatDate(snapshot.date)}
+                            </button>
+                          );
+                        })}
+                        {!isOrderCreateMode && !isOrderEditMode && onOrderCreate && (
+                          <button
+                            className="text-sm px-1 py-0.5 border-none bg-transparent cursor-pointer text-blue-500 hover:text-blue-700 font-medium"
+                            onClick={() => enterOrderCreateMode()}
+                          >
+                            +
+                          </button>
+                        )}
+                      </>
+                    )
+                    : !isOrderCreateMode && onOrderCreate && (
+                        <button
+                          className="text-sm px-1 py-0.5 border-none bg-transparent cursor-pointer text-blue-600 hover:text-blue-800 font-medium"
+                          onClick={() => enterOrderCreateMode()}
+                        >
+                          + 주문 생성
+                        </button>
+                      )}
+                </div>
+                {onStatusChange && orderId && currentSnapshot && !isOrderEditMode && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">{STATUS_LABELS[currentStatus] ?? currentStatus}</span>
+                    <select
+                      className="px-2 py-1 text-xs border border-gray-200 rounded outline-none focus:border-primary-900 text-gray-700 bg-white disabled:opacity-50"
+                      defaultValue=""
+                      disabled={isChangingStatus}
+                      onChange={async (e) => {
+                        const next = e.target.value as OrderStatusValue;
+                        if (!next) return;
+                        setIsChangingStatus(true);
+                        try {
+                          await onStatusChange(orderId, next);
+                          setToast({ message: '주문 상태가 변경되었습니다.', variant: 'success' });
+                          currentSnapshot.status = next;
+                        } catch {
+                          setToast({ message: '상태 변경에 실패했습니다.', variant: 'error' });
+                        } finally {
+                          setIsChangingStatus(false);
+                          e.target.value = '';
+                        }
+                      }}
+                    >
+                      <option value="">상태 변경</option>
+                      {(Object.entries(STATUS_LABELS) as [OrderStatusValue, string][])
+                        .filter(([v]) => v !== currentStatus)
+                        .map(([v, label]) => (
+                          <option key={v} value={v}>{label}</option>
+                        ))}
+                    </select>
+                  </div>
+                )}
               </div>
-            )}
+            );
+          })()}
+          {isOrderCreateMode && (
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-medium text-bg-700 whitespace-nowrap">구입일자</span>
+              <input
+                type="date"
+                className="px-2 py-1 text-sm border border-gray-200 rounded outline-none focus:border-bg-400 text-gray-700"
+                value={orderDate}
+                onChange={(e) => setOrderDate(e.target.value)}
+              />
+            </div>
+          )}
+          {/* isOrderEditMode의 구입일자는 날짜 탭 행 내부에 표시 */}
           {renderUniformTable("동복", winterUniforms, "winter")}
-        </div>
+        </div>}
 
         {/* 하복 테이블 */}
-        {renderUniformTable("하복", summerUniforms, "summer")}
+        {!isEditing && renderUniformTable("하복", summerUniforms, "summer")}
+
+        {/* 사계절 테이블 — 항목 없으면 숨김 */}
+        {!isEditing && (allUniforms.length > 0 || (isTableEditable && (student?.availableUniforms ?? []).some(u => u.season === 'all'))) && renderUniformTable("사계절", allUniforms, "all")}
 
         {/* 용품 & 명찰 */}
+        {!isEditing && (
         <div className="flex gap-4 items-start">
           {renderSupplyTable()}
           {renderNameTagTable()}
         </div>
+        )}
 
         {/* 가격 요약 — 정가 / 지원금액 / 실납부액 */}
-        {hasPrice && (
+        {!isEditing && hasPrice && (
           <div className="border border-gray-200 rounded-lg overflow-hidden text-sm">
             <table className="w-full border-collapse">
               <thead>
@@ -1299,8 +1777,9 @@ export const StudentModal = ({
           </div>
         )}
 
-        {/* 이력 + 등록일/최종수정일 (view/edit 모드) */}
-        {(mode === "view" || isEditing) && (
+
+{/* 이력 + 등록일/최종수정일 (view 모드) */}
+        {mode === "view" && !isEditing && (
           <div className="flex justify-between items-end gap-4">
             {/* 이력 */}
             <div className="flex flex-col gap-2 flex-1">

@@ -135,7 +135,7 @@ export const MyPage = () => {
 
   const buildOrderPayload = () => ({
     uniform_items: [...form.winterUniforms, ...form.summerUniforms].map((u) => ({
-      item_id: u.name,
+      item_id: Number(u.productId),
       name: u.name,
       season: u.season === 'winter' ? '동복' : '하복' as '동복' | '하복',
       selected_size: u.selectedSize || 0,
@@ -153,10 +153,6 @@ export const MyPage = () => {
         selected_size: s.selectedSize || '',
         purchase_count: s.quantity,
       })),
-    name_tag: {
-      order_quantity: form.nameTag.orderQuantity,
-      attach_quantity: form.nameTag.attachQuantity,
-    },
     notes: '',
   });
 

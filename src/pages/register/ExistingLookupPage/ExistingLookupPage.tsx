@@ -33,7 +33,7 @@ export const ExistingLookupPage = () => {
     try {
       const data = await checkinByPhone(phone);
       setCheckinData(data);
-      navigate('/register/measurement-guide');
+      navigate('/register/measurement-guide', { state: { fromExisting: true } });
     } catch (err) {
       const axiosError = err as { response?: { data?: { error?: { code?: string; message?: string } } } };
       const code = axiosError.response?.data?.error?.code;

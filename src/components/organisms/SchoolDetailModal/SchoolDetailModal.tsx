@@ -5,7 +5,7 @@ import type { SchoolProductItem } from "../SchoolAddModal";
 import { GENDER_OPTIONS } from "@/constants/gender";
 import { getAllProducts, updateProductSelectable, type Product } from "@/api/product";
 import { CATEGORY_OPTIONS } from "@/constants/productCategories";
-import type { SchoolListItem, SupportedYear, UniformItem } from "@/api/school";
+import type { SchoolListItem, SupportedYear, UpdateUniformItem } from "@/api/school";
 import { getSchoolDetail } from "@/api/school";
 import { getApiErrorString } from "@/utils/errorUtils";
 
@@ -25,7 +25,7 @@ export interface SchoolDetailModalProps {
         measurement_start_date?: string;
         measurement_end_date?: string;
       }[];
-      uniforms?: { winter?: UniformItem[]; summer?: UniformItem[] };
+      uniforms?: { winter?: UpdateUniformItem[]; summer?: UpdateUniformItem[] };
       has_name_tag?: boolean;
       name_tag_price?: number | null;
       name_tag_attach_price?: number | null;
@@ -115,6 +115,10 @@ export const SchoolDetailModal = ({
             expected_student_count: y.expected_student_count,
           })),
         );
+        const allUniforms = [...detail.uniforms.winter, ...detail.uniforms.summer];
+        // school_uniforms.id → product_id 역매핑 (서버가 selectable_with에 uniform row id를 내려줄 경우 보정)
+        const uniformIdToProductId = new Map(allUniforms.map((u) => [u.id, u.product_id]));
+
         const toEditableProduct = (
           u: (typeof detail.uniforms.winter)[number],
         ): EditableProduct => ({
@@ -131,7 +135,11 @@ export const SchoolDetailModal = ({
           nameTagAttachPrice: u.name_tag_attach_price ?? undefined,
           nameTagMinUnit: u.name_tag_min_unit ?? undefined,
           is_selectable: u.is_selectable,
-          selectable_with: u.selectable_with,
+          selectable_with: u.selectable_with.map((s) => ({
+            // s.product_id가 school_uniforms.id일 수도 있으므로 역매핑으로 보정
+            product_id: uniformIdToProductId.get(s.product_id) ?? s.product_id,
+            display_name: s.display_name,
+          })),
         });
         const genderOrder = (g: string) => g === "U" || g === "공용" ? 0 : g === "M" || g === "남" ? 1 : g === "F" || g === "여" ? 2 : 3;
         const sortByGender = (a: EditableProduct, b: EditableProduct) => genderOrder(a.gender) - genderOrder(b.gender);
@@ -298,18 +306,13 @@ export const SchoolDetailModal = ({
     setYears((prev) => prev.filter((y) => y._id !== id));
   };
 
-  const toUniformItem = (p: EditableProduct): UniformItem => ({
+  const toUniformItem = (p: EditableProduct): UpdateUniformItem => ({
     product_id: Number(p.productApiId),
+    display_name: p.displayName,
     contract_price: p.contractPrice,
-    quantity: p.freeQuantity,
-    has_name_tag: p.hasNameTag ?? false,
-    name_tag_price: p.hasNameTag ? (p.nameTagPrice ?? undefined) : undefined,
-    name_tag_attach_price: p.hasNameTag
-      ? (p.nameTagAttachPrice ?? undefined)
-      : undefined,
-    name_tag_min_unit: p.hasNameTag
-      ? (p.nameTagMinUnit ?? undefined)
-      : undefined,
+    free_support_count: p.freeQuantity ?? 0,
+    is_selectable: p.is_selectable ?? false,
+    selectable_with: (p.selectable_with ?? []).map((s) => s.product_id),
   });
 
   const handleSelectableSave = async (product: EditableProduct) => {
@@ -1017,12 +1020,15 @@ export const SchoolDetailModal = ({
                             </div>
                           </div>
                         )}
-                        <div className="flex flex-col gap-2">
-                          {isEditMode
-                            ? group.map((p) => renderProductRow(p, season, false, true))
-                            : group.map((p) => renderProductRow(p, season, true, true))
-                          }
-                        </div>
+                        {isEditMode ? (
+                          <div className="flex flex-col gap-2">
+                            {group.map((p) => renderProductRow(p, season, false, true))}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-1.5 px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                            {group.map((p) => renderProductRow(p, season, true, true))}
+                          </div>
+                        )}
                       </div>
                     );
                   })}

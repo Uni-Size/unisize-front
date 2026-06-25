@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useStudentFormStore } from '@/stores/useStudentFormStore';
 import { useStudentResponseStore } from '@/stores/useStudentResponseStore';
 import { addStudent, startMeasurement } from '@/api/student';
@@ -15,13 +15,15 @@ const VALIDATION_RANGES = {
 
 export const MeasurementInputPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromExisting = location.state?.fromExisting ?? false;
   const { formData, setBodyMeasurements, resetFormData } = useStudentFormStore();
   const { setStudentData, checkinData } = useStudentResponseStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (checkinData?.body_measurements) {
+    if (fromExisting && checkinData?.body_measurements) {
       const m = checkinData.body_measurements;
       if (m.height) setBodyMeasurements('height', m.height);
       if (m.weight) setBodyMeasurements('weight', m.weight);

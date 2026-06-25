@@ -142,8 +142,9 @@ export interface UniformProduct {
 
 export interface RecommendedUniformItem {
   product_id: number;
-  item_id?: string;
+  item_id: string;
   product_name: string;
+  season: string;
   recommended_size: string;
   supported_quantity: number;
   purchase_quantity: number;
@@ -153,15 +154,19 @@ export interface RecommendedUniformItem {
     in_stock: boolean;
     stock_count: number;
   }>;
-  selectable_with?: string[];
+  selectable_with: string[];
   gender: string;
   is_customization_required?: boolean;
   customization?: string;
   is_reserved?: boolean;
   has_name_tag?: boolean;
+  name_tag_price?: number | null;
+  name_tag_attach_price?: number | null;
+  name_tag_min_unit?: number | null;
   name_tag_count?: number;
   name_tag_name?: string;
   name_tag_attach?: boolean;
+  delivery_status?: string;
 }
 
 export interface SupplyItemResponse {
@@ -237,7 +242,7 @@ export interface CompleteMeasurementRequest {
 }
 
 export interface MeasurementOrderItem {
-  item_id: string;
+  item_id: number;
   name: string;
   season: "동복" | "하복";
   selected_size: string | number;
@@ -250,9 +255,9 @@ export interface MeasurementOrderItem {
 }
 
 export interface SupplyOrderItem {
-  item_id: number;
+  item_id: number | string;
   name: string;
-  selected_size: string;
+  selected_size?: string;
   purchase_count: number;
 }
 
@@ -264,7 +269,7 @@ export interface MeasurementOrderNameTag {
 export interface MeasurementOrderRequest {
   uniform_items: MeasurementOrderItem[];
   supply_items: SupplyOrderItem[];
-  name_tag?: MeasurementOrderNameTag;
+  notes?: string;
 }
 
 // ============================================================================
@@ -458,8 +463,22 @@ export interface AdminOrderItemProduct {
   name: string;
   category: string;
   gender: string;
+  season?: string; // W / S / A
   price: number;
+  is_repair?: boolean;
+  is_repair_required?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
+
+export type DeliveryStatus =
+  | 'pending'
+  | 'out_of_stock'
+  | 'shipped'
+  | 'delivered'
+  | 'reserved'
+  | 'receipt'
+  | 'cancelled';
 
 export interface AdminOrderItem {
   id: number;
@@ -474,58 +493,80 @@ export interface AdminOrderItem {
   name_tag_count: number;
   name_tag_name: string;
   name_tag_attach: boolean;
+  name_tag_unit_price?: number;
+  name_tag_attach_price?: number;
+  delivery_status: DeliveryStatus;
   created_at: string;
 }
+
+export type OrderStatus =
+  | 'pending'    // 대기중
+  | 'confirmed'  // 확인됨
+  | 'preparing'  // 준비중
+  | 'ready'      // 준비완료
+  | 'receive'    // 수령완료
+  | 'complete'   // 완료
+  | 'cancelled'; // 취소됨
 
 export interface AdminStudentOrder {
   id: number;
   order_number: string;
   student_id: number;
+  student?: null;
   total_amount: number;
-  order_status: string;
+  order_status: OrderStatus;
   order_status_display: string;
   order_date: string;
   delivery_date: string | null;
   notes: string;
-  order_items: AdminOrderItem[];
+  signature?: string;
   can_cancel_order: boolean;
   can_modify_order: boolean;
   is_order_completed: boolean;
   is_order_cancelled: boolean;
+  order_items: AdminOrderItem[];
   created_at: string;
   updated_at: string;
 }
 
+export type StudentType = '신입' | '재학' | '전학';
+
 export interface AdminStudent {
   id: number;
   name: string;
-  birth_date: string;
+  birth_date?: string | null;
   gender: string;
   student_phone: string;
   guardian_phone: string;
-  address: string | null;
+  address?: string | null;
   previous_school: string;
   admission_year: number;
   admission_grade: number;
-  admission_school?: string;
-  school_name?: string;
-  checked_in_at: string;
+  admission_school: string;
+  checked_in_at?: string;
   is_eligible_for_public_purchase: boolean;
   is_manually_supported: boolean;
-  student_type: string;
+  student_type: StudentType;
   has_confirmed_order: boolean;
-  created_at: string;
-  updated_at: string;
+  total_name_tag_count?: number;
   body_measurements?: {
     height: number | null;
     weight: number | null;
     shoulder: number | null;
     waist: number | null;
   } | null;
+  recommended_uniforms?: {
+    winter: RecommendedUniformItem[];
+    summer: RecommendedUniformItem[];
+  };
   orders?: AdminStudentOrder[];
+  // 목록 조회 응답에서만 오는 필드
+  school_name?: string;
   student_number?: string;
   grade?: number;
   government_purchase?: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface GetStudentsParams {
@@ -570,6 +611,36 @@ export async function getStudents(
       total_pages: Math.ceil(total / limit),
     },
   };
+}
+
+export interface CreateStudentRequest {
+  name: string;
+  admission_year: number;
+  admission_grade: number;
+  admission_school: string;
+  birth_date?: string;
+  gender?: string;
+  student_phone?: string;
+  guardian_phone?: string;
+  address?: string;
+  delivery?: boolean;
+  privacy_consent?: boolean;
+  previous_school?: string;
+  body?: {
+    height?: number;
+    weight?: number;
+    shoulder?: number;
+    waist?: number;
+  };
+}
+
+/**
+ * 학생 추가 (관리자)
+ * POST /api/v1/students
+ */
+export async function createStudent(data: CreateStudentRequest): Promise<AdminStudent> {
+  const response = await apiClient.post<ApiResponse<AdminStudent>>("/api/v1/students", data);
+  return response.data.data;
 }
 
 /**
@@ -767,14 +838,18 @@ export interface UpdateOrderUniformItem {
   item_id: string;
   name: string;
   season: string;
-  selected_size: number;
+  selected_size: number | string;
   purchase_count: number;
-  customization: string;
-  has_name_tag?: boolean;
+  supported_quantity?: number;
+  customization?: string;
+  is_reserved?: boolean;
+  name_tag_count?: number;
+  name_tag_name?: string;
+  name_tag_attach?: boolean;
 }
 
 export interface UpdateOrderSupplyItem {
-  item_id: string;
+  item_id: string | number;
   name: string;
   selected_size: string;
   purchase_count: number;
@@ -790,10 +865,11 @@ export interface UpdateOrderRequest {
   supply_items: UpdateOrderSupplyItem[];
   notes: string;
   name_tag?: UpdateOrderNameTag;
+  order_date?: string;
 }
 
 /**
- * 주문 수정 (관리자)
+ * 주문 수정 (관리자 전용 엔드포인트)
  * PUT /api/v1/admin/orders/:id
  */
 export async function updateAdminOrder(
@@ -827,20 +903,19 @@ export interface PhoneOrderSupplyItem {
 
 export interface PhoneOrderRequest {
   name: string;
-  gender: string;
-  student_phone: string;
-  guardian_phone: string;
-  delivery: boolean;
-  address: string;
-  privacy_consent: boolean;
   admission_school: string;
-  previous_school: string;
   admission_year: number;
   admission_grade: number;
-  class_name: string;
-  notes: string;
-  order_items: PhoneOrderItem[];
-  supply_items: PhoneOrderSupplyItem[];
+  gender?: string;
+  birth_date?: string;
+  guardian_phone?: string;
+  student_phone?: string;
+  delivery?: boolean;
+  address?: string | null;
+  previous_school?: string;
+  notes?: string;
+  order_items?: PhoneOrderItem[];
+  supply_items?: PhoneOrderSupplyItem[];
 }
 
 export interface PhoneOrderStudentResult {

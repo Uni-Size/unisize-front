@@ -1,15 +1,17 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/atoms/Button';
 
 export const MeasurementGuidePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromExisting = location.state?.fromExisting ?? false;
 
   const handleBack = () => {
     navigate('/register/student-info');
   };
 
   const handleNext = () => {
-    navigate('/register/measurement');
+    navigate('/register/measurement', { state: { fromExisting } });
   };
 
   return (

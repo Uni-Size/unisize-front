@@ -57,7 +57,7 @@ export interface SchoolListParams {
   year?: number;
 }
 
-/** POST /uniforms (일괄 등록) 및 PUT /schools/supported (수정) 용 */
+/** POST /uniforms (일괄 등록) 용 */
 export interface UniformItem {
   product_id: number;
   contract_price: number;
@@ -68,6 +68,16 @@ export interface UniformItem {
   name_tag_min_unit?: number;
 }
 
+/** PUT /schools/supported/by-name/:school_name 의 uniforms 배열 항목 */
+export interface UpdateUniformItem {
+  product_id: number;
+  display_name: string;
+  contract_price: number;
+  free_support_count: number;
+  is_selectable: boolean;
+  selectable_with: number[];
+}
+
 // GET /schools/supported/detail 응답 타입
 export interface SchoolDetailYear {
   id: number;
@@ -76,6 +86,11 @@ export interface SchoolDetailYear {
   expected_student_count: number;
   measurement_start_date: string | null;
   measurement_end_date: string | null;
+}
+
+export interface SchoolDetailUniformSizeStock {
+  size: string;
+  quantity: number;
 }
 
 export interface SchoolDetailUniform {
@@ -90,8 +105,10 @@ export interface SchoolDetailUniform {
   name_tag_price: number | null;
   name_tag_attach_price: number | null;
   name_tag_min_unit: number | null;
-  is_selectable?: boolean;
-  selectable_with?: { product_id: number; display_name: string; free_support_count?: number }[];
+  is_selectable: boolean;
+  selectable_with: { product_id: number; display_name: string; free_support_count?: number }[];
+  total_stock: number;
+  stock_by_sizes: SchoolDetailUniformSizeStock[];
 }
 
 export interface SchoolDetailResponse {
@@ -140,8 +157,8 @@ export interface UpdateSchoolRequest {
   name_tag_min_unit?: number | null;
   years?: UpdateSchoolYearInfo[];
   uniforms?: {
-    winter?: UniformItem[];
-    summer?: UniformItem[];
+    winter?: UpdateUniformItem[];
+    summer?: UpdateUniformItem[];
   };
 }
 
