@@ -7,27 +7,20 @@ import type { ApiResponse } from "./auth";
 
 export interface ProductSize {
   size: string;
-  display_order?: number;
+  total_in?: number;
+  round_number?: number;
 }
 
-export interface ProductInventory {
-  id?: number;
+export interface ProductSizeResponse {
   size: string;
   quantity: number;
   rounds?: { round_number: number; total_in: number }[];
 }
 
-export interface AddInventoryRequest {
+export interface SelectableProduct {
   product_id: number;
-  size: string;
-  quantity: number;
-  round_number?: number;
-}
-
-export interface UpdateInventoryRequest {
-  quantity: number;
-  round_number?: number;
-  reason?: string;
+  display_name: string;
+  free_support_count?: number;
 }
 
 export interface ProductSchool {
@@ -35,6 +28,8 @@ export interface ProductSchool {
   display_name: string;
   price: number;
   quantity: number;
+  is_selectable?: boolean;
+  selectable_with?: SelectableProduct[];
 }
 
 export interface Product {
@@ -47,9 +42,9 @@ export interface Product {
   is_repair: boolean;
   is_repair_required: boolean;
   size_type?: "numeric" | "alpha" | "free";
-  sizes?: ProductSize[];
+  sizes?: ProductSizeResponse[];
   schools?: ProductSchool[];
-  inventory?: ProductInventory[];
+  inventory_status?: string;
   created_at: string;
   updated_at: string;
 }
@@ -67,6 +62,7 @@ export interface GetProductsParams {
   season?: string;
   search?: string;
   active_only?: boolean;
+  school_name?: string;
 }
 
 export interface CreateProductRequest {
@@ -79,7 +75,7 @@ export interface CreateProductRequest {
   is_repair_required?: boolean;
   size_type?: "numeric" | "alpha" | "free";
   sizes?: ProductSize[];
-  schools?: { school_id: number; price: number }[];
+  schools?: { school_name: string; display_name?: string; price?: number; quantity?: number }[];
 }
 
 export interface UpdateProductRequest {
@@ -92,7 +88,14 @@ export interface UpdateProductRequest {
   is_repair_required?: boolean;
   size_type?: "numeric" | "alpha" | "free";
   sizes?: ProductSize[];
-  schools?: { school_id: number; price: number }[];
+  schools?: {
+    school_name: string;
+    display_name?: string;
+    price?: number;
+    quantity?: number;
+    is_selectable?: boolean | null;
+    selectable_with?: number[] | null;
+  }[];
 }
 
 // ============================================================================
@@ -113,6 +116,7 @@ export async function getProducts(params?: GetProductsParams): Promise<ProductsD
   if (params?.season) queryParams.append("season", params.season);
   if (params?.search) queryParams.append("search", params.search);
   if (params?.active_only !== undefined) queryParams.append("active_only", params.active_only.toString());
+  if (params?.school_name) queryParams.append("school_name", params.school_name);
 
   const queryString = queryParams.toString();
   const url = queryString ? `/api/v1/products?${queryString}` : "/api/v1/products";
@@ -164,6 +168,21 @@ export async function updateProduct(id: number, data: UpdateProductRequest): Pro
 }
 
 /**
+ * 학교별 교체 가능 상품 설정
+ * PUT /api/v1/products/:id/schools/:school_name/selectable
+ */
+export async function updateProductSelectable(
+  productId: number,
+  schoolName: string,
+  data: { is_selectable: boolean; selectable_with?: number[] },
+): Promise<void> {
+  await apiClient.put(
+    `/api/v1/products/${productId}/schools/${encodeURIComponent(schoolName)}/selectable`,
+    data,
+  );
+}
+
+/**
  * 상품 삭제
  * DELETE /api/v1/products/:id
  */
@@ -171,30 +190,3 @@ export async function deleteProduct(id: number): Promise<void> {
   await apiClient.delete(`/api/v1/products/${id}`);
 }
 
-// ============================================================================
-// 재고 API
-// ============================================================================
-
-/**
- * 재고 추가
- * POST /api/v1/inventory
- */
-export async function addInventory(data: AddInventoryRequest): Promise<ProductInventory> {
-  const response = await apiClient.post<ApiResponse<ProductInventory>>(
-    "/api/v1/inventory",
-    data,
-  );
-  return response.data.data;
-}
-
-/**
- * 재고 수정
- * PUT /api/v1/inventory/:id
- */
-export async function updateInventory(id: number, data: UpdateInventoryRequest): Promise<ProductInventory> {
-  const response = await apiClient.put<ApiResponse<ProductInventory>>(
-    `/api/v1/inventory/${id}`,
-    data,
-  );
-  return response.data.data;
-}

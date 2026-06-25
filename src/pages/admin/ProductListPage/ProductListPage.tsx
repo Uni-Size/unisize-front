@@ -23,6 +23,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+
   type Product as ApiProduct,
 } from "@/api/product";
 import { getApiErrorMessage } from "@/utils/errorUtils";
@@ -47,7 +48,7 @@ interface ProductRow {
   modifiedDate: string;
   // TODO: API 응답에 추가되면 실제 값으로 교체
   schoolCount: number;
-  stockStatus: "정상" | "부족재고 있음";
+  stockStatus: string;
 }
 
 const seasonLabel: Record<string, string> = {
@@ -81,7 +82,7 @@ const toProductRow = (
   createdDate: item.created_at ?? "",
   modifiedDate: item.updated_at ?? "",
   schoolCount: 0, // HARDCODED: API 응답에 추가되면 실제 값으로 교체
-  stockStatus: "정상", // HARDCODED: API 응답에 추가되면 실제 값으로 교체
+  stockStatus: item.inventory_status ?? "-",
 });
 
 export const ProductListPage = () => {
@@ -177,14 +178,14 @@ export const ProductListPage = () => {
   };
 
   const apiSizeTypeToUi = (size_type?: string): string => {
-    if (size_type === "numeric") return "numeric_5";
+    if (size_type === "numeric") return "numeric";
     if (size_type === "alpha") return "alpha";
     if (size_type === "free") return "free";
     return "";
   };
 
   const uiSizeTypeToApi = (sizeType: string): "numeric" | "alpha" | "free" | undefined => {
-    if (sizeType === "numeric_5" || sizeType === "numeric_3") return "numeric";
+    if (sizeType === "numeric") return "numeric";
     if (sizeType === "alpha") return "alpha";
     if (sizeType === "free") return "free";
     return undefined;
@@ -201,8 +202,9 @@ export const ProductListPage = () => {
         price: data.originalPrice,
         season: data.season || undefined,
         size_type: uiSizeTypeToApi(data.sizeType),
+        sizes: data.sizes.length > 0 ? data.sizes : undefined,
         schools: data.schools.length > 0
-          ? data.schools.map((s) => ({ school_id: Number(s.schoolId), price: s.price }))
+          ? data.schools.map((s) => ({ school_name: s.schoolName, price: s.price }))
           : undefined,
       });
       handleCloseAddModal();
@@ -230,40 +232,45 @@ export const ProductListPage = () => {
     }
   };
 
+  const apiProductToDetailData = (detail: ApiProduct, id: string): ProductDetailData => {
+    const rawSchools: ProductSchoolDetail[] = (detail.schools ?? []).map((s) => ({
+      school_name: s.school_name,
+      display_name: s.display_name,
+      price: s.price,
+      quantity: s.quantity,
+      is_selectable: s.is_selectable,
+      selectable_with: s.selectable_with,
+    }));
+    const schools: SchoolPrice[] = rawSchools.map((s, i) => ({
+      schoolId: String(i),
+      schoolName: s.school_name,
+      price: s.price,
+      year: "",
+    }));
+    return {
+      id,
+      season: detail.season ?? "",
+      category: detail.category,
+      gender: detail.gender,
+      displayName: detail.name,
+      originalPrice: detail.price,
+      isRepairable: detail.is_repair ? "yes" : "no",
+      isRepairRequired: detail.is_repair_required ? "required" : "optional",
+      sizeType: apiSizeTypeToUi(detail.size_type),
+      schools,
+      rawSchools,
+      sizes: detail.sizes ?? [],
+      createdAt: detail.created_at,
+      updatedAt: detail.updated_at,
+    };
+  };
+
   const handleOpenDetailModal = async (product: ProductRow) => {
     try {
       const detail = await getProduct(Number(product.id));
-      const rawSchools: ProductSchoolDetail[] = (detail.schools ?? []).map((s) => ({
-        school_id: s.school_id,
-        school_name: s.school_name,
-        display_name: s.display_name,
-        price: s.price,
-        quantity: s.quantity,
-      }));
-      const schools: SchoolPrice[] = rawSchools.map((s, i) => ({
-        schoolId: String(i),
-        schoolName: s.school_name,
-        price: s.price,
-        year: "",
-      }));
-      const detailData: ProductDetailData = {
-        id: product.id,
-        season: detail.season ?? "",
-        category: detail.category,
-        gender: detail.gender,
-        displayName: detail.name,
-        originalPrice: detail.price,
-        isRepairable: detail.is_repair ? "yes" : "no",
-        isRepairRequired: detail.is_repair_required ? "required" : "optional",
-        sizeType: apiSizeTypeToUi(detail.size_type),
-        schools,
-        rawSchools,
-        inventory: detail.inventory ?? [],
-        createdAt: detail.created_at,
-        updatedAt: detail.updated_at,
-      };
+      const detailData = apiProductToDetailData(detail, product.id);
       setSelectedProduct(detailData);
-      setSelectedSchools(schools);
+      setSelectedSchools(detailData.schools);
       setIsDetailModalOpen(true);
     } catch (err) {
       console.error("상품 상세 조회 실패:", err);
@@ -277,26 +284,31 @@ export const ProductListPage = () => {
     setPendingSchool(null);
   };
 
-  const handleUpdateProduct = async (data: ProductDetailData) => {
-    try {
-      await updateProduct(Number(data.id), {
-        category: data.category,
-        gender: data.gender,
-        is_repair: data.isRepairable === "yes" ? true : data.isRepairable === "no" ? false : undefined,
-        is_repair_required: data.isRepairRequired === "required" ? true : data.isRepairRequired === "optional" ? false : undefined,
-        name: data.displayName,
-        price: data.originalPrice,
-        season: data.season || undefined,
-        size_type: uiSizeTypeToApi(data.sizeType),
-        schools: data.rawSchools && data.rawSchools.length > 0
-          ? data.rawSchools.map((s) => ({ school_id: Number(s.school_id), price: s.price }))
-          : undefined,
-      });
-      handleCloseDetailModal();
-      fetchProducts(currentPage, categoryFilter, genderFilter, seasonFilter, searchTerm);
-    } catch (error) {
-      console.error("상품 수정 실패:", error);
-    }
+  const handleUpdateProduct = async (data: ProductDetailData): Promise<ProductDetailData> => {
+    const updated = await updateProduct(Number(data.id), {
+      category: data.category,
+      gender: data.gender,
+      is_repair: data.isRepairable === "yes" ? true : data.isRepairable === "no" ? false : undefined,
+      is_repair_required: data.isRepairRequired === "required" ? true : data.isRepairRequired === "optional" ? false : undefined,
+      name: data.displayName,
+      price: data.originalPrice,
+      season: data.season || undefined,
+      size_type: uiSizeTypeToApi(data.sizeType),
+      sizes: data.sizesRequest && data.sizesRequest.length > 0 ? data.sizesRequest : undefined,
+      schools: (data.rawSchools ?? []).map((s) => ({
+        school_name: s.school_name,
+        display_name: s.display_name,
+        price: s.price,
+        quantity: s.quantity,
+        is_selectable: s.is_selectable ?? null,
+        selectable_with: s.selectable_with ? s.selectable_with.map((sw) => sw.product_id) : null,
+      })),
+    });
+    const updatedDetailData = apiProductToDetailData(updated, data.id);
+    setSelectedProduct(updatedDetailData);
+    setSelectedSchools(updatedDetailData.schools);
+    fetchProducts(currentPage, categoryFilter, genderFilter, seasonFilter, searchTerm);
+    return updatedDetailData;
   };
 
   const handleOpenSchoolModal = () => {
@@ -383,14 +395,13 @@ export const ProductListPage = () => {
       width: "100px",
       align: "center",
       render: (product) => (
-        <span
-          className={
-            product.stockStatus === "정상"
-              ? "text-green-600"
-              : "text-red-500"
-          }
-        >
-          {product.stockStatus} {/* HARDCODED */}
+        <span className={
+          product.stockStatus === "정상" ? "text-green-600"
+          : product.stockStatus === "미입력" ? "text-gray-400"
+          : product.stockStatus === "부족재고 있음" ? "text-red-500"
+          : "text-gray-700"
+        }>
+          {product.stockStatus}
         </span>
       ),
     },
@@ -606,6 +617,7 @@ export const ProductListPage = () => {
       </div>
 
       <ProductAddModal
+        key={isAddModalOpen ? "open" : "closed"}
         isOpen={isAddModalOpen}
         onClose={handleCloseAddModal}
         onSubmit={handleAddProduct}

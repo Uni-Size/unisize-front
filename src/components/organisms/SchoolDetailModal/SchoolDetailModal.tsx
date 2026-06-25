@@ -3,7 +3,7 @@ import { Modal, Select, Input } from "@components/atoms";
 import { Toast } from "@components/atoms/Toast";
 import type { SchoolProductItem } from "../SchoolAddModal";
 import { GENDER_OPTIONS } from "@/constants/gender";
-import { getAllProducts, type Product } from "@/api/product";
+import { getAllProducts, updateProductSelectable, type Product } from "@/api/product";
 import { CATEGORY_OPTIONS } from "@/constants/productCategories";
 import type { SchoolListItem, SupportedYear, UniformItem } from "@/api/school";
 import { getSchoolDetail } from "@/api/school";
@@ -55,6 +55,9 @@ interface EditableYear extends SupportedYear {
 interface EditableProduct extends SchoolProductItem {
   productApiId?: string;
   uniformApiId?: number;
+  is_selectable?: boolean;
+  free_support_count?: number;
+  selectable_with?: { product_id: number; display_name: string; free_support_count?: number }[];
 }
 
 export const SchoolDetailModal = ({
@@ -78,6 +81,9 @@ export const SchoolDetailModal = ({
   const [productsCache, setProductsCache] = useState<Record<string, Product[]>>(
     {},
   );
+  const [allWinterProducts, setAllWinterProducts] = useState<Product[]>([]);
+  const [allSummerProducts, setAllSummerProducts] = useState<Product[]>([]);
+  const [selectableSaving, setSelectableSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
 
   useEffect(() => {
@@ -124,9 +130,13 @@ export const SchoolDetailModal = ({
           nameTagPrice: u.name_tag_price ?? undefined,
           nameTagAttachPrice: u.name_tag_attach_price ?? undefined,
           nameTagMinUnit: u.name_tag_min_unit ?? undefined,
+          is_selectable: u.is_selectable,
+          selectable_with: u.selectable_with,
         });
-        setWinterProducts(detail.uniforms.winter.map(toEditableProduct));
-        setSummerProducts(detail.uniforms.summer.map(toEditableProduct));
+        const genderOrder = (g: string) => g === "U" || g === "공용" ? 0 : g === "M" || g === "남" ? 1 : g === "F" || g === "여" ? 2 : 3;
+        const sortByGender = (a: EditableProduct, b: EditableProduct) => genderOrder(a.gender) - genderOrder(b.gender);
+        setWinterProducts(detail.uniforms.winter.map(toEditableProduct).sort(sortByGender));
+        setSummerProducts(detail.uniforms.summer.map(toEditableProduct).sort(sortByGender));
       })
       .catch((err) => {
         console.error("학교 상세 조회 실패:", err);
@@ -141,6 +151,10 @@ export const SchoolDetailModal = ({
   // 수정 모드 진입 시 기존 품목들의 상품 목록 미리 로드
   const handleEnterEditMode = () => {
     setIsEditMode(true);
+    if (school) {
+      getAllProducts({ school_name: school.school_name, season: "W", limit: 200 }).then((res) => setAllWinterProducts(res.products)).catch(() => {});
+      getAllProducts({ school_name: school.school_name, season: "S", limit: 200 }).then((res) => setAllSummerProducts(res.products)).catch(() => {});
+    }
     const allProducts = [
       ...winterProducts.map((p) => ({
         season: "W",
@@ -287,7 +301,7 @@ export const SchoolDetailModal = ({
   const toUniformItem = (p: EditableProduct): UniformItem => ({
     product_id: Number(p.productApiId),
     contract_price: p.contractPrice,
-    free_support_count: p.freeQuantity,
+    quantity: p.freeQuantity,
     has_name_tag: p.hasNameTag ?? false,
     name_tag_price: p.hasNameTag ? (p.nameTagPrice ?? undefined) : undefined,
     name_tag_attach_price: p.hasNameTag
@@ -297,6 +311,34 @@ export const SchoolDetailModal = ({
       ? (p.nameTagMinUnit ?? undefined)
       : undefined,
   });
+
+  const handleSelectableSave = async (product: EditableProduct) => {
+    if (!product.productApiId) return;
+    setSelectableSaving(true);
+    try {
+      await updateProductSelectable(Number(product.productApiId), school!.school_name, {
+        is_selectable: product.is_selectable ?? false,
+        selectable_with: (product.selectable_with ?? []).map((s) => s.product_id),
+      });
+      setToast({ message: "교체 가능 설정이 저장되었습니다.", variant: "success" });
+    } catch (err) {
+      setToast({ message: getApiErrorString(err, "교체 가능 설정 저장에 실패했습니다."), variant: "error" });
+    } finally {
+      setSelectableSaving(false);
+    }
+  };
+
+  const updateProductField = (
+    season: "winter" | "summer",
+    productId: string,
+    field: keyof EditableProduct,
+    value: boolean | { product_id: number; display_name: string }[],
+  ) => {
+    const updateFn = (prev: EditableProduct[]) =>
+      prev.map((p) => p.id === productId ? { ...p, [field]: value } : p);
+    if (season === "winter") setWinterProducts(updateFn);
+    else setSummerProducts(updateFn);
+  };
 
   const handleSave = async () => {
     if (!school) return;
@@ -342,6 +384,8 @@ export const SchoolDetailModal = ({
   const renderProductRow = (
     product: EditableProduct,
     season: "winter" | "summer",
+    hideQuantity = false,
+    hideSelectableUI = false,
   ) => {
     const seasonCode = season === "winter" ? "W" : "S";
     const options = getDisplayNameOptions(
@@ -354,6 +398,55 @@ export const SchoolDetailModal = ({
 
     return (
       <div key={product.id} className="flex flex-col gap-1">
+        {/* 교체 가능 설정 */}
+        {isEditMode && product.productApiId && !hideSelectableUI && (
+          <div className="flex flex-col gap-1.5 px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+            <label className="flex items-center gap-2 text-13 text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                className="w-4 h-4 accent-primary-900"
+                checked={product.is_selectable ?? false}
+                onChange={(e) => updateProductField(season, product.id, "is_selectable", e.target.checked)}
+              />
+              교체 가능 품목 설정
+            </label>
+            {product.is_selectable && (
+              <>
+                <div className="flex flex-wrap gap-1.5">
+                  {(season === "winter" ? allWinterProducts : allSummerProducts)
+                    .filter((p) => String(p.id) !== product.productApiId)
+                    .map((p) => {
+                      const selected = (product.selectable_with ?? []).some((s) => s.product_id === p.id);
+                      return (
+                        <button
+                          key={p.id}
+                          className={`px-2.5 py-1 text-13 rounded border cursor-pointer ${selected ? "bg-primary-900 text-white border-primary-900" : "bg-white text-gray-700 border-gray-200 hover:border-primary-300"}`}
+                          onClick={() => {
+                            const prev = product.selectable_with ?? [];
+                            updateProductField(season, product.id, "selectable_with", selected ? prev.filter((s) => s.product_id !== p.id) : [...prev, { product_id: p.id, display_name: p.name }]);
+                          }}
+                        >
+                          {p.name}
+                        </button>
+                      );
+                    })}
+                  {(season === "winter" ? allWinterProducts : allSummerProducts).filter((p) => String(p.id) !== product.productApiId).length === 0 && (
+                    <span className="text-13 text-gray-400">같은 시즌의 다른 품목이 없습니다</span>
+                  )}
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    className="px-3 py-1 text-13 bg-primary-900 text-white rounded border-none cursor-pointer hover:opacity-90 disabled:opacity-40"
+                    disabled={selectableSaving}
+                    onClick={() => handleSelectableSave(product)}
+                  >
+                    저장
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
         <div className="flex gap-2 items-start">
           {isEditMode && (
             <button
@@ -459,7 +552,9 @@ export const SchoolDetailModal = ({
             )}
           </div>
           <div className="w-17.5 shrink-0">
-            {isEditMode ? (
+            {hideQuantity ? (
+              <div className="w-17.5" />
+            ) : isEditMode ? (
               <Input
                 placeholder=""
                 type="number"
@@ -860,45 +955,101 @@ export const SchoolDetailModal = ({
             )}
           </div>
 
-          <div className="flex flex-col gap-2">
-            <span className="text-sm text-gray-700">동복</span>
-            {winterProducts.length > 0 && (
-              <>
-                {renderProductHeader()}
-                <div className="flex flex-col gap-2">
-                  {winterProducts.map((p) => renderProductRow(p, "winter"))}
-                </div>
-              </>
-            )}
-            {isEditMode && (
-              <button
-                className="flex items-center justify-center px-5 py-2.5 bg-primary-900 border-none rounded-lg text-15 text-bg-050 cursor-pointer mx-auto hover:opacity-90"
-                onClick={() => handleAddProduct("winter")}
-              >
-                동복 품목 추가
-              </button>
-            )}
-          </div>
+          {(["winter", "summer"] as const).map((season) => {
+            const products = season === "winter" ? winterProducts : summerProducts;
+            const label = season === "winter" ? "동복" : "하복";
+            const addLabel = season === "winter" ? "동복 품목 추가" : "하복 품목 추가";
 
-          <div className="flex flex-col gap-2">
-            <span className="text-sm text-gray-700">하복</span>
-            {summerProducts.length > 0 && (
-              <>
-                {renderProductHeader()}
+            const renderProducts = () => {
+              // 단독 품목 먼저, 교체 가능 그룹은 하단에
+              const soloProducts: EditableProduct[] = [];
+              const selectableGroups: EditableProduct[][] = [];
+              const visited = new Set<string>();
+              for (const p of products) {
+                if (visited.has(p.id)) continue;
+                if (p.is_selectable && (p.selectable_with ?? []).length > 0) {
+                  const siblingIds = new Set((p.selectable_with ?? []).map((sw) => String(sw.product_id)));
+                  const group = [p, ...products.filter((q) => siblingIds.has(q.productApiId ?? ""))];
+                  group.forEach((q) => visited.add(q.id));
+                  selectableGroups.push(group);
+                } else {
+                  visited.add(p.id);
+                  soloProducts.push(p);
+                }
+              }
+              return (
                 <div className="flex flex-col gap-2">
-                  {summerProducts.map((p) => renderProductRow(p, "summer"))}
+                  {soloProducts.map((p) => renderProductRow(p, season))}
+                  {selectableGroups.map((group) => {
+                    const totalFree = group.reduce((sum, p) => sum + (p.freeQuantity ?? 0), 0);
+                    const names = group.map((p) => p.displayName || p.category);
+                    return (
+                      <div key={group.map((p) => p.id).join("-")} className="flex flex-col gap-1.5 pt-2 mt-1 border-t border-dashed border-gray-200">
+                        <div className="flex items-center gap-2 px-1">
+                          <span className="text-12 text-gray-400">교체 가능</span>
+                          <span className="text-12 text-gray-500">{names.join(" / ")}</span>
+                          <span className="text-12 text-gray-300">·</span>
+                          {isEditMode ? (
+                            <span className="text-12 text-gray-400">품목별 무상 개수 설정</span>
+                          ) : (
+                            <span className="text-12 text-gray-500">무상 최대 <span className="font-medium text-gray-700">{totalFree}개</span> 한도 내 자유 조합</span>
+                          )}
+                        </div>
+                        {isEditMode && (
+                          <div className="flex flex-col gap-1.5 px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                            <div className="flex flex-wrap gap-1.5">
+                              {(season === "winter" ? allWinterProducts : allSummerProducts)
+                                .filter((p) => group.some((g) => g.productApiId === String(p.id)))
+                                .map((p) => (
+                                  <span key={p.id} className="px-2.5 py-1 text-13 rounded border bg-primary-900 text-white border-primary-900">
+                                    {p.name}
+                                  </span>
+                                ))}
+                            </div>
+                            <div className="flex justify-end">
+                              <button
+                                className="px-3 py-1 text-13 bg-primary-900 text-white rounded border-none cursor-pointer hover:opacity-90 disabled:opacity-40"
+                                disabled={selectableSaving}
+                                onClick={() => handleSelectableSave(group[0])}
+                              >
+                                저장
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-2">
+                          {isEditMode
+                            ? group.map((p) => renderProductRow(p, season, false, true))
+                            : group.map((p) => renderProductRow(p, season, true, true))
+                          }
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </>
-            )}
-            {isEditMode && (
-              <button
-                className="flex items-center justify-center px-5 py-2.5 bg-primary-900 border-none rounded-lg text-15 text-bg-050 cursor-pointer mx-auto hover:opacity-90"
-                onClick={() => handleAddProduct("summer")}
-              >
-                하복 품목 추가
-              </button>
-            )}
-          </div>
+              );
+            };
+
+            return (
+              <div key={season} className="flex flex-col gap-2">
+                <span className="text-sm text-gray-700">{label}</span>
+                {products.length > 0 && (
+                  <>
+                    {renderProductHeader()}
+                    {renderProducts()}
+                  </>
+                )}
+                {isEditMode && (
+                  <button
+                    className="flex items-center justify-center px-5 py-2.5 bg-primary-900 border-none rounded-lg text-15 text-bg-050 cursor-pointer mx-auto hover:opacity-90"
+                    onClick={() => handleAddProduct(season)}
+                  >
+                    {addLabel}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </Modal>

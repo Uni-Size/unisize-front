@@ -168,7 +168,7 @@ export const SchoolAddModal = ({
   const toUniformItem = (p: SchoolProductItem): UniformItem => ({
     product_id: Number(p.productApiId),
     contract_price: p.contractPrice,
-    free_support_count: p.freeQuantity,
+    quantity: p.freeQuantity,
     has_name_tag: p.hasNameTag ?? false,
     name_tag_price: p.hasNameTag ? (p.nameTagPrice ?? undefined) : undefined,
     name_tag_attach_price: p.hasNameTag ? (p.nameTagAttachPrice ?? undefined) : undefined,

@@ -7,13 +7,22 @@ import {
   REPAIRABLE_OPTIONS,
   REPAIR_REQUIRED_OPTIONS,
   SIZE_TYPE_OPTIONS,
+  NUMERIC_STEP_OPTIONS,
+  DEFAULT_SIZES,
+  sortSizes,
 } from "@/constants/product";
+import type { ProductSize } from "@/api/product";
 
 export interface SchoolPrice {
   schoolId: string;
   schoolName: string;
   price: number;
   year: string;
+}
+
+export interface SizeWithStock {
+  size: string;
+  quantity: number;
 }
 
 export interface ProductAddData {
@@ -25,6 +34,7 @@ export interface ProductAddData {
   isRepairable: string;
   isRepairRequired: string;
   sizeType: string;
+  sizes: ProductSize[];
   schools: SchoolPrice[];
 }
 
@@ -57,6 +67,52 @@ export const ProductAddModal = ({
   const [isRepairable, setIsRepairable] = useState("");
   const [isRepairRequired, setIsRepairRequired] = useState("");
   const [sizeType, setSizeType] = useState("");
+  const [numericStep, setNumericStep] = useState("");
+  const [sizesWithStock, setSizesWithStock] = useState<SizeWithStock[]>([]);
+  const [stockRows, setStockRows] = useState<{ round: string; quantities: Record<string, string> }[]>([]);
+
+  const handleSizeTypeChange = (value: string) => {
+    setSizeType(value);
+    setNumericStep("");
+    if (value !== "numeric") {
+      const defaults = DEFAULT_SIZES[value] ?? [];
+      setSizesWithStock(defaults.map((size) => ({ size, quantity: 0 })));
+    } else {
+      setSizesWithStock([]);
+    }
+  };
+
+  const handleNumericStepChange = (step: string) => {
+    setNumericStep(step);
+    const key = step === "5" ? "numeric_5" : "numeric_3";
+    const defaults = DEFAULT_SIZES[key] ?? [];
+    setSizesWithStock(defaults.map((size) => ({ size, quantity: 0 })));
+  };
+
+  const handleSizeValueChange = (index: number, value: string) => {
+    const trimmed = value.trim();
+    setSizesWithStock((prev) => {
+      const isDuplicate = prev.some((s, i) => i !== index && s.size.trim() === trimmed && trimmed !== "");
+      if (isDuplicate) return prev;
+      return prev.map((s, i) => i === index ? { ...s, size: value } : s);
+    });
+  };
+
+  const handleSortSizes = () => {
+    setSizesWithStock((prev) => {
+      const filled = prev.filter((s) => s.size.trim() !== "");
+      const empty = prev.filter((s) => s.size.trim() === "");
+      return [...sortSizes(filled.map((s) => s.size)).map((size) => ({ size, quantity: 0 })), ...empty];
+    });
+  };
+
+  const handleAddSizeRow = () => {
+    setSizesWithStock((prev) => [...prev, { size: "", quantity: 0 }]);
+  };
+
+  const handleRemoveSizeRow = (index: number) => {
+    setSizesWithStock((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = () => {
     const missing: string[] = [];
@@ -71,6 +127,16 @@ export const ProductAddModal = ({
       return;
     }
 
+    const validSizes = sizesWithStock.filter((s) => s.size.trim() !== "");
+    const sizes = stockRows.length > 0
+      ? stockRows.flatMap((row) =>
+          validSizes.map((s) => ({
+            size: s.size,
+            total_in: Number(row.quantities[s.size] ?? 0),
+            round_number: row.round !== "" ? Number(row.round) : undefined,
+          }))
+        )
+      : validSizes.map(({ size }) => ({ size }));
     onSubmit({
       season,
       category,
@@ -80,6 +146,7 @@ export const ProductAddModal = ({
       isRepairable,
       isRepairRequired,
       sizeType,
+      sizes,
       schools: selectedSchools,
     });
   };
@@ -93,6 +160,9 @@ export const ProductAddModal = ({
     setIsRepairable("");
     setIsRepairRequired("");
     setSizeType("");
+    setNumericStep("");
+    setSizesWithStock([]);
+    setStockRows([]);
     onClose();
   };
 
@@ -204,20 +274,162 @@ export const ProductAddModal = ({
           </div>
         </div>
 
-        {/* 사이즈 */}
+        {/* 사이즈 / 재고 */}
         <div className="flex gap-2 items-start">
-          <div className="flex-1 min-w-0">
+          {/* 왼쪽: 유형 + 단위 */}
+          <div className="w-1/2 flex flex-col gap-2">
             <Select
               label="사이즈"
               placeholder="사이즈 유형 선택"
               options={SIZE_TYPE_OPTIONS}
               value={sizeType}
-              onChange={setSizeType}
+              onChange={handleSizeTypeChange}
               fullWidth
             />
+            {sizeType === "numeric" && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-15 font-normal text-gray-700">단위</span>
+                <div className="flex items-center gap-4 h-12.5">
+                  {NUMERIC_STEP_OPTIONS.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-1.5 text-14 text-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="add-numeric-step"
+                        value={opt.value}
+                        checked={numericStep === opt.value}
+                        onChange={() => handleNumericStepChange(opt.value)}
+                        className="w-4 h-4 accent-primary-900"
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          <div className="flex-1 min-w-0" />
+          {/* 오른쪽: 사이즈 목록 */}
+          <div className="w-1/2 flex flex-col gap-1.5">
+            {sizesWithStock.length > 0 && (
+              <>
+                <span className="text-15 font-normal text-gray-700">치수</span>
+                <div className="flex flex-wrap gap-1.5 p-2.5 border border-gray-200 rounded-lg bg-gray-50 min-h-12.5">
+                  {/* 값 있는 항목: 정렬 후 표시 */}
+                  {sortSizes(sizesWithStock.map((s) => s.size).filter((s) => s.trim() !== "")).map((size) => {
+                    const idx = sizesWithStock.findIndex((s) => s.size === size);
+                    const s = sizesWithStock[idx];
+                    return (
+                      <div key={size} className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-200 rounded text-13 text-gray-700">
+                        <input
+                          className="w-10 border-none bg-transparent text-13 text-gray-700 text-center outline-none"
+                          value={s.size}
+                          onChange={(e) => handleSizeValueChange(idx, e.target.value)}
+                          onBlur={handleSortSizes}
+                        />
+                        <button
+                          className="ml-0.5 text-gray-300 hover:text-red-400 border-none bg-transparent cursor-pointer text-14 leading-none"
+                          onClick={() => handleRemoveSizeRow(idx)}
+                        >×</button>
+                      </div>
+                    );
+                  })}
+                  {/* 빈 값 행(새로 추가된 미입력 행) */}
+                  {sizesWithStock.map((s, idx) => s.size.trim() !== "" ? null : (
+                    <div key={`empty-${idx}`} className="flex items-center gap-1 px-2 py-1 bg-white border border-dashed border-gray-300 rounded text-13">
+                      <input
+                        className="w-10 border-none bg-transparent text-13 text-gray-700 text-center outline-none"
+                        placeholder="입력"
+                        value={s.size}
+                        onChange={(e) => handleSizeValueChange(idx, e.target.value)}
+                        onBlur={handleSortSizes}
+                      />
+                      <button
+                        className="ml-0.5 text-gray-300 hover:text-red-400 border-none bg-transparent cursor-pointer text-14 leading-none"
+                        onClick={() => handleRemoveSizeRow(idx)}
+                      >×</button>
+                    </div>
+                  ))}
+                  <button
+                    className="px-2 py-1 text-13 text-primary-900 border border-dashed border-primary-300 rounded bg-transparent cursor-pointer hover:bg-primary-50"
+                    onClick={handleAddSizeRow}
+                  >+</button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
+
+        {/* 재고 */}
+        {sizesWithStock.filter((s) => s.size.trim() !== "").length > 0 && (() => {
+          const validSizes = sortSizes(sizesWithStock.map((s) => s.size).filter((s) => s.trim() !== ""));
+          return (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-15 font-normal text-gray-700">재고</span>
+                <button
+                  className="px-3 py-1.5 text-13 text-primary-900 border border-primary-200 rounded-lg bg-transparent cursor-pointer hover:bg-primary-50"
+                  onClick={() => setStockRows((prev) => [...prev, { round: "", quantities: {} }])}
+                >
+                  + 차수 추가
+                </button>
+              </div>
+              {stockRows.length > 0 && (
+                <div className="border border-gray-200 rounded-lg overflow-x-auto">
+                  <table className="text-13 text-gray-700 border-collapse w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap border-r border-gray-200 sticky left-0 bg-gray-50 w-16">차수</th>
+                        {validSizes.map((size) => (
+                          <th key={size} className="px-3 py-2 text-center font-medium whitespace-nowrap min-w-16">{size}</th>
+                        ))}
+                        <th className="px-3 py-2 w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stockRows.map((row, rowIdx) => (
+                        <tr key={rowIdx} className="border-b border-gray-100 last:border-b-0">
+                          <td className="px-2 py-1.5 border-r border-gray-200 sticky left-0 bg-white">
+                            {row.round !== "" ? (
+                              <span className="px-1.5 text-13 text-gray-500">
+                                {row.round === "0" ? "이월" : `${row.round}차 입고`}
+                              </span>
+                            ) : (
+                              <input
+                                type="number"
+                                className="w-12 border border-gray-200 rounded px-1.5 py-1 text-13 text-gray-700 text-center outline-none focus:border-gray-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                placeholder="차"
+                                value={row.round}
+                                onChange={(e) => setStockRows((prev) => prev.map((r, i) => i === rowIdx ? { ...r, round: e.target.value } : r))}
+                              />
+                            )}
+                          </td>
+                          {validSizes.map((size) => (
+                            <td key={size} className="px-2 py-1.5 text-center">
+                              <input
+                                type="number"
+                                className="w-14 border border-gray-200 rounded px-1.5 py-1 text-13 text-gray-700 text-center outline-none focus:border-gray-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                placeholder="0"
+                                value={row.quantities[size] ?? ""}
+                                onChange={(e) => setStockRows((prev) => prev.map((r, i) => i === rowIdx ? { ...r, quantities: { ...r.quantities, [size]: e.target.value } } : r))}
+                              />
+                            </td>
+                          ))}
+                          <td className="px-2 py-1.5 text-center">
+                            <button
+                              className="px-2 py-1 bg-transparent text-gray-400 text-xs rounded border-none cursor-pointer hover:text-red-400"
+                              onClick={() => setStockRows((prev) => prev.filter((_, i) => i !== rowIdx))}
+                            >
+                              ×
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* 사용 학교 */}
         <div className="flex flex-col gap-2">

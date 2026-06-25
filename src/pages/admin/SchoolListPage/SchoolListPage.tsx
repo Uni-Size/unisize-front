@@ -24,7 +24,7 @@ import {
   updateSupportedSchool,
   deleteSupportedSchool,
   type SchoolListItem,
-  type SchoolType,
+  type SchoolTypeCode,
   type SchoolListParams,
 } from "@/api/school";
 import { getApiErrorMessage } from "@/utils/errorUtils";
@@ -44,7 +44,7 @@ interface SchoolRow {
   _raw: SchoolListItem;
 }
 
-const SCHOOL_TYPE_LABEL: Record<SchoolType, string> = {
+const SCHOOL_TYPE_LABEL: Record<SchoolTypeCode, string> = {
   초: "초등학교",
   중: "중학교",
   고: "고등학교",
@@ -65,7 +65,7 @@ const getMeasurementPeriod = (item: SchoolListItem): string => {
 const toSchoolRow = (item: SchoolListItem, index: number): SchoolRow => ({
   school_name: item.school_name,
   no: index + 1,
-  type: SCHOOL_TYPE_LABEL[item.school_type] ?? item.school_type,
+  type: SCHOOL_TYPE_LABEL[item.school_type as SchoolTypeCode] ?? item.school_type,
   supportYears:
     item.supported_years.map((sy) => `${sy.year}`).join(", ") || "-",
   isActive: item.is_active ? "O" : "-",
@@ -86,7 +86,7 @@ export const SchoolListPage = () => {
   // 필터 상태
   const [searchTerm, setSearchTerm] = useState("");
   const [searchType, setSearchType] = useState("통합검색");
-  const [typeFilter, setTypeFilter] = useState<SchoolType | "all">("all");
+  const [typeFilter, setTypeFilter] = useState<SchoolTypeCode | "all">("all");
   const [activeFilter, setActiveFilter] = useState<
     "all" | "active" | "inactive"
   >("all");

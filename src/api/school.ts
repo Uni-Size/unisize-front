@@ -21,7 +21,12 @@ export interface SupportedSchoolsData {
 }
 
 // GET /schools/list 응답 타입
-export type SchoolType = '초' | '중' | '고';
+/** 목록 조회 파라미터 및 목록 응답에서 사용하는 코드 */
+export type SchoolTypeCode = '초' | '중' | '고';
+/** 상세 응답의 school_type 전체 문자열 */
+export type SchoolTypeFull = '초등학교' | '중학교' | '고등학교';
+/** 하위 호환 별칭 */
+export type SchoolType = SchoolTypeCode;
 
 export interface SupportedYear {
   id?: number;
@@ -52,10 +57,11 @@ export interface SchoolListParams {
   year?: number;
 }
 
+/** POST /uniforms (일괄 등록) 및 PUT /schools/supported (수정) 용 */
 export interface UniformItem {
   product_id: number;
   contract_price: number;
-  free_support_count: number;
+  quantity: number;
   has_name_tag?: boolean;
   name_tag_price?: number;
   name_tag_attach_price?: number;
@@ -84,11 +90,14 @@ export interface SchoolDetailUniform {
   name_tag_price: number | null;
   name_tag_attach_price: number | null;
   name_tag_min_unit: number | null;
+  is_selectable?: boolean;
+  free_support_count: number;
+  selectable_with?: { product_id: number; display_name: string; free_support_count?: number }[];
 }
 
 export interface SchoolDetailResponse {
   school_name: string;
-  school_type: SchoolType;
+  school_type: SchoolTypeFull;
   is_permanent: boolean;
   is_active: boolean;
   has_name_tag: boolean;
