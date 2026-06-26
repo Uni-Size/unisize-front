@@ -418,11 +418,14 @@ export type OrderInventoryStatus = DeliveryStatus;
 export interface InventoryOrder {
   name: string;
   status: OrderInventoryStatus;
+  quantity?: number;
+  round_number?: number;
 }
 
 export interface StockRound {
   round_number: number;
   total_in: number;
+  orders?: InventoryOrder[];
 }
 
 export interface InventorySizeStat {

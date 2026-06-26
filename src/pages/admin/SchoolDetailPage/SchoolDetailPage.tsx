@@ -768,7 +768,6 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
 // 주문/예약 탭
 // ============================================================================
 
-const EXCLUDED_STATUSES = new Set(['receipt', 'delivered', 'shipped']);
 
 type SeasonTab = '동복' | '하복';
 
@@ -842,10 +841,15 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
       const orderedRow = ['주문', ...product.size_stats.map((s) => s.ordered)];
       const remainRow = ['잔여', ...product.size_stats.map((s) => s.remaining)];
 
-      // 사이즈별 visibleOrders 모으기
-      const sizeOrders = product.size_stats.map((s) =>
-        s.orders.filter((o) => !EXCLUDED_STATUSES.has(o.status))
-      );
+      // 사이즈별 visibleOrders 모으기 (이름 중복 제거)
+      const sizeOrders = product.size_stats.map((s) => {
+        const seenNames = new Set<string>();
+        return s.orders.filter((o) => {
+          if (seenNames.has(o.name)) return false;
+          seenNames.add(o.name);
+          return true;
+        });
+      });
       const maxRows = Math.max(0, ...sizeOrders.map((o) => o.length));
 
       const studentRows = Array.from({ length: maxRows }).map((_, rowIdx) => [
