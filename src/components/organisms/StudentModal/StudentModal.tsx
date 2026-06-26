@@ -743,14 +743,15 @@ export const StudentModal = ({
                   학교를 먼저 선택해주세요
                 </td>
               </tr>
-            ) : items.length === 0 ? (
-              <tr>
-                <td colSpan={colSpan} className="text-center p-5 text-sm text-bg-400">
-                  {mode === "add" ? "학교를 먼저 선택해주세요" : "데이터가 없습니다"}
-                </td>
-              </tr>
             ) : (
               <>
+                {items.length === 0 && !isTableEditable && (
+                  <tr>
+                    <td colSpan={colSpan} className="text-center p-5 text-sm text-bg-400">
+                      데이터가 없습니다
+                    </td>
+                  </tr>
+                )}
                 {items.map((item) => {
                   const totalQty = item.supportedQuantity + item.additionalQuantity;
                   const rowTotal = item.unitPrice != null ? item.unitPrice * totalQty : null;
@@ -909,9 +910,8 @@ export const StudentModal = ({
                   );
                 })}
                 {(isEditing || isOrderCreateMode || isOrderEditMode) && (() => {
-                  const usedIds = new Set(items.filter(i => !i.isDeleted && i.productId != null).map(i => i.productId));
                   const addable = (student?.availableUniforms ?? []).filter(
-                    (u) => (u.season === season || u.season === 'all') && !usedIds.has(u.productId),
+                    (u) => u.season === season || u.season === 'all',
                   );
                   if (addable.length === 0) return null;
                   return (
@@ -1672,37 +1672,8 @@ export const StudentModal = ({
                         </button>
                       )}
                 </div>
-                {onStatusChange && orderId && currentSnapshot && !isOrderEditMode && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">{STATUS_LABELS[currentStatus] ?? currentStatus}</span>
-                    <select
-                      className="px-2 py-1 text-xs border border-gray-200 rounded outline-none focus:border-primary-900 text-gray-700 bg-white disabled:opacity-50"
-                      defaultValue=""
-                      disabled={isChangingStatus}
-                      onChange={async (e) => {
-                        const next = e.target.value as OrderStatusValue;
-                        if (!next) return;
-                        setIsChangingStatus(true);
-                        try {
-                          await onStatusChange(orderId, next);
-                          setToast({ message: '주문 상태가 변경되었습니다.', variant: 'success' });
-                          currentSnapshot.status = next;
-                        } catch {
-                          setToast({ message: '상태 변경에 실패했습니다.', variant: 'error' });
-                        } finally {
-                          setIsChangingStatus(false);
-                          e.target.value = '';
-                        }
-                      }}
-                    >
-                      <option value="">상태 변경</option>
-                      {(Object.entries(STATUS_LABELS) as [OrderStatusValue, string][])
-                        .filter(([v]) => v !== currentStatus)
-                        .map(([v, label]) => (
-                          <option key={v} value={v}>{label}</option>
-                        ))}
-                    </select>
-                  </div>
+                {currentSnapshot && !isOrderEditMode && (
+                  <span className="text-xs text-gray-500">{STATUS_LABELS[currentStatus] ?? currentStatus}</span>
                 )}
               </div>
             );
