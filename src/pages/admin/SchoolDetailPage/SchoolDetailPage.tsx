@@ -8,7 +8,6 @@ import type {
   StudentDetailData,
   StudentFormInput,
   AvailableUniform,
-  UniformItem,
 } from "@components/organisms/StudentModal";
 import { OrderSizeTable } from "@components/organisms/OrderSizeTable";
 import { Table } from "@components/atoms/Table";

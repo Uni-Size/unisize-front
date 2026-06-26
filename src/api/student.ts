@@ -160,6 +160,7 @@ export interface RecommendedUniformItem {
   customization?: string;
   is_reserved?: boolean;
   name_tag_count?: number;
+  name_tag_name?: string;
   name_tag_attach?: boolean;
   delivery_status?: string;
 }
@@ -513,6 +514,7 @@ export interface AdminOrderItem {
   subtotal: number;
   name_tag_count: number;
   name_tag_attach: boolean;
+  name_tag_name?: string;
   customization?: string;
   delivery_status: DeliveryStatus;
   created_at: string;

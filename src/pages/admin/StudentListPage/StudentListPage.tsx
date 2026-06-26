@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import { AdminHeader } from '@components/organisms/AdminHeader';
 import { StudentModal } from '@components/organisms/StudentModal';
-import type { StudentDetailData, StudentFormInput, AvailableUniform, UniformItem } from '@components/organisms/StudentModal';
+import type { StudentDetailData, StudentFormInput, AvailableUniform } from '@components/organisms/StudentModal';
 import { Table } from '@components/atoms/Table';
 import { Input } from '@components/atoms/Input';
 import { Button } from '@components/atoms/Button';

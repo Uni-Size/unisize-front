@@ -143,7 +143,7 @@ export const MyPage = () => {
       is_reserved: u.reservation,
       customization: u.repair || undefined,
       name_tag_count: u.nameTagCount || undefined,
-      name_tag_attach: u.attachCount > 0 || undefined,
+      name_tag_attach: u.nameTagAttach || undefined,
     })),
     supply_items: form.supplies
       .filter((s) => s.quantity > 0)
@@ -382,8 +382,10 @@ export const MyPage = () => {
         onUpdateSupply={form.updateSupply}
         onAddSupplyRow={form.addSupplyRow}
         onRemoveSupplyRow={form.removeSupplyRow}
+        nameTagMinUnit={form.nameTagMinUnit}
+        nameTagName={form.nameTagName}
+        onUpdateNameTagName={form.setNameTagName}
         onUpdateNameTagOrderQuantity={form.updateNameTagOrderQuantity}
-        onUpdateNameTagAttachQuantity={form.updateNameTagAttachQuantity}
         onConfirm={handleConfirm}
       />
 

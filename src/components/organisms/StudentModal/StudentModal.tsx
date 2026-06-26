@@ -174,17 +174,6 @@ export interface StudentModalProps {
 
 const genderOptions = GENDER_OPTIONS_MF;
 
-const sizeOptions = [
-  { value: "77", label: "77" },
-  { value: "80", label: "80" },
-  { value: "85", label: "85" },
-  { value: "90", label: "90" },
-  { value: "95", label: "95" },
-  { value: "100", label: "100" },
-  { value: "105", label: "105" },
-  { value: "110", label: "110" },
-];
-
 const supplySizeOptions = [
   { value: "S", label: "S" },
   { value: "M", label: "M" },
@@ -230,19 +219,16 @@ export const StudentModal = ({
   onPaymentComplete,
   onOrderCreate,
   onOrderUpdate,
-  onStatusChange,
 }: StudentModalProps) => {
   // view 모드에서 수정 버튼 클릭 시 편집 상태
   const [isEditing, setIsEditing] = useState(false);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [isOrderCreateMode, setIsOrderCreateMode] = useState(false);
   const [isOrderEditMode, setIsOrderEditMode] = useState(false);
-  const [isChangingStatus, setIsChangingStatus] = useState(false);
   const isView = mode === "view" && !isEditing && !isOrderCreateMode && !isOrderEditMode;
   // 동복/하복 테이블은 주문 생성/수정 모드에서만 편집 가능
   const isTableEditable = isOrderCreateMode || isOrderEditMode || mode === "add";
   const isTableView = !isTableEditable;
-  const hasOrder = !!(student?.orderId || (student?.orderSnapshots && student.orderSnapshots.length > 0));
   const [toast, setToast] = useState<{ message: string; variant: ToastVariant } | null>(null);
 
   // 학교 검색 state
@@ -1606,7 +1592,6 @@ export const StudentModal = ({
         {!isEditing && <div className="flex flex-col gap-1">
           {mode === "view" && (() => {
             const currentSnapshot = student?.orderSnapshots?.[activeDateIndex];
-            const orderId = activeOrderId ?? student?.orderId;
             const STATUS_LABELS: Record<OrderStatusValue, string> = {
               pending:   '대기중',
               confirmed: '확인됨',
@@ -1616,7 +1601,7 @@ export const StudentModal = ({
               complete:  '완료',
               cancelled: '취소됨',
             };
-            const currentStatus = currentSnapshot?.status ?? '';
+            const currentStatus = (currentSnapshot?.status ?? '') as OrderStatusValue | '';
             return (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1673,7 +1658,7 @@ export const StudentModal = ({
                       )}
                 </div>
                 {currentSnapshot && !isOrderEditMode && (
-                  <span className="text-xs text-gray-500">{STATUS_LABELS[currentStatus] ?? currentStatus}</span>
+                  <span className="text-xs text-gray-500">{(currentStatus && STATUS_LABELS[currentStatus]) || currentStatus}</span>
                 )}
               </div>
             );
