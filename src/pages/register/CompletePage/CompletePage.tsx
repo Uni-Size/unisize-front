@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStudentResponseStore } from '@/stores/useStudentResponseStore';
+import { type RecommendedSizeItem } from '@/api/student';
 
 const itemData = {
   동복: [
@@ -38,13 +39,30 @@ interface UniformData {
   gender: 'male' | 'female' | 'unisex';
 }
 
+const toUniformData = (items: RecommendedSizeItem[] | undefined): UniformData[] =>
+  items?.map((item) => ({
+    item: item.product_name,
+    size: item.recommended_size,
+    count: item.supported_quantity,
+    selectableWith: item.selectable_with,
+    gender: item.gender,
+  })) ?? [];
+
 export const CompletePage = () => {
-  const { studentData } = useStudentResponseStore();
+  const { studentData, checkinData } = useStudentResponseStore();
   const [activeTab, setActiveTab] = useState<SeasonType>('동복');
 
   const tabs: SeasonType[] = ['동복', '하복'];
 
-  if (!studentData) {
+  const name = studentData?.name ?? checkinData?.name ?? '';
+  const schoolName = studentData?.school_name ?? checkinData?.school_name ?? '';
+
+  const recommendedUniforms = studentData?.recommended_uniforms ?? checkinData?.recommended_uniforms;
+  const hasRecommendations =
+    (recommendedUniforms?.winter?.length ?? 0) > 0 ||
+    (recommendedUniforms?.summer?.length ?? 0) > 0;
+
+  if (!studentData && !checkinData) {
     return (
       <section className="max-w-[24rem] mx-auto p-4 min-h-screen">
         <div className="flex justify-center items-center min-h-[50vh] text-slate-600">
@@ -55,22 +73,8 @@ export const CompletePage = () => {
   }
 
   const data: Record<SeasonType, UniformData[]> = {
-    동복:
-      studentData.recommended_uniforms?.winter?.map((item) => ({
-        item: item.product_name,
-        size: item.recommended_size,
-        count: item.supported_quantity,
-        selectableWith: item.selectable_with,
-        gender: item.gender,
-      })) || [],
-    하복:
-      studentData.recommended_uniforms?.summer?.map((item) => ({
-        item: item.product_name,
-        size: item.recommended_size,
-        count: item.supported_quantity,
-        selectableWith: item.selectable_with,
-        gender: item.gender,
-      })) || [],
+    동복: toUniformData(recommendedUniforms?.winter),
+    하복: toUniformData(recommendedUniforms?.summer),
   };
 
   const TableView = ({
@@ -117,43 +121,47 @@ export const CompletePage = () => {
       <div className="text-center my-6">
         <p className="text-base font-semibold text-gray-700">잠시만 기다려주세요.</p>
         <h2 className="text-2xl font-bold my-2 text-bg-900">
-          {studentData.school_name} {studentData.name}
+          {schoolName} {name}
         </h2>
         <p className="text-lg font-medium text-gray-700">
           교복 시착을 준비해드리겠습니다.
         </p>
       </div>
 
-      <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium bg-none border-none cursor-pointer transition-all duration-200 ease-in-out ${
-              activeTab === tab
-                ? 'bg-white text-primary-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-800'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      {hasRecommendations && (
+        <>
+          <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium bg-none border-none cursor-pointer transition-all duration-200 ease-in-out ${
+                  activeTab === tab
+                    ? 'bg-white text-primary-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
 
-      <div className="relative overflow-hidden w-full">
-        <div
-          className="flex transition-transform duration-300 ease-out"
-          style={{
-            transform: `translateX(-${tabs.indexOf(activeTab) * 100}%)`,
-          }}
-        >
-          {tabs.map((season) => (
-            <div key={season} className="w-full shrink-0">
-              <TableView season={season} tableData={data[season]} />
+          <div className="relative overflow-hidden w-full">
+            <div
+              className="flex transition-transform duration-300 ease-out"
+              style={{
+                transform: `translateX(-${tabs.indexOf(activeTab) * 100}%)`,
+              }}
+            >
+              {tabs.map((season) => (
+                <div key={season} className="w-full shrink-0">
+                  <TableView season={season} tableData={data[season]} />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+        </>
+      )}
 
       <article className="mt-8">
         <h3 className="text-base font-semibold text-slate-800 mb-4">

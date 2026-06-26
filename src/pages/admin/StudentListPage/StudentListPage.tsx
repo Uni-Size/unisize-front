@@ -129,6 +129,7 @@ export const StudentListPage = () => {
 
   const parseAdminOrderItems = (
     orderItems: import('@/api/student').AdminOrderItem[],
+    nameTagService?: import('@/api/student').AdminStudentOrder['name_tag_service'],
   ): {
     winterUniforms: import('@components/organisms/StudentModal').UniformItem[];
     summerUniforms: import('@components/organisms/StudentModal').UniformItem[];
@@ -150,17 +151,20 @@ export const StudentListPage = () => {
         nameUpper.includes('하복') || nameUpper.includes('SUMMER') ? 'S' : 'A';
       const uniform: import('@components/organisms/StudentModal').UniformItem = {
         id: String(item.id),
+        productId: item.product_id,
         name: productName,
         size: item.selected_size,
         supportedQuantity: item.supported_quantity,
         additionalQuantity: item.purchase_quantity - item.supported_quantity,
         unitPrice: item.unit_price,
-        repair: '',
+        repair: item.customization ?? '',
         reservation: item.delivery_status === 'reserved',
         received: item.delivery_status === 'receipt',
         nameTag: item.name_tag_count || null,
         nameTagName: item.name_tag_name || undefined,
         attachCount: item.name_tag_attach ? 1 : 0,
+        nameTagUnitPrice: nameTagService?.unit_price ?? undefined,
+        nameTagAttachPrice: nameTagService?.attach_price ?? undefined,
         itemStatus: item.delivery_status,
         seasonCode,
       };
@@ -177,7 +181,7 @@ export const StudentListPage = () => {
     const adminOrders = detail.orders ?? [];
     const orderSnapshots: import('@components/organisms/StudentModal').OrderSnapshot[] = adminOrders.map(
       (order: import('@/api/student').AdminStudentOrder) => {
-        const { winterUniforms, summerUniforms, allUniforms } = parseAdminOrderItems(order.order_items ?? []);
+        const { winterUniforms, summerUniforms, allUniforms } = parseAdminOrderItems(order.order_items ?? [], order.name_tag_service);
         return {
           orderId: order.id,
           date: order.order_date ?? order.created_at,
@@ -188,6 +192,8 @@ export const StudentListPage = () => {
           supplies: [],
           history: [],
           modifiedDate: formatDate(order.updated_at),
+          name_tag_service: order.name_tag_service,
+          nameTagName: order.name_tag_name,
         };
       },
     );
@@ -197,10 +203,16 @@ export const StudentListPage = () => {
     const historyData = firstSnapshot
       ? await getOrderHistory(firstSnapshot.orderId).catch(() => null)
       : null;
-    const firstHistory = historyData?.histories.map((h) => ({
-      date: h.changed_at,
-      content: h.description,
-    })) ?? [];
+    const firstHistory = historyData?.histories.map((h) => {
+      const who = h.changedBy?.employeeName ?? '알 수 없음';
+      let content = h.reason ?? '';
+      if (!content) {
+        const actionMap: Record<string, string> = { created: '생성', updated: '수정', deleted: '삭제', cancelled: '취소', confirmed: '확정' };
+        content = actionMap[h.action] ?? h.action;
+      }
+      if (h.fieldName) content += ` (${h.fieldName}${h.oldValue != null ? `: ${h.oldValue} → ${h.newValue}` : ''})`;
+      return { date: h.createdAt, content: `[${who}] ${content}` };
+    }) ?? [];
 
     if (firstSnapshot) {
       firstSnapshot.history = firstHistory;
@@ -321,14 +333,32 @@ export const StudentListPage = () => {
       orderSnapshots,
       availableUniforms,
       supportAllowances: detail.support_allowances?.map((a) => ({ product_id: a.product_id, remaining: a.remaining })),
-      nameTagMinUnit,
-      nameTagPrice,
-      nameTagAttachPrice,
+      nameTagMinUnit: detail.name_tag_service?.min_unit ?? nameTagMinUnit,
+      nameTagPrice: detail.name_tag_service?.unit_price ?? nameTagPrice,
+      nameTagAttachPrice: detail.name_tag_service?.attach_price ?? nameTagAttachPrice,
+      nameTagName: firstSnapshot?.nameTagName ?? detail.name,
       winterUniforms: firstSnapshot?.winterUniforms ?? recWinter,
       summerUniforms: firstSnapshot?.summerUniforms ?? recSummer,
       allUniforms: firstSnapshot?.allUniforms ?? recAll,
       supplies: [],
-      nameTag: { orderQuantity: 0, attachQuantity: 0 },
+      nameTag: (() => {
+        if (!firstSnapshot) return { orderQuantity: 0, attachQuantity: 0 };
+        const allItems = [
+          ...firstSnapshot.winterUniforms,
+          ...firstSnapshot.summerUniforms,
+          ...(firstSnapshot.allUniforms ?? []),
+        ];
+        const orderQuantityFromItems = allItems.reduce((s, i) => s + (i.nameTag ?? 0), 0);
+        const orderQuantity = orderQuantityFromItems > 0 ? orderQuantityFromItems : (detail.total_name_tag_count ?? 0);
+        const attachQuantity = allItems.reduce((s, i) => s + (i.attachCount ?? 0), 0);
+        return {
+          orderQuantity,
+          attachQuantity,
+          unitPrice: detail.name_tag_service?.unit_price,
+          attachPrice: detail.name_tag_service?.attach_price,
+        };
+      })(),
+      totalNameTagCount: detail.total_name_tag_count,
       history: firstHistory,
       isManuallySupported: detail.is_manually_supported,
     };
@@ -350,7 +380,7 @@ export const StudentListPage = () => {
         ...data.winterUniforms.filter((u) => !u.isDeleted).map((u) => ({
           item_id: String(u.productId),
           name: u.name,
-          season: '동복',
+          season: u.seasonCode ?? 'W',
           selected_size: Number(u.size),
           purchase_count: u.supportedQuantity + u.additionalQuantity,
           customization: u.repair,
@@ -358,7 +388,15 @@ export const StudentListPage = () => {
         ...data.summerUniforms.filter((u) => !u.isDeleted).map((u) => ({
           item_id: String(u.productId),
           name: u.name,
-          season: '하복',
+          season: u.seasonCode ?? 'S',
+          selected_size: Number(u.size),
+          purchase_count: u.supportedQuantity + u.additionalQuantity,
+          customization: u.repair,
+        })),
+        ...(data.allUniforms ?? []).filter((u) => !u.isDeleted).map((u) => ({
+          item_id: String(u.productId),
+          name: u.name,
+          season: u.seasonCode ?? 'A',
           selected_size: Number(u.size),
           purchase_count: u.supportedQuantity + u.additionalQuantity,
           customization: u.repair,
@@ -395,10 +433,10 @@ export const StudentListPage = () => {
     // 원본 스냅샷 (변경 감지용)
     const origSnapshot = selectedStudent?.orderSnapshots?.find(s => s.orderId === orderId);
 
-    const mapUniform = (u: typeof data.winterUniforms[0], season: string): AdminOrderUniformItem => ({
-      item_id: u.productId!,
+    const mapUniform = (u: typeof data.winterUniforms[0], fallbackSeason: string): AdminOrderUniformItem => ({
+      item_id: u.productId ?? Number(u.id),
       name: u.name,
-      season,
+      season: u.seasonCode ?? fallbackSeason,
       selected_size: u.size,
       purchase_count: u.supportedQuantity + u.additionalQuantity,
       delivery_status: u.itemStatus as AdminOrderUniformItem['delivery_status'] || undefined,
@@ -417,9 +455,9 @@ export const StudentListPage = () => {
 
     const payload: import('@/api/order').UpdateAdminOrderRequest = {
       uniform_items: [
-        ...data.winterUniforms.filter((u) => !u.isDeleted && u.productId != null).map((u) => mapUniform(u, '동복')),
-        ...data.summerUniforms.filter((u) => !u.isDeleted && u.productId != null).map((u) => mapUniform(u, '하복')),
-        ...(data.allUniforms ?? []).filter((u) => !u.isDeleted && u.productId != null).map((u) => mapUniform(u, '사계절')),
+        ...data.winterUniforms.filter((u) => !u.isDeleted).map((u) => mapUniform(u, 'W')),
+        ...data.summerUniforms.filter((u) => !u.isDeleted).map((u) => mapUniform(u, 'S')),
+        ...(data.allUniforms ?? []).filter((u) => !u.isDeleted).map((u) => mapUniform(u, 'A')),
       ],
       ...(suppliesChanged ? {
         supply_items: data.supplies.filter((s) => s.quantity > 0).map((s) => ({
@@ -430,6 +468,7 @@ export const StudentListPage = () => {
         })),
       } : {}),
       ...(dateChanged ? { order_date: data.orderDate } : {}),
+      name_tag_name: data.nameTagName || undefined,
     };
 
     await updateAdminOrderNew(orderId, payload);
@@ -470,6 +509,7 @@ export const StudentListPage = () => {
       uniform_items: uniformItems,
       supply_items: supplyItems,
       notes: '',
+      name_tag_name: data.nameTagName || undefined,
     });
     const refreshed = await fetchStudentDetail(studentId);
     setSelectedStudent(refreshed);

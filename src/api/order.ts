@@ -304,6 +304,7 @@ export interface UpdateAdminOrderRequest {
   supply_items?: AdminOrderSupplyItem[];
   notes?: string;
   order_date?: string;
+  name_tag_name?: string;
 }
 
 /**

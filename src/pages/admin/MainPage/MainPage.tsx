@@ -86,34 +86,44 @@ export const MainPage = () => {
     fetchOrders(currentPage);
   }, [currentPage, fetchOrders]);
 
-  const parseOrderItems = (orderItems: AdminOrderItem[]) => {
+  const parseAdminOrderItems = (orderItems: AdminOrderItem[], nameTagService?: AdminStudentOrder['name_tag_service']) => {
     const winterUniforms: import("@components/organisms/StudentModal").UniformItem[] = [];
     const summerUniforms: import("@components/organisms/StudentModal").UniformItem[] = [];
+    const allUniforms: import("@components/organisms/StudentModal").UniformItem[] = [];
     for (const item of orderItems) {
       const productName = item.product?.name ?? "";
       const nameUpper = productName.toUpperCase();
-      const isWinter = nameUpper.includes("동복") || nameUpper.includes("WINTER");
+      const rawSeason = item.product?.season?.toUpperCase();
+      const seasonCode: "W" | "S" | "A" =
+        rawSeason === "W" ? "W" :
+        rawSeason === "S" ? "S" :
+        rawSeason === "A" ? "A" :
+        nameUpper.includes("동복") || nameUpper.includes("WINTER") ? "W" :
+        nameUpper.includes("하복") || nameUpper.includes("SUMMER") ? "S" : "A";
       const uniform: import("@components/organisms/StudentModal").UniformItem = {
         id: String(item.id),
+        productId: item.product_id,
         name: productName,
         size: item.selected_size,
         supportedQuantity: item.supported_quantity,
         additionalQuantity: item.purchase_quantity - item.supported_quantity,
         unitPrice: item.unit_price,
-        repair: "",
-        reservation: false,
-        received: false,
+        repair: item.customization ?? "",
+        reservation: item.delivery_status === "reserved",
+        received: item.delivery_status === "receipt",
         nameTag: item.name_tag_count || null,
         nameTagName: item.name_tag_name || undefined,
         attachCount: item.name_tag_attach ? 1 : 0,
+        nameTagUnitPrice: nameTagService?.unit_price ?? undefined,
+        nameTagAttachPrice: nameTagService?.attach_price ?? undefined,
+        itemStatus: item.delivery_status,
+        seasonCode,
       };
-      if (isWinter) {
-        winterUniforms.push(uniform);
-      } else {
-        summerUniforms.push(uniform);
-      }
+      if (seasonCode === "W") winterUniforms.push(uniform);
+      else if (seasonCode === "S") summerUniforms.push(uniform);
+      else allUniforms.push(uniform);
     }
-    return { winterUniforms, summerUniforms };
+    return { winterUniforms, summerUniforms, allUniforms };
   };
 
   const handleDetailClick = async (e: React.MouseEvent, row: PendingRow) => {
@@ -125,16 +135,19 @@ export const MainPage = () => {
 
       const orderSnapshots: import("@components/organisms/StudentModal").OrderSnapshot[] =
         adminOrders.map((order: AdminStudentOrder) => {
-          const { winterUniforms, summerUniforms } = parseOrderItems(order.order_items ?? []);
+          const { winterUniforms, summerUniforms, allUniforms } = parseAdminOrderItems(order.order_items ?? [], order.name_tag_service);
           return {
             orderId: order.id,
-            date: order.order_date,
+            date: order.order_date ?? order.created_at,
             status: order.order_status,
             winterUniforms,
             summerUniforms,
+            allUniforms,
             supplies: [],
             history: [],
             modifiedDate: formatDate(order.updated_at),
+            name_tag_service: order.name_tag_service,
+            nameTagName: order.name_tag_name,
           };
         });
 
@@ -143,14 +156,29 @@ export const MainPage = () => {
       const historyData = targetSnapshot
         ? await getOrderHistory(targetSnapshot.orderId).catch(() => null)
         : null;
-      const history = historyData?.histories.map((h) => ({
-        date: formatDateTime(h.changed_at),
-        content: h.description,
-      })) ?? [];
+      const history = historyData?.histories.map((h) => {
+        const who = h.changedBy?.employeeName ?? '알 수 없음';
+        let content = h.reason ?? '';
+        if (!content) {
+          const actionMap: Record<string, string> = { created: '생성', updated: '수정', deleted: '삭제', cancelled: '취소', confirmed: '확정' };
+          content = actionMap[h.action] ?? h.action;
+        }
+        if (h.fieldName) content += ` (${h.fieldName}${h.oldValue != null ? `: ${h.oldValue} → ${h.newValue}` : ''})`;
+        return { date: h.createdAt, content: `[${who}] ${content}` };
+      }) ?? [];
 
       if (targetSnapshot) {
         targetSnapshot.history = history;
       }
+
+      const allOrderItems = (targetSnapshot
+        ? [...(targetSnapshot.winterUniforms ?? []), ...(targetSnapshot.summerUniforms ?? []), ...(targetSnapshot.allUniforms ?? [])]
+        : []);
+      const nameTagOrderQtyFromItems = allOrderItems.reduce((sum, i) => sum + (i.nameTag ?? 0), 0);
+      const nameTagOrderQty = nameTagOrderQtyFromItems > 0 ? nameTagOrderQtyFromItems : (detail.total_name_tag_count ?? 0);
+      const nameTagAttachQty = allOrderItems.reduce((sum, i) => sum + (i.attachCount ?? 0), 0);
+      const nameTagUnitPrice = detail.name_tag_service?.unit_price ?? undefined;
+      const nameTagAttachPrice = detail.name_tag_service?.attach_price ?? undefined;
 
       const detailData: StudentDetailData = {
         id: String(detail.id),
@@ -174,10 +202,21 @@ export const MainPage = () => {
         registeredDate: formatDate(detail.created_at) || undefined,
         modifiedDate: targetSnapshot?.modifiedDate,
         orderSnapshots,
+        nameTagMinUnit: detail.name_tag_service?.min_unit ?? undefined,
+        nameTagPrice: nameTagUnitPrice,
+        nameTagAttachPrice: nameTagAttachPrice,
         winterUniforms: targetSnapshot?.winterUniforms ?? [],
         summerUniforms: targetSnapshot?.summerUniforms ?? [],
+        allUniforms: targetSnapshot?.allUniforms ?? [],
         supplies: [],
-        nameTag: { orderQuantity: 0, attachQuantity: 0 },
+        nameTag: {
+          orderQuantity: nameTagOrderQty,
+          attachQuantity: nameTagAttachQty,
+          unitPrice: nameTagUnitPrice,
+          attachPrice: nameTagAttachPrice,
+        },
+        nameTagName: targetSnapshot?.nameTagName ?? detail.name,
+        totalNameTagCount: detail.total_name_tag_count,
         history,
         isManuallySupported: detail.is_manually_supported,
       };

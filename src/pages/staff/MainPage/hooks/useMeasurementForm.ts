@@ -15,10 +15,10 @@ export interface MeasurementUniformItem {
   repair: string;
   reservation: boolean;
   received: boolean;
-  hasNameTag: boolean;
   nameTagCount: number;
-  attachCount: number;
+  nameTagAttach: boolean;
   isRequired: boolean; // 지원수량 > 0이면 삭제 불가
+  isCustomizationRequired: boolean;
 }
 
 export interface MeasurementSupplyItem {
@@ -57,10 +57,10 @@ const toUniformItem = (
   repair: item.customization ?? '',
   reservation: item.is_reserved ?? false,
   received: !(item.is_reserved ?? false),
-  hasNameTag: item.has_name_tag ?? true,
-  nameTagCount: (item.has_name_tag ?? true) ? (item.name_tag_count ?? 0) : 0,
-  attachCount: (item.has_name_tag ?? true) && item.name_tag_attach ? (item.name_tag_count ?? 0) : 0,
+  nameTagCount: item.name_tag_count ?? 0,
+  nameTagAttach: item.name_tag_attach ?? false,
   isRequired: item.supported_quantity > 0,
+  isCustomizationRequired: item.is_customization_required ?? false,
 });
 
 const toSupplyItem = (item: SupplyItemResponse): MeasurementSupplyItem => ({
@@ -74,26 +74,47 @@ const toSupplyItem = (item: SupplyItemResponse): MeasurementSupplyItem => ({
   availableSizes: item.available_sizes ?? [],
 });
 
+const calcNameTagSummary = (
+  all: MeasurementUniformItem[],
+  minUnit: number,
+  prevOrderQuantity: number,
+): MeasurementNameTag => {
+  const nameTagTotal = all.reduce((sum, i) => sum + i.nameTagCount, 0);
+  const attachTotal = all.reduce((sum, i) => (i.nameTagAttach ? sum + i.nameTagCount : sum), 0);
+  const minCeiled = nameTagTotal === 0 ? 0 : Math.ceil(nameTagTotal / minUnit) * minUnit;
+  return {
+    orderQuantity: Math.max(prevOrderQuantity, minCeiled),
+    attachQuantity: attachTotal,
+  };
+};
+
 export function useMeasurementForm() {
   const [winterUniforms, setWinterUniforms] = useState<MeasurementUniformItem[]>([]);
   const [summerUniforms, setSummerUniforms] = useState<MeasurementUniformItem[]>([]);
   const [supplies, setSupplies] = useState<MeasurementSupplyItem[]>([]);
   const [nameTag, setNameTag] = useState<MeasurementNameTag>({ orderQuantity: 0, attachQuantity: 0 });
+  const [nameTagMinUnit, setNameTagMinUnit] = useState(8);
+  const [nameTagName, setNameTagName] = useState('');
 
   const initFromResponse = useCallback((data: StartMeasurementResponse) => {
     const winter = (data.recommended_uniforms?.winter ?? []).map((i) => toUniformItem(i, 'winter'));
     const summer = (data.recommended_uniforms?.summer ?? []).map((i) => toUniformItem(i, 'summer'));
+    const minUnit = data.name_tag_service?.min_unit ?? 8;
     setWinterUniforms(winter);
     setSummerUniforms(summer);
     setSupplies((data.supply_items ?? []).map(toSupplyItem));
-    setNameTag({ orderQuantity: 0, attachQuantity: 0 });
+    setNameTagMinUnit(minUnit);
+    setNameTag(calcNameTagSummary([...winter, ...summer], minUnit, 0));
+    setNameTagName(data.name_tag_name ?? data.student_name ?? '');
   }, []);
 
   const reset = useCallback(() => {
     setWinterUniforms([]);
     setSummerUniforms([]);
     setSupplies([]);
+    setNameTagMinUnit(8);
     setNameTag({ orderQuantity: 0, attachQuantity: 0 });
+    setNameTagName('');
   }, []);
 
   const updateUniform = useCallback(
@@ -115,18 +136,11 @@ export function useMeasurementForm() {
         setSummerUniforms(nextSummer);
       }
 
-      if (patch.nameTagCount !== undefined || patch.attachCount !== undefined) {
-        const all = [...nextWinter, ...nextSummer];
-        const nameTagTotal = all.reduce((sum, i) => sum + i.nameTagCount, 0);
-        const attachTotal = all.reduce((sum, i) => sum + i.attachCount, 0);
-        const ceiled = nameTagTotal === 0 ? 0 : Math.ceil(nameTagTotal / 8) * 8;
-        setNameTag((prev) => ({
-          orderQuantity: Math.max(prev.orderQuantity, ceiled),
-          attachQuantity: attachTotal,
-        }));
+      if (patch.nameTagCount !== undefined || patch.nameTagAttach !== undefined) {
+        setNameTag((prev) => calcNameTagSummary([...nextWinter, ...nextSummer], nameTagMinUnit, prev.orderQuantity));
       }
     },
-    [winterUniforms, summerUniforms],
+    [winterUniforms, summerUniforms, nameTagMinUnit],
   );
 
   const addUniformFromProduct = useCallback(
@@ -145,10 +159,10 @@ export function useMeasurementForm() {
         repair: '',
         reservation: false,
         received: true,
-        hasNameTag: true,
         nameTagCount: 0,
-        attachCount: 0,
+        nameTagAttach: false,
         isRequired: false,
+        isCustomizationRequired: false,
       };
       if (season === 'winter') {
         setWinterUniforms((prev) => [...prev, newRow]);
@@ -171,7 +185,7 @@ export function useMeasurementForm() {
         reservation: false,
         received: true,
         nameTagCount: 0,
-        attachCount: 0,
+        nameTagAttach: false,
         isRequired: false,
       };
       if (season === 'winter') {
@@ -232,26 +246,28 @@ export function useMeasurementForm() {
     setSupplies((prev) => prev.filter((i) => i.rowId !== rowId));
   }, []);
 
+  // 주문수량은 min_unit 단위로 증감, 품목 행 합계 이하로는 줄일 수 없음
   const updateNameTagOrderQuantity = useCallback(
-    (value: number) => {
+    (delta: number) => {
       const all = [...winterUniforms, ...summerUniforms];
       const nameTagTotal = all.reduce((sum, i) => sum + i.nameTagCount, 0);
-      const minCeiled = nameTagTotal === 0 ? 0 : Math.ceil(nameTagTotal / 8) * 8;
-      const newVal = value === 0 ? 0 : Math.ceil(value / 8) * 8;
-      setNameTag((prev) => ({ ...prev, orderQuantity: Math.max(newVal, minCeiled) }));
+      const minCeiled = nameTagTotal === 0 ? 0 : Math.ceil(nameTagTotal / nameTagMinUnit) * nameTagMinUnit;
+      setNameTag((prev) => {
+        const next = prev.orderQuantity + delta * nameTagMinUnit;
+        return { ...prev, orderQuantity: Math.max(next, minCeiled) };
+      });
     },
-    [winterUniforms, summerUniforms],
+    [winterUniforms, summerUniforms, nameTagMinUnit],
   );
-
-  const updateNameTagAttachQuantity = useCallback((value: number) => {
-    setNameTag((prev) => ({ ...prev, attachQuantity: value }));
-  }, []);
 
   return {
     winterUniforms,
     summerUniforms,
     supplies,
     nameTag,
+    nameTagMinUnit,
+    nameTagName,
+    setNameTagName,
     initFromResponse,
     reset,
     updateUniform,
@@ -262,6 +278,5 @@ export function useMeasurementForm() {
     addSupplyRow,
     removeSupplyRow,
     updateNameTagOrderQuantity,
-    updateNameTagAttachQuantity,
   };
 }

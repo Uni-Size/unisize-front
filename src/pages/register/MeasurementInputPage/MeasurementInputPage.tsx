@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStudentFormStore } from '@/stores/useStudentFormStore';
 import { useStudentResponseStore } from '@/stores/useStudentResponseStore';
-import { addStudent, startMeasurement } from '@/api/student';
+import { addStudent, updateMeasurement } from '@/api/student';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 
@@ -23,14 +23,13 @@ export const MeasurementInputPage = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (fromExisting && checkinData?.body_measurements) {
-      const m = checkinData.body_measurements;
-      if (m.height) setBodyMeasurements('height', m.height);
-      if (m.weight) setBodyMeasurements('weight', m.weight);
-      if (m.shoulder) setBodyMeasurements('shoulder', m.shoulder);
-      if (m.waist) setBodyMeasurements('waist', m.waist);
-    }
-  }, [checkinData]);
+    if (!fromExisting || !checkinData?.body_measurements) return;
+    const m = checkinData.body_measurements;
+    if (m.height) setBodyMeasurements('height', m.height);
+    if (m.weight) setBodyMeasurements('weight', m.weight);
+    if (m.shoulder) setBodyMeasurements('shoulder', m.shoulder);
+    if (m.waist) setBodyMeasurements('waist', m.waist);
+  }, []);
 
   const isFormValid =
     formData.body.height > 0 &&
@@ -49,8 +48,15 @@ export const MeasurementInputPage = () => {
     setError('');
 
     try {
-      if (checkinData) {
-        await startMeasurement(checkinData.id);
+      if (fromExisting && checkinData) {
+        if (checkinData.measurement_id) {
+          await updateMeasurement(checkinData.measurement_id, {
+            height: formData.body.height,
+            weight: formData.body.weight,
+            shoulder_width: formData.body.shoulder,
+            waist: formData.body.waist,
+          });
+        }
         resetFormData();
         navigate('/register/complete');
       } else {

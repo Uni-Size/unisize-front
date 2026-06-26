@@ -159,12 +159,7 @@ export interface RecommendedUniformItem {
   is_customization_required?: boolean;
   customization?: string;
   is_reserved?: boolean;
-  has_name_tag?: boolean;
-  name_tag_price?: number | null;
-  name_tag_attach_price?: number | null;
-  name_tag_min_unit?: number | null;
   name_tag_count?: number;
-  name_tag_name?: string;
   name_tag_attach?: boolean;
   delivery_status?: string;
 }
@@ -187,6 +182,13 @@ export interface StartMeasurementResponse {
   to_school: string;
   parent_phone: string;
   school_deadline: string;
+  name_tag_service?: {
+    available: boolean;
+    unit_price: number;
+    attach_price: number;
+    min_unit: number;
+  };
+  name_tag_name?: string;
   body_measurements: {
     height: number;
     weight: number;
@@ -237,7 +239,9 @@ export interface StudentMeasurementData {
 // ============================================================================
 
 export interface CompleteMeasurementRequest {
-  notes: string;
+  uniform_items: MeasurementOrderItem[];
+  supply_items: SupplyOrderItem[];
+  notes?: string;
   signature: string;
 }
 
@@ -250,7 +254,6 @@ export interface MeasurementOrderItem {
   is_reserved?: boolean;
   customization?: string;
   name_tag_count?: number;
-  name_tag_name?: string;
   name_tag_attach?: boolean;
 }
 
@@ -270,6 +273,7 @@ export interface MeasurementOrderRequest {
   uniform_items: MeasurementOrderItem[];
   supply_items: SupplyOrderItem[];
   notes?: string;
+  name_tag_name?: string;
 }
 
 // ============================================================================
@@ -313,6 +317,7 @@ export async function addStudent(
 
 export interface CheckinResponse {
   id: number;
+  measurement_id: number | null;
   name: string;
   birth_date: string | null;
   gender: string;
@@ -323,6 +328,7 @@ export interface CheckinResponse {
   admission_year: number;
   admission_grade: number;
   admission_school: string;
+  school_name: string;
   checked_in_at: string;
   is_eligible_for_public_purchase: boolean;
   is_manually_supported: boolean;
@@ -334,8 +340,23 @@ export interface CheckinResponse {
     shoulder: number | null;
     waist: number | null;
   } | null;
+  recommended_uniforms?: {
+    winter?: RecommendedSizeItem[];
+    summer?: RecommendedSizeItem[];
+  };
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * 신체 측정값 수정
+ * PUT /api/v1/measurements/:id
+ */
+export async function updateMeasurement(
+  measurementId: number,
+  body: { height: number; weight: number; shoulder_width: number; waist: number },
+): Promise<void> {
+  await apiClient.put(`/api/v1/measurements/${measurementId}`, body);
 }
 
 /**
@@ -491,10 +512,8 @@ export interface AdminOrderItem {
   unit_price: number;
   subtotal: number;
   name_tag_count: number;
-  name_tag_name: string;
   name_tag_attach: boolean;
-  name_tag_unit_price?: number;
-  name_tag_attach_price?: number;
+  customization?: string;
   delivery_status: DeliveryStatus;
   created_at: string;
 }
@@ -520,6 +539,13 @@ export interface AdminStudentOrder {
   delivery_date: string | null;
   notes: string;
   signature?: string;
+  name_tag_service?: {
+    available: boolean;
+    unit_price: number;
+    attach_price: number;
+    min_unit: number;
+  };
+  name_tag_name?: string;
   can_cancel_order: boolean;
   can_modify_order: boolean;
   is_order_completed: boolean;
@@ -566,8 +592,16 @@ export interface AdminStudent {
   recommended_uniforms?: {
     winter: RecommendedUniformItem[];
     summer: RecommendedUniformItem[];
+    all?: RecommendedUniformItem[];
   };
   support_allowances?: SupportAllowance[];
+  name_tag_service?: {
+    available: boolean;
+    unit_price: number;
+    attach_price: number;
+    min_unit: number;
+  };
+  name_tag_name?: string;
   orders?: AdminStudentOrder[];
   // 목록 조회 응답에서만 오는 필드
   school_name?: string;
@@ -802,12 +836,26 @@ export async function getStudentOrders(
 // ============================================================================
 
 export interface OrderHistory {
-  changed_at: string;
-  description: string;
+  id: number;
+  orderId: number;
+  changedById: number;
+  action: string;
+  fieldName: string | null;
+  oldValue: string | null;
+  newValue: string | null;
+  reason: string | null;
+  createdAt: string;
+  changedBy?: {
+    id: number;
+    employeeId: string;
+    employeeName: string;
+    role: string;
+  };
 }
 
 export interface OrderHistoriesData {
   histories: OrderHistory[];
+  total: number;
 }
 
 /**
@@ -853,7 +901,6 @@ export interface UpdateOrderUniformItem {
   customization?: string;
   is_reserved?: boolean;
   name_tag_count?: number;
-  name_tag_name?: string;
   name_tag_attach?: boolean;
 }
 

@@ -49,6 +49,7 @@ const toDateKey = (date: string): string => {
 interface SnapshotState {
   winterUniforms: UniformItem[];
   summerUniforms: UniformItem[];
+  allUniforms: UniformItem[];
   supplies: SupplyItem[];
 }
 
@@ -59,9 +60,9 @@ export const InvoiceModal = ({
   onPaymentComplete,
 }: InvoiceModalProps) => {
   const [activeDateKey, setActiveDateKey] = useState<string>("");
-  // orderId → 편집 상태
   const [snapshotStates, setSnapshotStates] = useState<Map<number, SnapshotState>>(new Map());
   const [activeHistory, setActiveHistory] = useState<HistoryItem[]>([]);
+  const [nameTagName, setNameTagName] = useState('');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
 
@@ -94,23 +95,28 @@ export const InvoiceModal = ({
       map.set(s.orderId, {
         winterUniforms: s.winterUniforms,
         summerUniforms: s.summerUniforms,
+        allUniforms: s.allUniforms ?? [],
         supplies: s.supplies,
       });
     }
     setSnapshotStates(map);
     setActiveHistory(student.history ?? []);
+    setNameTagName(snapshots[0]?.nameTagName ?? student.nameTagName ?? '');
   }, [isOpen, student]);
 
   const handleDateTabClick = (key: string) => {
     if (key === activeDateKey) return;
     setActiveDateKey(key);
     const firstSnapshot = dateGroups.get(key)?.[0];
-    if (firstSnapshot) setActiveHistory(firstSnapshot.history);
+    if (firstSnapshot) {
+      setActiveHistory(firstSnapshot.history);
+      setNameTagName(firstSnapshot.nameTagName ?? student?.nameTagName ?? '');
+    }
   };
 
   const handleUniformChange = (
     orderId: number,
-    season: "winter" | "summer",
+    season: "winter" | "summer" | "all",
     itemId: string,
     field: keyof UniformItem,
     value: string | number | boolean,
@@ -127,6 +133,9 @@ export const InvoiceModal = ({
         summerUniforms: season === "summer"
           ? cur.summerUniforms.map((i) => (i.id === itemId ? { ...i, [field]: value } : i))
           : cur.summerUniforms,
+        allUniforms: season === "all"
+          ? cur.allUniforms.map((i) => (i.id === itemId ? { ...i, [field]: value } : i))
+          : cur.allUniforms,
       });
       return next;
     });
@@ -160,20 +169,19 @@ export const InvoiceModal = ({
         saveTargets.map((snapshot) => {
           const state = snapshotStates.get(snapshot.orderId);
           if (!state) return Promise.resolve();
-          const { winterUniforms, summerUniforms, supplies } = state;
+          const { winterUniforms, summerUniforms, allUniforms, supplies } = state;
           return updateAdminOrder(snapshot.orderId, {
-            uniform_items: [...winterUniforms, ...summerUniforms]
+            uniform_items: [...winterUniforms, ...summerUniforms, ...allUniforms]
               .filter((i) => !i.isDeleted)
               .map((i) => ({
                 item_id: i.id,
                 name: i.name,
-                season: winterUniforms.includes(i) ? "winter" : "summer",
+                season: winterUniforms.includes(i) ? "winter" : summerUniforms.includes(i) ? "summer" : "all",
                 selected_size: i.size,
                 purchase_count: i.supportedQuantity + i.additionalQuantity,
                 is_reserved: i.reservation,
                 customization: i.repair,
                 name_tag_count: i.nameTag ?? 0,
-                name_tag_name: student.name ?? "",
                 name_tag_attach: i.attachCount > 0,
               })),
             supply_items: supplies
@@ -184,6 +192,7 @@ export const InvoiceModal = ({
                 selected_size: i.size,
                 purchase_count: i.quantity,
               })),
+            name_tag_name: nameTagName || undefined,
             notes: "",
           });
         }),
@@ -214,27 +223,30 @@ export const InvoiceModal = ({
 
   const allWinter = activeSnapshots.flatMap((s) => snapshotStates.get(s.orderId)?.winterUniforms ?? []);
   const allSummer = activeSnapshots.flatMap((s) => snapshotStates.get(s.orderId)?.summerUniforms ?? []);
+  const allAll = activeSnapshots.flatMap((s) => snapshotStates.get(s.orderId)?.allUniforms ?? []);
   const allSupplies = activeSnapshots.flatMap((s) => snapshotStates.get(s.orderId)?.supplies ?? []);
 
   const winterCalc = calcSection(allWinter);
   const summerCalc = calcSection(allSummer);
+  const allCalc = calcSection(allAll);
   const hasPrice =
     allWinter.some((i) => i.unitPrice != null) ||
-    allSummer.some((i) => i.unitPrice != null);
+    allSummer.some((i) => i.unitPrice != null) ||
+    allAll.some((i) => i.unitPrice != null);
   const supplyTotal = allSupplies.reduce(
     (sum, i) => (i.unitPrice != null ? sum + i.unitPrice * i.quantity : sum),
     0,
   );
   const hasSupplyPrice = allSupplies.some((i) => i.unitPrice != null);
-  const grandTotal = winterCalc.total + summerCalc.total + supplyTotal;
-  const grandSupported = winterCalc.supported + summerCalc.supported;
+  const grandTotal = winterCalc.total + summerCalc.total + allCalc.total + supplyTotal;
+  const grandSupported = winterCalc.supported + summerCalc.supported + allCalc.supported;
   const grandPayable = grandTotal - grandSupported;
 
   // ============================================================================
   // 교복 테이블
   // ============================================================================
 
-  const renderUniformTable = (title: string, items: UniformItem[], season: "winter" | "summer", orderId: number, readOnly = false) => {
+  const renderUniformTable = (title: string, items: UniformItem[], season: "winter" | "summer" | "all", orderId: number, readOnly = false) => {
     const showPrice = hasPrice;
     const sectionTotal = items.reduce((sum, i) => {
       if (i.isDeleted || i.unitPrice == null) return sum;
@@ -497,23 +509,88 @@ export const InvoiceModal = ({
 
   const renderNameTagTable = () => {
     const nameTag = student?.nameTag;
-    if (!nameTag) return null;
+    if (!nameTag || nameTag.orderQuantity === 0) return null;
+
+    const unitPrice = student?.nameTagPrice ?? nameTag.unitPrice;
+    const attachPrice = student?.nameTagAttachPrice ?? nameTag.attachPrice;
+    const nameTagTotal = unitPrice != null ? unitPrice * nameTag.orderQuantity : null;
+    const attachTotal = attachPrice != null ? attachPrice * nameTag.attachQuantity : null;
+    const grandCash = (nameTagTotal ?? 0) + (attachTotal ?? 0);
+    const showPrice = unitPrice != null || attachPrice != null;
+
     return (
-      <div className="flex-none">
+      <div className="flex-none flex flex-col gap-1.5">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-gray-500 whitespace-nowrap">명찰 표시 이름</span>
+          {isReadOnly ? (
+            <span className="text-sm text-gray-800 font-medium">{nameTagName || student?.name || '-'}</span>
+          ) : (
+            <input
+              type="text"
+              className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm text-gray-800 bg-white outline-none focus:border-primary-900"
+              value={nameTagName}
+              onChange={(e) => setNameTagName(e.target.value)}
+              placeholder={student?.name ?? '이름 입력'}
+            />
+          )}
+        </div>
         <table className="w-full border-collapse border border-gray-200 text-sm">
           <thead>
             <tr>
-              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap">명찰</th>
-              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-24">주문수량</th>
-              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-24">부착수량</th>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap">구분</th>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">주문수량</th>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">부착수량</th>
+              {showPrice && (
+                <>
+                  <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-22">단가</th>
+                  <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-24">금액</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
             <tr>
               <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">명찰</td>
-              <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">{nameTag.orderQuantity}</td>
-              <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">{nameTag.attachQuantity}</td>
+              <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle tabular-nums">{nameTag.orderQuantity}</td>
+              <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle tabular-nums">{nameTag.attachQuantity}</td>
+              {showPrice && (
+                <>
+                  <td className="p-2 border border-gray-200 text-right text-gray-500 align-middle tabular-nums pr-3">
+                    {unitPrice != null ? `${unitPrice.toLocaleString()}원` : "-"}
+                  </td>
+                  <td className="p-2 border border-gray-200 text-right text-gray-700 align-middle tabular-nums pr-3">
+                    {nameTagTotal != null ? `${nameTagTotal.toLocaleString()}원` : "-"}
+                  </td>
+                </>
+              )}
             </tr>
+            {nameTag.attachQuantity > 0 && (
+              <tr>
+                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">부착</td>
+                <td className="p-2 border border-gray-200 text-center text-gray-400 align-middle">-</td>
+                <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle tabular-nums">{nameTag.attachQuantity}</td>
+                {showPrice && (
+                  <>
+                    <td className="p-2 border border-gray-200 text-right text-gray-500 align-middle tabular-nums pr-3">
+                      {attachPrice != null ? `${attachPrice.toLocaleString()}원` : "-"}
+                    </td>
+                    <td className="p-2 border border-gray-200 text-right text-gray-700 align-middle tabular-nums pr-3">
+                      {attachTotal != null ? `${attachTotal.toLocaleString()}원` : "-"}
+                    </td>
+                  </>
+                )}
+              </tr>
+            )}
+            {showPrice && grandCash > 0 && (
+              <tr className="bg-amber-50">
+                <td colSpan={showPrice ? 4 : 2} className="px-3 py-2 border border-gray-200 text-right text-sm font-semibold text-amber-800">
+                  명찰 합계 <span className="ml-1 text-xs font-normal text-amber-600">(현금)</span>
+                </td>
+                <td className="px-3 py-2 border border-gray-200 text-right text-sm font-bold text-amber-800 tabular-nums">
+                  {grandCash.toLocaleString()}원
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -521,6 +598,7 @@ export const InvoiceModal = ({
   };
 
   if (!student) return null;
+
 
   const genderLabel = formatGender(student.gender);
 
@@ -634,6 +712,7 @@ export const InvoiceModal = ({
                 )}
                 {renderUniformTable("동복", state.winterUniforms, "winter", snapshot.orderId, snapReadOnly)}
                 {renderUniformTable("하복", state.summerUniforms, "summer", snapshot.orderId, snapReadOnly)}
+                {state.allUniforms.length > 0 && renderUniformTable("사계절", state.allUniforms, "all", snapshot.orderId, snapReadOnly)}
                 <div className="flex gap-4 items-start">
                   {renderSupplyTable(state.supplies, snapshot.orderId, snapReadOnly)}
                   {renderNameTagTable()}
@@ -675,6 +754,16 @@ export const InvoiceModal = ({
                       <td className="px-3 py-2 text-right font-medium text-gray-900 tabular-nums">{summerCalc.payable.toLocaleString()}원</td>
                     </tr>
                   )}
+                  {allCalc.total > 0 && (
+                    <tr className="border-b border-gray-100">
+                      <td className="px-3 py-2 text-gray-700">사계절</td>
+                      <td className="px-3 py-2 text-right text-gray-700 tabular-nums">{allCalc.total.toLocaleString()}원</td>
+                      <td className="px-3 py-2 text-right text-blue-600 tabular-nums">
+                        {allCalc.supported > 0 ? `-${allCalc.supported.toLocaleString()}원` : "-"}
+                      </td>
+                      <td className="px-3 py-2 text-right font-medium text-gray-900 tabular-nums">{allCalc.payable.toLocaleString()}원</td>
+                    </tr>
+                  )}
                   {hasSupplyPrice && supplyTotal > 0 && (
                     <tr className="border-b border-gray-100">
                       <td className="px-3 py-2 text-gray-700">용품</td>
@@ -683,6 +772,26 @@ export const InvoiceModal = ({
                       <td className="px-3 py-2 text-right font-medium text-gray-900 tabular-nums">{supplyTotal.toLocaleString()}원</td>
                     </tr>
                   )}
+                  {(() => {
+                    const nameTag = student?.nameTag;
+                    const unitPrice = student?.nameTagPrice ?? nameTag?.unitPrice;
+                    const attachPrice = student?.nameTagAttachPrice ?? nameTag?.attachPrice;
+                    const nameTagTotal = unitPrice != null && nameTag ? unitPrice * nameTag.orderQuantity : 0;
+                    const attachTotal = attachPrice != null && nameTag ? attachPrice * nameTag.attachQuantity : 0;
+                    const cashTotal = nameTagTotal + attachTotal;
+                    if (cashTotal === 0) return null;
+                    return (
+                      <tr className="border-b border-gray-100 bg-amber-50/60">
+                        <td className="px-3 py-2 text-amber-800 font-medium">
+                          명찰
+                          <span className="ml-1 text-xs font-normal text-amber-600">(현금)</span>
+                        </td>
+                        <td className="px-3 py-2 text-right text-gray-700 tabular-nums">{cashTotal.toLocaleString()}원</td>
+                        <td className="px-3 py-2 text-right text-gray-400 tabular-nums">-</td>
+                        <td className="px-3 py-2 text-right font-medium text-amber-800 tabular-nums">{cashTotal.toLocaleString()}원</td>
+                      </tr>
+                    );
+                  })()}
                   <tr className="bg-bg-050 font-semibold">
                     <td className="px-3 py-2.5 text-bg-800">합계</td>
                     <td className="px-3 py-2.5 text-right text-gray-900 tabular-nums">{grandTotal.toLocaleString()}원</td>

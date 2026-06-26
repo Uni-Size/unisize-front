@@ -88,7 +88,7 @@ export const MainPage = () => {
       is_reserved: u.reservation,
       customization: u.repair || undefined,
       name_tag_count: u.nameTagCount || undefined,
-      name_tag_attach: u.attachCount > 0 || undefined,
+      name_tag_attach: u.nameTagAttach || undefined,
     })),
     supply_items: form.supplies
       .filter((s) => s.quantity > 0)
@@ -99,6 +99,7 @@ export const MainPage = () => {
         purchase_count: s.quantity,
       })),
     notes: '',
+    name_tag_name: form.nameTagName || undefined,
   });
 
   const handleTempSave = async () => {
@@ -120,7 +121,8 @@ export const MainPage = () => {
 
   const handleConfirm = async (signature: string) => {
     if (!selectedStudent) return;
-    await completeMeasurement(selectedStudent.id, { signature });
+    const payload = buildOrderPayload();
+    await completeMeasurement(selectedStudent.id, { ...payload, signature });
     setIsMeasurementOpen(false);
     setMeasurementData(null);
     setSelectedStudent(null);
@@ -169,6 +171,9 @@ export const MainPage = () => {
         summerUniforms={form.summerUniforms}
         supplies={form.supplies}
         nameTag={form.nameTag}
+        nameTagMinUnit={form.nameTagMinUnit}
+        nameTagName={form.nameTagName}
+        onUpdateNameTagName={form.setNameTagName}
         onUpdateUniform={form.updateUniform}
         onAddUniformFromProduct={form.addUniformFromProduct}
         onAddUniformRow={form.addUniformRow}
@@ -177,7 +182,6 @@ export const MainPage = () => {
         onAddSupplyRow={form.addSupplyRow}
         onRemoveSupplyRow={form.removeSupplyRow}
         onUpdateNameTagOrderQuantity={form.updateNameTagOrderQuantity}
-        onUpdateNameTagAttachQuantity={form.updateNameTagAttachQuantity}
         onConfirm={handleConfirm}
       />
 

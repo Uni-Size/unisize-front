@@ -5,7 +5,7 @@ import type { ToastVariant } from "@components/atoms/Toast";
 import { GENDER_OPTIONS_MF } from "@/constants/gender";
 import { updateStudent } from "@/api/student";
 import { getSchoolList } from "@/api/school";
-import { formatDate, toDateInputValue } from "@/utils/dateUtils";
+import { formatDate, formatDateTime, toDateInputValue } from "@/utils/dateUtils";
 import { formatGender } from "@/utils/genderUtils";
 
 // ============================================================================
@@ -26,6 +26,8 @@ export interface UniformItem {
   received: boolean;
   nameTag: number | null;
   nameTagName?: string;
+  nameTagUnitPrice?: number;
+  nameTagAttachPrice?: number;
   attachCount: number;
   itemStatus?: string; // 품목별 상태
   seasonCode?: 'W' | 'S' | 'A'; // W=동복 S=하복 A=사계절
@@ -52,6 +54,8 @@ export interface SupplyItem {
 export interface NameTagInfo {
   orderQuantity: number;
   attachQuantity: number;
+  unitPrice?: number;
+  attachPrice?: number;
 }
 
 export interface HistoryItem {
@@ -69,6 +73,13 @@ export interface OrderSnapshot {
   supplies: SupplyItem[];
   history: HistoryItem[];
   modifiedDate?: string;
+  name_tag_service?: {
+    available: boolean;
+    unit_price: number;
+    attach_price: number;
+    min_unit: number;
+  };
+  nameTagName?: string;
 }
 
 export interface StudentDetailData {
@@ -95,9 +106,11 @@ export interface StudentDetailData {
   orderSnapshots?: OrderSnapshot[]; // 전체 주문 탭 데이터
   availableUniforms?: AvailableUniform[]; // 학교에 등록된 품목 (편집 시 추가용)
   supportAllowances?: { product_id: number; remaining: number }[]; // 품목별 무상지원 잔여
-  nameTagMinUnit?: number;      // 명찰 주문 최소 단위
-  nameTagPrice?: number | null; // 개당 가격
-  nameTagAttachPrice?: number | null; // 부착 가격
+  nameTagMinUnit?: number;
+  nameTagPrice?: number | null;
+  nameTagAttachPrice?: number | null;
+  nameTagName?: string;
+  totalNameTagCount?: number;
   winterUniforms: UniformItem[];
   summerUniforms: UniformItem[];
   allUniforms: UniformItem[];   // 사계절(A) 품목
@@ -129,6 +142,7 @@ export interface StudentFormInput {
   allUniforms: UniformItem[];
   supplies: SupplyItem[];
   nameTag: NameTagInfo;
+  nameTagName: string;
 }
 
 export type OrderStatusValue =
@@ -271,6 +285,7 @@ export const StudentModal = ({
     orderQuantity: 0,
     attachQuantity: 0,
   });
+  const [nameTagName, setNameTagName] = useState('');
 
   // view 모드: 활성 날짜 탭
   const [activeDateIndex, setActiveDateIndex] = useState(0);
@@ -288,6 +303,19 @@ export const StudentModal = ({
     setSupplies(snapshot.supplies.length > 0 ? snapshot.supplies : defaultSupplies);
     setActiveOrderId(snapshot.orderId);
     setActiveHistory(snapshot.history);
+    const allItems = [
+      ...snapshot.winterUniforms,
+      ...snapshot.summerUniforms,
+      ...(snapshot.allUniforms ?? []),
+    ];
+    const orderQtyFromItems = allItems.reduce((s, i) => s + (i.nameTag ?? 0), 0);
+    setNameTag({
+      orderQuantity: orderQtyFromItems > 0 ? orderQtyFromItems : (student?.totalNameTagCount ?? 0),
+      attachQuantity: allItems.reduce((s, i) => s + (i.attachCount ?? 0), 0),
+      unitPrice: snapshot.name_tag_service?.unit_price,
+      attachPrice: snapshot.name_tag_service?.attach_price,
+    });
+    setNameTagName(snapshot.nameTagName ?? '');
     const date = snapshot.date ? (toDateInputValue(snapshot.date) || snapshot.date.slice(0, 10)) : '';
     if (date) setOrderDate(date);
     // 수정 시 변경 감지를 위해 원본 저장
@@ -404,18 +432,19 @@ export const StudentModal = ({
       setAllUniforms(student.allUniforms ?? []);
       setSupplies(initialSupplies);
       setNameTag(student.nameTag);
+      setNameTagName(student.nameTagName ?? student.orderSnapshots?.[0]?.nameTagName ?? '');
       setActiveDateIndex(0);
       setActiveOrderId(student.orderId);
       setActiveHistory(student.history ?? []);
       const firstSnapshotDate = student.orderSnapshots?.[0]?.date;
       setOrderDate(firstSnapshotDate ? (toDateInputValue(firstSnapshotDate) || firstSnapshotDate.slice(0, 10)) : new Date().toISOString().slice(0, 10));
       setIsEditing(false);
-      // 주문이 있고 onOrderUpdate가 제공된 경우 즉시 수정 모드
-      const hasSnapshots = (student.orderSnapshots?.length ?? 0) > 0;
-      setIsOrderEditMode(mode === "view" && hasSnapshots && !!onOrderUpdate);
+      setIsOrderEditMode(false);
 
       originalStudentRef.current = { admissionSchool: aSchool, previousSchool: pSchool, name: n, gender: g, birthDate: bd, admissionYear: ay, admissionGrade: ag, studentPhone: sPhone, guardianPhone: gPhone, address: addr, height: h, weight: w, shoulder: sh, waist: ws };
-      originalOrderRef.current = { winterUniforms: student.winterUniforms, summerUniforms: student.summerUniforms, supplies: initialSupplies };
+      const firstSnapshotDateForRef = student.orderSnapshots?.[0]?.date;
+      const orderDateForRef = firstSnapshotDateForRef ? (toDateInputValue(firstSnapshotDateForRef) || firstSnapshotDateForRef.slice(0, 10)) : new Date().toISOString().slice(0, 10);
+      originalOrderRef.current = { winterUniforms: student.winterUniforms, summerUniforms: student.summerUniforms, allUniforms: student.allUniforms ?? [], supplies: initialSupplies, orderDate: orderDateForRef };
     }
   }, [mode, student]);
 
@@ -439,6 +468,7 @@ export const StudentModal = ({
     setAllUniforms([]);
     setSupplies(defaultSupplies.map((s) => ({ ...s, size: "", quantity: 0 })));
     setNameTag({ orderQuantity: 0, attachQuantity: 0 });
+    setNameTagName('');
     setActiveDateIndex(0);
     setActiveHistory([]);
     setIsEditing(false);
@@ -483,6 +513,7 @@ export const StudentModal = ({
       allUniforms,
       supplies,
       nameTag,
+      nameTagName,
     };
 
     if (isEditing) {
@@ -673,7 +704,7 @@ export const StudentModal = ({
       if (i.isDeleted || i.unitPrice == null) return sum;
       return sum + i.unitPrice * (i.supportedQuantity + i.additionalQuantity);
     }, 0);
-    const colSpan = showPrice ? 8 : 7;
+    const colSpan = showPrice ? 7 : 6;
 
     return (
       <div>
@@ -700,9 +731,6 @@ export const StudentModal = ({
                   금액
                 </th>
               )}
-              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
-                상태
-              </th>
               <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
                 품목상태
               </th>
@@ -853,35 +881,6 @@ export const StudentModal = ({
                           ) : "-"}
                         </td>
                       )}
-                      {/* 예약/수령 토글 */}
-                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                        {isTableView ? (
-                          <span>{item.reservation ? "예약" : item.received ? "수령" : "-"}</span>
-                        ) : (
-                          <div className="flex items-center justify-center rounded overflow-hidden border border-gray-200 text-xs">
-                            <button
-                              type="button"
-                              className={`px-2 py-1 border-none cursor-pointer transition-colors ${item.reservation ? "bg-yellow-400 text-white font-medium" : "bg-white text-gray-500 hover:bg-gray-50"}`}
-                              onClick={() => {
-                                handleUniformChange(season, item.id, "reservation", !item.reservation);
-                                if (!item.reservation) handleUniformChange(season, item.id, "received", false);
-                              }}
-                            >
-                              예약
-                            </button>
-                            <button
-                              type="button"
-                              className={`px-2 py-1 border-none border-l border-gray-200 cursor-pointer transition-colors ${item.received ? "bg-green-500 text-white font-medium" : "bg-white text-gray-500 hover:bg-gray-50"}`}
-                              onClick={() => {
-                                handleUniformChange(season, item.id, "received", !item.received);
-                                if (!item.received) handleUniformChange(season, item.id, "reservation", false);
-                              }}
-                            >
-                              수령
-                            </button>
-                          </div>
-                        )}
-                      </td>
                       {/* 품목별 상태 */}
                       <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                         {isTableView ? (
@@ -969,7 +968,7 @@ export const StudentModal = ({
                     <td className="px-3 py-2 border border-gray-200 text-right text-gray-900 tabular-nums">
                       {sectionTotal.toLocaleString()}원
                     </td>
-                    <td colSpan={2} className="border border-gray-200" />
+                    <td className="border border-gray-200" />
                   </tr>
                 )}
               </>
@@ -1111,10 +1110,14 @@ export const StudentModal = ({
 
   const renderNameTagTable = () => {
     const minUnit = student?.nameTagMinUnit ?? 1;
-    const nameTagPrice = student?.nameTagPrice;
-    const attachPrice = student?.nameTagAttachPrice;
+    const nameTagPrice = (nameTag.unitPrice != null && nameTag.unitPrice > 0)
+      ? nameTag.unitPrice
+      : (student?.nameTagPrice != null && student.nameTagPrice > 0) ? student.nameTagPrice : null;
+    const attachPrice = (nameTag.attachPrice != null && nameTag.attachPrice > 0)
+      ? nameTag.attachPrice
+      : (student?.nameTagAttachPrice != null && student.nameTagAttachPrice > 0) ? student.nameTagAttachPrice : null;
 
-    const orderTotal = nameTagPrice != null ? (nameTag.orderQuantity / minUnit) * nameTagPrice : null;
+    const orderTotal = nameTagPrice != null ? Math.ceil(nameTag.orderQuantity / minUnit) * nameTagPrice : null;
     const attachTotal = attachPrice != null ? nameTag.attachQuantity * attachPrice : null;
     const showPrice = orderTotal != null || attachTotal != null;
 
@@ -1146,7 +1149,21 @@ export const StudentModal = ({
     );
 
     return (
-    <div className="flex-none">
+    <div className="flex-none flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-gray-500 whitespace-nowrap">명찰 표시 이름</span>
+        {isTableView ? (
+          <span className="text-sm text-gray-800 font-medium">{nameTagName || student?.name || '-'}</span>
+        ) : (
+          <input
+            type="text"
+            className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm text-gray-800 bg-white outline-none focus:border-primary-900"
+            value={nameTagName}
+            onChange={(e) => setNameTagName(e.target.value)}
+            placeholder={student?.name ?? '이름 입력'}
+          />
+        )}
+      </div>
       <table className="w-full border-collapse border border-gray-200 text-sm">
         <thead>
           <tr>
@@ -1214,6 +1231,7 @@ export const StudentModal = ({
   // 렌더링
   // ============================================================================
 
+
   const titleText =
     mode === "add"
       ? "학생추가"
@@ -1257,6 +1275,14 @@ export const StudentModal = ({
             >
               닫기
             </button>
+            {onOrderUpdate && (activeOrderId ?? student?.orderId) && (
+              <button
+                className="px-6 py-2.5 bg-primary-900 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+                onClick={() => setIsOrderEditMode(true)}
+              >
+                주문 수정
+              </button>
+            )}
             {onPaymentComplete && (
               <button
                 className="px-6 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
@@ -1618,9 +1644,8 @@ export const StudentModal = ({
                                 isActive ? "font-bold text-bg-800" : "text-bg-400"
                               }`}
                               onClick={() => {
-                                if (!isOrderCreateMode) {
+                                if (!isOrderCreateMode && !isOrderEditMode) {
                                   handleDateTabClick(i);
-                                  if (onOrderUpdate) setIsOrderEditMode(true);
                                 }
                               }}
                             >
@@ -1780,7 +1805,7 @@ export const StudentModal = ({
               {activeHistory.length > 0 ? (
                 activeHistory.map((h, i) => (
                   <div key={i} className="flex">
-                    <span className="text-sm text-gray-700 w-40">{h.date}</span>
+                    <span className="text-sm text-gray-700 w-40">{formatDateTime(h.date)}</span>
                     <span className="text-sm text-gray-700">{h.content}</span>
                   </div>
                 ))

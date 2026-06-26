@@ -23,6 +23,9 @@ interface MeasurementBottomSheetProps {
   summerUniforms: MeasurementUniformItem[];
   supplies: MeasurementSupplyItem[];
   nameTag: MeasurementNameTag;
+  nameTagMinUnit: number;
+  nameTagName: string;
+  onUpdateNameTagName: (name: string) => void;
   onUpdateUniform: (season: 'winter' | 'summer', rowId: string, patch: Partial<MeasurementUniformItem>) => void;
   onAddUniformFromProduct: (season: 'winter' | 'summer', product: UniformProduct) => void;
   onAddUniformRow: (season: 'winter' | 'summer', source: MeasurementUniformItem) => void;
@@ -30,8 +33,7 @@ interface MeasurementBottomSheetProps {
   onUpdateSupply: (rowId: string, patch: Partial<MeasurementSupplyItem>) => void;
   onAddSupplyRow: (source: MeasurementSupplyItem) => void;
   onRemoveSupplyRow: (rowId: string) => void;
-  onUpdateNameTagOrderQuantity: (value: number) => void;
-  onUpdateNameTagAttachQuantity: (value: number) => void;
+  onUpdateNameTagOrderQuantity: (delta: number) => void;
   onNext: () => Promise<void>;
   onConfirm: (signature: string) => Promise<void>;
 }
@@ -222,6 +224,9 @@ export const MeasurementBottomSheet = ({
   summerUniforms,
   supplies,
   nameTag,
+  nameTagMinUnit,
+  nameTagName,
+  onUpdateNameTagName,
   onUpdateUniform,
   onAddUniformFromProduct,
   onAddUniformRow,
@@ -230,7 +235,6 @@ export const MeasurementBottomSheet = ({
   onAddSupplyRow,
   onRemoveSupplyRow,
   onUpdateNameTagOrderQuantity,
-  onUpdateNameTagAttachQuantity,
   onNext,
   onConfirm,
 }: MeasurementBottomSheetProps) => {
@@ -313,22 +317,18 @@ export const MeasurementBottomSheet = ({
     return { total, supported, payable: total - supported };
   };
 
-  const winterCalc = calcUniform(winterUniforms);
-  const summerCalc = calcUniform(summerUniforms);
   const supplyTotal = supplies.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-  const grandTotal = winterCalc.total + summerCalc.total + supplyTotal;
-  const grandSupported = winterCalc.supported + summerCalc.supported;
-  const grandPayable = grandTotal - grandSupported;
 
   // ============================================================================
   // 단계1: 입력 폼
   // ============================================================================
 
   const renderUniformSection = (_title: string, items: MeasurementUniformItem[], season: 'winter' | 'summer') => {
-    const showNameTag = items.some((i) => i.hasNameTag);
-    const allItems = [...winterUniforms, ...summerUniforms];
-    const totalNameTagOther = (rowId: string) =>
-      allItems.filter((i) => i.rowId !== rowId).reduce((sum, i) => sum + i.nameTagCount, 0);
+    const sortedItems: MeasurementUniformItem[] = [
+      ...items.filter((i) => i.supportedQuantity > 0),
+      ...items.filter((i) => i.supportedQuantity === 0),
+    ];
+    const showNameTag = true;
     return (
       <div className="rounded-2xl border border-gray-200">
         <table className="w-full border-collapse text-sm">
@@ -347,19 +347,25 @@ export const MeasurementBottomSheet = ({
             </tr>
           </thead>
           <tbody>
-            {items.length === 0 ? (
+            {sortedItems.length === 0 ? (
               <tr>
                 <td colSpan={showNameTag ? 10 : 8} className="text-center py-5 text-gray-400">해당 품목 없음</td>
               </tr>
             ) : (
-              items.map((item) => {
+              sortedItems.map((item) => {
                 const baseSizes = item.availableSizes.length > 0
                   ? item.availableSizes
                   : DEFAULT_SIZE_OPTIONS.map((s) => ({ size: s, inStock: true, stockCount: 0 }));
                 const hasRecommended = baseSizes.some((s) => s.size === item.recommendedSize);
-                const sizeOptions = hasRecommended || !item.recommendedSize
+                const sizeOptions = (hasRecommended || !item.recommendedSize
                   ? baseSizes
-                  : [{ size: item.recommendedSize, inStock: true, stockCount: 0 }, ...baseSizes];
+                  : [{ size: item.recommendedSize, inStock: true, stockCount: 0 }, ...baseSizes]
+                ).slice().sort((a, b) => {
+                  const na = parseFloat(a.size);
+                  const nb = parseFloat(b.size);
+                  if (!isNaN(na) && !isNaN(nb)) return na - nb;
+                  return a.size.localeCompare(b.size);
+                });
                 const isAdded = !item.isRequired && item.supportedQuantity === 0;
                 return (
                   <tr key={item.rowId} className="border-b border-gray-100 last:border-b-0">
@@ -390,13 +396,17 @@ export const MeasurementBottomSheet = ({
                       />
                     </td>
                     <td className="p-1 text-center align-middle border-l border-gray-100">
-                      <input
-                        type="text"
-                        className="w-full px-1 py-1.5 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900"
-                        value={item.repair}
-                        onChange={(e) => onUpdateUniform(season, item.rowId, { repair: e.target.value })}
-                        placeholder="-"
-                      />
+                      {item.isCustomizationRequired ? (
+                        <input
+                          type="text"
+                          className="w-full px-1 py-1.5 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900"
+                          value={item.repair}
+                          onChange={(e) => onUpdateUniform(season, item.rowId, { repair: e.target.value })}
+                          placeholder="수선 필수"
+                        />
+                      ) : (
+                        <span className="text-gray-300">-</span>
+                      )}
                     </td>
                     <td className="p-2 text-center align-middle border-l border-gray-100">
                       <button
@@ -413,27 +423,22 @@ export const MeasurementBottomSheet = ({
                     </td>
                     {showNameTag && (
                       <td className="p-1 text-center align-middle border-l border-gray-100">
-                        {item.hasNameTag ? (
-                          <Stepper
-                            value={item.nameTagCount}
-                            max={Math.min(
-                              item.supportedQuantity + item.additionalQuantity,
-                              nameTag.orderQuantity - totalNameTagOther(item.rowId),
-                            )}
-                            onChange={(v) => onUpdateUniform(season, item.rowId, { nameTagCount: v })}
-                          />
-                        ) : <span className="text-gray-300">-</span>}
+                        <Stepper
+                          value={item.nameTagCount}
+                          max={item.supportedQuantity + item.additionalQuantity}
+                          onChange={(v) => onUpdateUniform(season, item.rowId, { nameTagCount: v })}
+                        />
                       </td>
                     )}
                     {showNameTag && (
                       <td className="p-1 text-center align-middle border-l border-gray-100">
-                        {item.hasNameTag ? (
-                          <Stepper
-                            value={item.attachCount}
-                            max={item.supportedQuantity + item.additionalQuantity}
-                            onChange={(v) => onUpdateUniform(season, item.rowId, { attachCount: v })}
-                          />
-                        ) : <span className="text-gray-300">-</span>}
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 cursor-pointer accent-primary-900"
+                          checked={item.nameTagAttach}
+                          disabled={item.nameTagCount === 0}
+                          onChange={(e) => onUpdateUniform(season, item.rowId, { nameTagAttach: e.target.checked })}
+                        />
                       </td>
                     )}
                     <td className="p-1 text-center align-middle border-l border-gray-100">
@@ -478,7 +483,12 @@ export const MeasurementBottomSheet = ({
           </thead>
           <tbody>
             {supplies.map((item) => {
-              const sizes = item.availableSizes;
+              const sizes = item.availableSizes.slice().sort((a, b) => {
+                const na = parseFloat(a.size);
+                const nb = parseFloat(b.size);
+                if (!isNaN(na) && !isNaN(nb)) return na - nb;
+                return a.size.localeCompare(b.size);
+              });
               const needsSelect = sizes.length > 1 || (sizes.length === 1 && sizes[0].size !== 'FREE');
               const isAdded = item.quantity > 0 && supplies.filter((s) => s.productId === item.productId).indexOf(item) > 0;
               return (
@@ -534,36 +544,59 @@ export const MeasurementBottomSheet = ({
     );
   };
 
-  const renderNameTagSection = () => (
-    <div className="flex-none rounded-2xl overflow-hidden border border-gray-200">
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-gray-200 bg-gray-50">
-            <th className="px-2 py-2.5 font-medium text-gray-600 text-center whitespace-nowrap">명찰</th>
-            <th className="px-2 py-2.5 font-medium text-gray-600 text-center whitespace-nowrap w-24">주문수량</th>
-            <th className="px-2 py-2.5 font-medium text-gray-600 text-center whitespace-nowrap w-24">부착수량</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td className="p-2 text-center text-gray-700 align-middle">명찰</td>
-            <td className="p-1 text-center text-gray-700 align-middle border-l border-gray-100">
-              <Stepper
-                value={nameTag.orderQuantity}
-                onChange={onUpdateNameTagOrderQuantity}
-              />
-            </td>
-            <td className="p-1 text-center text-gray-700 align-middle border-l border-gray-100">
-              <Stepper
-                value={nameTag.attachQuantity}
-                onChange={onUpdateNameTagAttachQuantity}
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  );
+  const renderNameTagSection = () => {
+    const nameTagTotal = [...winterUniforms, ...summerUniforms].reduce((sum, i) => sum + i.nameTagCount, 0);
+    const minCeiled = nameTagTotal === 0 ? 0 : Math.ceil(nameTagTotal / nameTagMinUnit) * nameTagMinUnit;
+    return (
+      <div className="flex-none flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-medium text-gray-500 whitespace-nowrap">명찰 표시 이름</label>
+          <input
+            type="text"
+            className="flex-1 px-2 py-1.5 border border-gray-200 rounded text-sm text-gray-800 bg-white outline-none focus:border-primary-900"
+            value={nameTagName}
+            onChange={(e) => onUpdateNameTagName(e.target.value)}
+            placeholder="이름 입력"
+          />
+        </div>
+        <div className="rounded-2xl overflow-hidden border border-gray-200">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-gray-200 bg-gray-50">
+              <th className="px-2 py-2.5 font-medium text-gray-600 text-center whitespace-nowrap">명찰</th>
+              <th className="px-2 py-2.5 font-medium text-gray-600 text-center whitespace-nowrap w-28">주문수량</th>
+              <th className="px-2 py-2.5 font-medium text-gray-600 text-center whitespace-nowrap w-20">부착수량</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="p-2 text-center text-gray-700 align-middle">명찰</td>
+              <td className="p-1 text-center text-gray-700 align-middle border-l border-gray-100">
+                <div className="flex items-center justify-center gap-0.5">
+                  <button
+                    type="button"
+                    className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-sm leading-none"
+                    onClick={() => onUpdateNameTagOrderQuantity(-1)}
+                    disabled={nameTag.orderQuantity <= minCeiled}
+                  >−</button>
+                  <span className="w-8 text-center text-xs text-gray-800 tabular-nums font-medium">{nameTag.orderQuantity}</span>
+                  <button
+                    type="button"
+                    className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 text-sm leading-none"
+                    onClick={() => onUpdateNameTagOrderQuantity(1)}
+                  >+</button>
+                </div>
+              </td>
+              <td className="p-2 text-center text-gray-700 align-middle border-l border-gray-100 tabular-nums text-xs font-medium">
+                {nameTag.attachQuantity}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    );
+  };
 
   // ============================================================================
   // 단계2: 확인 테이블 + 사인
@@ -617,7 +650,7 @@ export const MeasurementBottomSheet = ({
                         <span className="text-blue-600 font-medium">{item.supportedQuantity}</span>
                       ) : '-'}
                     </td>
-                    <td className={`${td} text-center tabular-nums`}>{item.attachCount > 0 ? item.attachCount : '-'}</td>
+                    <td className={`${td} text-center tabular-nums`}>{item.nameTagAttach ? item.nameTagCount : '-'}</td>
                     <td className={`${td} text-right tabular-nums text-gray-500`}>
                       {item.unitPrice > 0 ? `${item.unitPrice.toLocaleString()}원` : '-'}
                     </td>
@@ -630,7 +663,7 @@ export const MeasurementBottomSheet = ({
             </tbody>
             {/* 소계 */}
             {(() => {
-              const calc = items === winterUniforms ? winterCalc : summerCalc;
+              const calc = calcUniform(active);
               return (
                 <tfoot>
                   {supported.length > 0 && (
@@ -672,7 +705,8 @@ export const MeasurementBottomSheet = ({
 
   const renderConfirmTable = () => {
     const hasSupply = supplies.some((s) => s.quantity > 0);
-    const hasNameTag = nameTag.orderQuantity > 0 || nameTag.attachQuantity > 0;
+    const hasNameTagService = !!(measurementData.name_tag_service?.available);
+    const hasNameTag = nameTag.orderQuantity > 0 || nameTag.attachQuantity > 0 || hasNameTagService;
     return (
       <div className="flex flex-col gap-5">
         {/* 동복 */}
@@ -727,16 +761,32 @@ export const MeasurementBottomSheet = ({
         {/* 명찰 */}
         {hasNameTag && (
           <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">명찰</h3>
-            <div className="rounded-2xl border border-gray-200 overflow-hidden">
-              <div className="flex divide-x divide-gray-200">
-                <div className="flex-1 px-4 py-3 bg-gray-50">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">명찰 <span className="text-orange-500 font-normal normal-case">(현금 별도)</span></h3>
+            <div className="rounded-2xl border border-orange-200 overflow-hidden">
+              <div className="px-4 py-2.5 bg-orange-50/50 border-b border-orange-100 flex items-center gap-2">
+                <span className="text-xs text-gray-500 whitespace-nowrap">표시 이름</span>
+                <input
+                  type="text"
+                  className="flex-1 px-2 py-1 border border-orange-200 rounded text-sm text-gray-800 bg-white outline-none focus:border-orange-400"
+                  value={nameTagName}
+                  onChange={(e) => onUpdateNameTagName(e.target.value)}
+                  placeholder={student?.name ?? '이름 입력'}
+                />
+              </div>
+              <div className="flex divide-x divide-orange-100">
+                <div className="flex-1 px-4 py-3 bg-orange-50/50">
                   <div className="text-xs text-gray-500 mb-0.5">주문 수량</div>
                   <div className="text-base font-semibold text-gray-900">{nameTag.orderQuantity}개</div>
+                  {measurementData.name_tag_service?.unit_price != null && measurementData.name_tag_service.unit_price > 0 && (
+                    <div className="text-xs text-orange-600 mt-0.5">{measurementData.name_tag_service.unit_price.toLocaleString()}원/장</div>
+                  )}
                 </div>
-                <div className="flex-1 px-4 py-3 bg-gray-50">
+                <div className="flex-1 px-4 py-3 bg-orange-50/50">
                   <div className="text-xs text-gray-500 mb-0.5">부착 수량</div>
                   <div className="text-base font-semibold text-gray-900">{nameTag.attachQuantity}개</div>
+                  {measurementData.name_tag_service?.attach_price != null && measurementData.name_tag_service.attach_price > 0 && (
+                    <div className="text-xs text-orange-600 mt-0.5">{measurementData.name_tag_service.attach_price.toLocaleString()}원/장</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -744,57 +794,82 @@ export const MeasurementBottomSheet = ({
         )}
 
         {/* 영수증 금액 요약 */}
-        {grandTotal > 0 && (
-          <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">결제 금액</h3>
-            <div className="rounded-2xl overflow-hidden border border-gray-200">
-              <div className="flex flex-col divide-y divide-gray-100">
-                {/* 라인 아이템 */}
-                {winterCalc.total > 0 && (
-                  <div className="flex justify-between items-center px-4 py-2.5 text-sm">
-                    <span className="text-gray-600">동복 정가</span>
-                    <span className="tabular-nums text-gray-800">{winterCalc.total.toLocaleString()}원</span>
+        {(() => {
+          const wCalc = calcUniform(winterUniforms.filter((i) => i.supportedQuantity + i.additionalQuantity > 0));
+          const sCalc = calcUniform(summerUniforms.filter((i) => i.supportedQuantity + i.additionalQuantity > 0));
+          const total = wCalc.total + sCalc.total + supplyTotal;
+          const payable = wCalc.payable + sCalc.payable + supplyTotal;
+
+          const nameTagSvc = measurementData.name_tag_service;
+          const nameTagCashTotal = hasNameTag && nameTagSvc
+            ? (nameTagSvc.unit_price ?? 0) * nameTag.orderQuantity + (nameTagSvc.attach_price ?? 0) * nameTag.attachQuantity
+            : 0;
+
+          if (total === 0 && nameTagCashTotal === 0) return null;
+          return (
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">결제 금액</h3>
+              <div className="rounded-2xl overflow-hidden border border-gray-200">
+                <div className="flex flex-col divide-y divide-gray-100">
+                  {wCalc.total > 0 && (
+                    <div className="flex justify-between items-center px-4 py-2.5 text-sm">
+                      <span className="text-gray-600">동복 정가</span>
+                      <span className="tabular-nums text-gray-800">{wCalc.total.toLocaleString()}원</span>
+                    </div>
+                  )}
+                  {wCalc.supported > 0 && (
+                    <div className="flex justify-between items-center px-4 py-2.5 text-sm bg-blue-50/50">
+                      <span className="text-blue-700 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
+                        동복 지원 차감
+                      </span>
+                      <span className="tabular-nums text-blue-700 font-medium">-{wCalc.supported.toLocaleString()}원</span>
+                    </div>
+                  )}
+                  {sCalc.total > 0 && (
+                    <div className="flex justify-between items-center px-4 py-2.5 text-sm">
+                      <span className="text-gray-600">하복 정가</span>
+                      <span className="tabular-nums text-gray-800">{sCalc.total.toLocaleString()}원</span>
+                    </div>
+                  )}
+                  {sCalc.supported > 0 && (
+                    <div className="flex justify-between items-center px-4 py-2.5 text-sm bg-blue-50/50">
+                      <span className="text-blue-700 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
+                        하복 지원 차감
+                      </span>
+                      <span className="tabular-nums text-blue-700 font-medium">-{sCalc.supported.toLocaleString()}원</span>
+                    </div>
+                  )}
+                  {supplyTotal > 0 && (
+                    <div className="flex justify-between items-center px-4 py-2.5 text-sm">
+                      <span className="text-gray-600">용품</span>
+                      <span className="tabular-nums text-gray-800">{supplyTotal.toLocaleString()}원</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center px-4 py-3.5 bg-gray-50 border-t-2 border-gray-200">
+                    <span className="text-base font-bold text-gray-900">최종 납부액</span>
+                    <span className="text-lg font-bold text-primary-900 tabular-nums">{payable.toLocaleString()}원</span>
                   </div>
-                )}
-                {winterCalc.supported > 0 && (
-                  <div className="flex justify-between items-center px-4 py-2.5 text-sm bg-blue-50/50">
-                    <span className="text-blue-700 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
-                      동복 지원 차감
-                    </span>
-                    <span className="tabular-nums text-blue-700 font-medium">-{winterCalc.supported.toLocaleString()}원</span>
-                  </div>
-                )}
-                {summerCalc.total > 0 && (
-                  <div className="flex justify-between items-center px-4 py-2.5 text-sm">
-                    <span className="text-gray-600">하복 정가</span>
-                    <span className="tabular-nums text-gray-800">{summerCalc.total.toLocaleString()}원</span>
-                  </div>
-                )}
-                {summerCalc.supported > 0 && (
-                  <div className="flex justify-between items-center px-4 py-2.5 text-sm bg-blue-50/50">
-                    <span className="text-blue-700 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
-                      하복 지원 차감
-                    </span>
-                    <span className="tabular-nums text-blue-700 font-medium">-{summerCalc.supported.toLocaleString()}원</span>
-                  </div>
-                )}
-                {supplyTotal > 0 && (
-                  <div className="flex justify-between items-center px-4 py-2.5 text-sm">
-                    <span className="text-gray-600">용품</span>
-                    <span className="tabular-nums text-gray-800">{supplyTotal.toLocaleString()}원</span>
-                  </div>
-                )}
-                {/* 구분선 + 합계 */}
-                <div className="flex justify-between items-center px-4 py-3.5 bg-gray-50 border-t-2 border-gray-200">
-                  <span className="text-base font-bold text-gray-900">최종 납부액</span>
-                  <span className="text-lg font-bold text-primary-900 tabular-nums">{grandPayable.toLocaleString()}원</span>
+                  {nameTagCashTotal > 0 && (
+                    <div className="flex justify-between items-center px-4 py-3 bg-orange-50 border-t border-orange-200">
+                      <span className="text-sm font-semibold text-orange-700 flex items-center gap-1.5">
+                        <span className="inline-block w-2 h-2 rounded-full bg-orange-400" />
+                        명찰 현금 별도
+                        <span className="text-xs font-normal text-orange-500">
+                          ({nameTag.orderQuantity > 0 && nameTagSvc?.unit_price ? `명찰 ${nameTag.orderQuantity}장` : ''}
+                          {nameTag.orderQuantity > 0 && nameTagSvc?.unit_price && nameTag.attachQuantity > 0 && nameTagSvc?.attach_price ? ' + ' : ''}
+                          {nameTag.attachQuantity > 0 && nameTagSvc?.attach_price ? `부착 ${nameTag.attachQuantity}장` : ''})
+                        </span>
+                      </span>
+                      <span className="text-sm font-bold text-orange-700 tabular-nums">{nameTagCashTotal.toLocaleString()}원</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* 서명 */}
         <SignatureCanvas onSign={setSignature} initialSignature={measurementData?.signature || ''} />
@@ -808,7 +883,7 @@ export const MeasurementBottomSheet = ({
       <div className="absolute inset-0 bg-black/50" onClick={handleTempSaveAndClose} />
 
       {/* 시트 */}
-      <div className="relative bg-white rounded-t-3xl flex flex-col max-h-[92vh] w-full">
+      <div className="relative bg-white rounded-t-3xl flex flex-col h-auto max-h-[92vh] w-full">
         {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-10 h-1 bg-gray-300 rounded-full" />
@@ -857,7 +932,7 @@ export const MeasurementBottomSheet = ({
         )}
 
         {/* 콘텐츠 */}
-        <div ref={contentRef} className="flex-1 min-h-0 overflow-y-auto px-5 py-4 flex flex-col gap-5">
+        <div ref={contentRef} className="overflow-y-auto px-5 py-4 flex flex-col gap-5">
           {step === 1 ? (
             <>
               {activeSeasonTab === 'winter'
@@ -890,7 +965,7 @@ export const MeasurementBottomSheet = ({
               })()}
               <div className="flex gap-4 items-start">
                 {renderSupplySection()}
-                {[...winterUniforms, ...summerUniforms].some((i) => i.hasNameTag) && renderNameTagSection()}
+                {renderNameTagSection()}
               </div>
             </>
           ) : (
