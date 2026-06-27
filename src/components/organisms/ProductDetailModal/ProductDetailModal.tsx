@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Modal, Select, Input } from "@components/atoms";
 import { Toast } from "@components/atoms/Toast";
 import type { SchoolPrice } from "../ProductAddModal";
@@ -600,8 +600,8 @@ const ProductDetailModalContent = ({
                 </thead>
                 <tbody>
                   {editSchools.map((s, i) => (
-                    <>
-                      <tr key={i} className="border-b border-gray-100">
+                    <React.Fragment key={i}>
+                      <tr className="border-b border-gray-100">
                         <td className="px-4 py-2.5">{s.school_name}</td>
                         <td className="px-4 py-2.5">
                           {isEditMode ? (
@@ -673,7 +673,7 @@ const ProductDetailModalContent = ({
                         )}
                       </tr>
                       {isEditMode && (
-                        <tr key={`${i}-selectable`} className="border-b border-gray-100 bg-gray-50">
+                        <tr className="border-b border-gray-100 bg-gray-50">
                           <td colSpan={6} className="px-4 py-2">
                             <div className="flex flex-col gap-1.5">
                               <div className="flex items-center gap-2">
@@ -744,7 +744,7 @@ const ProductDetailModalContent = ({
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>

@@ -52,18 +52,8 @@ export const StockAddModal = ({
 
   useEffect(() => {
     if (!isOpen) return;
-
     const initial: NewRoundMap = {};
-    products.forEach((p) => {
-      const sizes = p.size_stats.map((s) => s.size);
-      // 서버 rounds 중 가장 큰 round_number 다음 차수부터 시작
-      const allRoundNums = p.size_stats.flatMap((s) =>
-        (s.rounds ?? []).map((r) => r.round_number),
-      );
-      const maxExisting =
-        allRoundNums.length > 0 ? Math.max(...allRoundNums) : 0;
-      initial[p.product_id] = [makeNewRound(maxExisting + 1, sizes)];
-    });
+    products.forEach((p) => { initial[p.product_id] = []; });
     setNewRoundMap(initial);
   }, [isOpen, products]);
 
@@ -134,7 +124,8 @@ export const StockAddModal = ({
     }[] = [];
 
     for (const product of products) {
-      const sizes = product.size_stats.map((s) => s.size);
+      const sizes = Array.from(new Set(product.size_stats.map((s) => s.size)))
+        .sort((a, b) => (parseFloat(a) || 0) - (parseFloat(b) || 0));
       const newRounds = newRoundMap[product.product_id] ?? [];
 
       for (const round of newRounds) {
@@ -231,7 +222,8 @@ export const StockAddModal = ({
           </p>
         ) : (
           tabProducts.map((product) => {
-            const sizes = product.size_stats.map((s) => s.size);
+            const sizes = Array.from(new Set(product.size_stats.map((s) => s.size)))
+              .sort((a, b) => (parseFloat(a) || 0) - (parseFloat(b) || 0));
             const newRounds = newRoundMap[product.product_id] ?? [];
 
             // 서버에서 내려온 모든 round_number 집합 (사이즈 통합)

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { InventoryProduct } from "@/api/order";
+import type { InventoryProduct, InventoryOrder } from "@/api/order";
 
 interface OrderSizeTableProps {
   product: InventoryProduct;
@@ -13,9 +13,8 @@ const ROUND_BG: Record<number, string> = {
   5: 'bg-purple-50',
 };
 
-function getRoundBg(round: number | null) {
-  if (round == null) return 'bg-white';
-  return ROUND_BG[round] ?? 'bg-gray-50';
+function getRoundBg(roundNum: number) {
+  return ROUND_BG[roundNum] ?? 'bg-gray-50';
 }
 
 const sizeToNum = (size: string) => {
@@ -23,16 +22,23 @@ const sizeToNum = (size: string) => {
   return isNaN(n) ? Infinity : n;
 };
 
+type CellInfo =
+  | { kind: 'order'; roundNum: number; name: string; status: string }
+  | { kind: 'empty'; roundNum: number }
+  | { kind: 'unassigned'; name: string; status: string };
+
 export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  // 같은 사이즈를 머지 (stock 합산, rounds 합치기)
+  // 같은 사이즈를 머지 (stock 합산, rounds 합치기, unassigned 합치기)
   const mergedMap = new Map<string, {
     size: string;
     stock: number;
     ordered: number;
     remaining: number;
-    rounds: Array<{ round_number: number; total_in: number; orders: Array<{ name: string; status: string }> }>;
+    orders: InventoryOrder[];
+    rounds: Array<{ round_number: number; total_in: number; orders: InventoryOrder[] }>;
+    unassigned: InventoryOrder[];
   }>();
 
   for (const stat of product.size_stats) {
@@ -41,12 +47,18 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
       total_in: r.total_in,
       orders: r.orders ?? [],
     }));
+    const unassigned = stat.unassigned ?? [];
+    const statOrders = stat.orders ?? [];
 
     const existing = mergedMap.get(stat.size);
     if (existing) {
       existing.stock += stat.stock;
       existing.ordered += stat.ordered;
       existing.remaining += stat.remaining;
+      const seenOrders = new Set(existing.orders.map((o) => o.name));
+      for (const o of statOrders) {
+        if (!seenOrders.has(o.name)) { existing.orders.push(o); seenOrders.add(o.name); }
+      }
       for (const r of rounds) {
         const ex = existing.rounds.find((er) => er.round_number === r.round_number);
         if (ex) {
@@ -56,41 +68,91 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
             if (!seenNames.has(o.name)) { ex.orders.push(o); seenNames.add(o.name); }
           }
         } else {
-          existing.rounds.push({ ...r });
+          existing.rounds.push({ ...r, orders: [...r.orders] });
         }
       }
+      const seenUnassigned = new Set(existing.unassigned.map((o) => o.name));
+      for (const o of unassigned) {
+        if (!seenUnassigned.has(o.name)) { existing.unassigned.push(o); seenUnassigned.add(o.name); }
+      }
     } else {
-      mergedMap.set(stat.size, { size: stat.size, stock: stat.stock, ordered: stat.ordered, remaining: stat.remaining, rounds });
+      mergedMap.set(stat.size, {
+        size: stat.size,
+        stock: stat.stock,
+        ordered: stat.ordered,
+        remaining: stat.remaining,
+        orders: [...statOrders],
+        rounds,
+        unassigned: [...unassigned],
+      });
     }
   }
 
   // 사이즈 오름차순 정렬
   const sizes = Array.from(mergedMap.values()).sort((a, b) => sizeToNum(a.size) - sizeToNum(b.size));
 
-  // 각 사이즈별로 행 인덱스 → { roundNum, order | null } 매핑 생성
-  // orders를 quantity만큼 펼쳐서 슬롯에 순서대로 배치
-  type CellInfo = { roundNum: number; order: { name: string; status: string } | null };
-
+  // 사이즈별 셀 목록 생성
+  // - rounds 순서대로 total_in 슬롯 생성, 그 안에 orders(quantity 반영) 배치
+  // - unassigned는 맨 뒤에 빨간색으로 추가
   const sizeCells: CellInfo[][] = sizes.map((s) => {
     const cells: CellInfo[] = [];
     const sortedRounds = [...s.rounds].sort((a, b) => a.round_number - b.round_number);
+
     for (const r of sortedRounds) {
-      // orders를 quantity만큼 펼친 슬롯
-      const expanded: Array<{ name: string; status: string }> = [];
+      // orders를 quantity만큼 펼치기
+      const expanded: InventoryOrder[] = [];
       for (const o of r.orders) {
-        const qty = o.quantity ?? 1;
-        for (let q = 0; q < qty; q++) expanded.push({ name: o.name, status: o.status });
+        for (let q = 0; q < (o.quantity ?? 1); q++) expanded.push(o);
       }
       const slotCount = Math.max(r.total_in, expanded.length);
       for (let i = 0; i < slotCount; i++) {
-        cells.push({ roundNum: r.round_number, order: expanded[i] ?? null });
+        const o = expanded[i];
+        const overflow = i >= r.total_in; // total_in 초과분
+        if (!o) {
+          cells.push({ kind: 'empty', roundNum: r.round_number });
+        } else if (overflow) {
+          cells.push({ kind: 'unassigned', name: o.name, status: o.status });
+        } else {
+          cells.push({ kind: 'order', roundNum: r.round_number, name: o.name, status: o.status });
+        }
       }
     }
+
+    // rounds가 없는 경우 stat.orders를 직접 표시
+    // stock > 0이면 슬롯 안에 배치, stock = 0이면 전부 초과(빨간색)
+    if (s.rounds.length === 0 && s.orders.length > 0) {
+      const expanded: InventoryOrder[] = [];
+      for (const o of s.orders) {
+        for (let q = 0; q < (o.quantity ?? 1); q++) expanded.push(o);
+      }
+      const slotCount = Math.max(s.stock, expanded.length);
+      for (let i = 0; i < slotCount; i++) {
+        const o = expanded[i];
+        const overflow = s.stock === 0 || i >= s.stock;
+        if (!o) {
+          cells.push({ kind: 'empty', roundNum: 1 });
+        } else if (overflow) {
+          cells.push({ kind: 'unassigned', name: o.name, status: o.status });
+        } else {
+          cells.push({ kind: 'order', roundNum: 1, name: o.name, status: o.status });
+        }
+      }
+    }
+
+    // unassigned: 재고 초과 주문 (빨간색)
+    for (const o of s.unassigned) {
+      for (let q = 0; q < (o.quantity ?? 1); q++) {
+        cells.push({ kind: 'unassigned', name: o.name, status: o.status });
+      }
+    }
+
     return cells;
   });
 
   const maxRows = Math.max(0, ...sizeCells.map((c) => c.length));
   const hasOverflow = sizes.some((s) => s.remaining < 0);
+  const totalStock = sizes.reduce((sum, s) => sum + s.stock, 0);
+  const totalOrdered = sizes.reduce((sum, s) => sum + s.ordered, 0);
 
   return (
     <div className="mb-3 border-t border-gray-100 overflow-hidden">
@@ -123,11 +185,16 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-13">
+        <table className="w-full border-collapse text-13 table-fixed">
+          <colgroup>
+            {sizes.map((s) => (
+              <col key={s.size} style={{ width: `${100 / sizes.length}%` }} />
+            ))}
+          </colgroup>
           <tbody>
-            {isOpen && maxRows > 0 && (
+            {isOpen && (totalStock > 0 || totalOrdered > 0) && (
               <>
-                {/* 헤더 행: 사이즈 */}
+                {/* 헤더 행: 사이즈 (재고) */}
                 <tr className="bg-gray-100">
                   {sizes.map((s) => (
                     <th
@@ -142,55 +209,67 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
                   ))}
                 </tr>
 
-                {/* 데이터 행: 각 셀마다 해당 round 배경색 */}
+                {/* 데이터 행 */}
                 {Array.from({ length: maxRows }).map((_, rowIdx) => (
                   <tr key={rowIdx} className="h-9">
                     {sizeCells.map((cells, sizeIdx) => {
                       const cell = cells[rowIdx];
-                      const bg = getRoundBg(cell?.roundNum ?? null);
+                      const sizeKey = sizes[sizeIdx].size;
 
                       if (!cell) {
+                        return <td key={sizeKey} className="px-2 py-1.5 border-0" />;
+                      }
+
+                      if (cell.kind === 'unassigned') {
                         return (
                           <td
-                            key={sizes[sizeIdx].size}
-                            className="px-2 py-1.5 border-0"
-                          />
+                            key={sizeKey}
+                            className="px-2 py-1.5 text-center text-13 border-[0.5px] border-gray-200 bg-red-50"
+                          >
+                            <span
+                              className="block w-full text-center wrap-break-word leading-tight text-red-600 font-bold"
+                              style={{ fontSize: 'clamp(9px, 1.5cqi, 13px)' }}
+                            >
+                              {cell.name}
+                            </span>
+                          </td>
                         );
                       }
 
-                      const { order } = cell;
-
-                      if (!order) {
+                      if (cell.kind === 'empty') {
                         return (
                           <td
-                            key={sizes[sizeIdx].size}
-                            className={`px-2 py-1.5 text-center text-gray-400 border-[0.5px] border-gray-200 ${bg}`}
+                            key={sizeKey}
+                            className={`px-2 py-1.5 text-center text-gray-400 border-[0.5px] border-gray-200 ${getRoundBg(cell.roundNum)}`}
                           >
                             -
                           </td>
                         );
                       }
 
-                      const isOutOfStock = order.status === 'out_of_stock';
-                      const isReserved = order.status === 'reserved';
+                      // kind === 'order'
+                      const isOutOfStock = cell.status === 'out_of_stock';
+                      const isReserved = cell.status === 'reserved';
+                      const bg = getRoundBg(cell.roundNum);
 
                       return (
                         <td
-                          key={sizes[sizeIdx].size}
+                          key={sizeKey}
                           className={[
                             "px-2 py-1.5 text-center text-13 border-[0.5px] border-gray-200",
-                            isOutOfStock ? "outline-1 outline-red-400 bg-red-50 relative z-10" : bg,
+                            isOutOfStock ? "bg-red-50" : bg,
                           ].join(" ")}
                         >
                           <span
                             className={[
-                              "inline-flex items-center gap-1 whitespace-nowrap",
+                              "block w-full text-center wrap-break-word leading-tight",
                               isOutOfStock ? "text-red-600 font-bold" : "",
                             ].join(" ")}
+                            style={{ fontSize: 'clamp(9px, 1.5cqi, 13px)' }}
                           >
-                            {order.name}
+                            {cell.name}
                             {isReserved && (
-                              <span className="text-11 text-blue-500 font-medium">예약</span>
+                              <span className="text-11 text-blue-500 font-medium ml-0.5">예약</span>
                             )}
                           </span>
                         </td>
@@ -209,8 +288,11 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
             {/* 집계 행 (항상 표시) */}
             <tr className="bg-gray-50 font-medium">
               {sizes.map((s) => {
-                const actualSold = s.rounds.reduce((sum, r) => sum + r.orders.length, 0);
-                const surplus = s.stock - actualSold;
+                const assigned = s.rounds.reduce((sum, r) =>
+                  sum + r.orders.reduce((s2, o) => s2 + (o.quantity ?? 1), 0), 0);
+                const unassignedCount = s.unassigned.reduce((sum, o) => sum + (o.quantity ?? 1), 0);
+                const totalOrdered = assigned + unassignedCount;
+                const surplus = s.stock - totalOrdered;
                 return (
                   <td
                     key={s.size}
@@ -219,7 +301,7 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
                       s.stock > 0 ? "border-[0.5px] border-gray-200" : "text-gray-300",
                     ].join(" ")}
                   >
-                    <div>{s.size} ({actualSold}/{s.stock})</div>
+                    <div>{s.size} ({totalOrdered}/{s.stock})</div>
                     {s.stock > 0 && surplus !== 0 && (
                       <div className={surplus < 0 ? "text-red-600 font-bold" : "text-blue-600 font-bold"}>
                         {surplus < 0 ? `부족 ${Math.abs(surplus)}` : `재고 ${surplus}`}
