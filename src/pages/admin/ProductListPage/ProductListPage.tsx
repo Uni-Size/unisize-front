@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
 import { AdminLayout } from "@components/templates/AdminLayout";
 import { AdminHeader } from "@components/organisms/AdminHeader";
+import { Toast } from "@components/atoms/Toast";
 import {
   ProductAddModal,
   ProductDetailModal,
@@ -106,6 +107,7 @@ export const ProductListPage = () => {
     useState<ProductDetailData | null>(null);
   const [selectedSchools, setSelectedSchools] = useState<SchoolPrice[]>([]);
   const [pendingSchool, setPendingSchool] = useState<ProductSchoolDetail | null>(null);
+  const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
 
   const fetchProducts = useCallback(
     async (
@@ -267,7 +269,7 @@ export const ProductListPage = () => {
 
   const handleOpenDetailModal = async (product: ProductRow) => {
     try {
-      const detail = await getProduct(Number(product.id));
+      const detail = await getProduct(product.id);
       const detailData = apiProductToDetailData(detail, product.id);
       setSelectedProduct(detailData);
       setSelectedSchools(detailData.schools);
@@ -285,7 +287,7 @@ export const ProductListPage = () => {
   };
 
   const handleUpdateProduct = async (data: ProductDetailData): Promise<ProductDetailData> => {
-    const updated = await updateProduct(Number(data.id), {
+    const updated = await updateProduct(data.id, {
       category: data.category,
       gender: data.gender,
       is_repair: data.isRepairable === "yes" ? true : data.isRepairable === "no" ? false : undefined,
@@ -308,6 +310,7 @@ export const ProductListPage = () => {
     setSelectedProduct(updatedDetailData);
     setSelectedSchools(updatedDetailData.schools);
     fetchProducts(currentPage, categoryFilter, genderFilter, seasonFilter, searchTerm);
+    setToast({ message: "저장되었습니다.", variant: "success" });
     return updatedDetailData;
   };
 
@@ -455,7 +458,7 @@ export const ProductListPage = () => {
               e.stopPropagation();
               if (!confirm("정말 삭제하시겠습니까?")) return;
               try {
-                await deleteProduct(Number(product.id));
+                await deleteProduct(product.id);
                 fetchProducts(
                   currentPage,
                   categoryFilter,
@@ -475,6 +478,7 @@ export const ProductListPage = () => {
   ];
 
   return (
+    <>
     <AdminLayout>
       <div className="flex flex-col p-5 gap-4">
         <AdminHeader
@@ -509,6 +513,7 @@ export const ProductListPage = () => {
                 <option value="상품명">상품명</option>
               </select>
               <Input
+                size="sm"
                 placeholder="검색어를 입력하세요."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -643,5 +648,7 @@ export const ProductListPage = () => {
         title={selectedProduct?.displayName || "학교 추가"}
       />
     </AdminLayout>
+    {toast && <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} />}
+    </>
   );
 };

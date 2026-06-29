@@ -204,7 +204,7 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
                         s.stock > 0 ? "border-[0.5px] border-gray-200" : "text-gray-300",
                       ].join(" ")}
                     >
-                      {s.size} ({s.stock})
+                      {s.size} ({s.stock === 0 ? "-" : s.stock})
                     </th>
                   ))}
                 </tr>
@@ -301,7 +301,7 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
                       s.stock > 0 ? "border-[0.5px] border-gray-200" : "text-gray-300",
                     ].join(" ")}
                   >
-                    <div>{s.size} ({totalOrdered}/{s.stock})</div>
+                    <div>{s.size} ({totalOrdered}/{s.stock === 0 ? "-" : s.stock})</div>
                     {s.stock > 0 && surplus !== 0 && (
                       <div className={surplus < 0 ? "text-red-600 font-bold" : "text-blue-600 font-bold"}>
                         {surplus < 0 ? `부족 ${Math.abs(surplus)}` : `재고 ${surplus}`}

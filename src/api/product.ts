@@ -18,7 +18,7 @@ export interface ProductSizeResponse {
 }
 
 export interface SelectableProduct {
-  product_id: number;
+  product_id: string;
   display_name: string;
   free_support_count?: number;
 }
@@ -33,7 +33,7 @@ export interface ProductSchool {
 }
 
 export interface Product {
-  id: number;
+  id: string;
   name: string;
   category: string;
   gender: string;
@@ -136,7 +136,7 @@ export const getAllProducts = getProducts;
  * 상품 단건 조회
  * GET /api/v1/products/:id
  */
-export async function getProduct(id: number): Promise<Product> {
+export async function getProduct(id: string): Promise<Product> {
   const response = await apiClient.get<ApiResponse<Product>>(
     `/api/v1/products/${id}`
   );
@@ -159,7 +159,7 @@ export async function createProduct(data: CreateProductRequest): Promise<Product
  * 상품 수정
  * PUT /api/v1/products/:id
  */
-export async function updateProduct(id: number, data: UpdateProductRequest): Promise<Product> {
+export async function updateProduct(id: string, data: UpdateProductRequest): Promise<Product> {
   const response = await apiClient.put<ApiResponse<Product>>(
     `/api/v1/products/${id}`,
     data
@@ -172,9 +172,9 @@ export async function updateProduct(id: number, data: UpdateProductRequest): Pro
  * PUT /api/v1/products/:id/schools/:school_name/selectable
  */
 export async function updateProductSelectable(
-  productId: number,
+  productId: string,
   schoolName: string,
-  data: { is_selectable: boolean; selectable_with?: number[] },
+  data: { is_selectable: boolean; selectable_with?: string[] },
 ): Promise<void> {
   await apiClient.put(
     `/api/v1/products/${productId}/schools/${encodeURIComponent(schoolName)}/selectable`,
@@ -186,7 +186,7 @@ export async function updateProductSelectable(
  * 상품 삭제
  * DELETE /api/v1/products/:id
  */
-export async function deleteProduct(id: number): Promise<void> {
+export async function deleteProduct(id: string): Promise<void> {
   await apiClient.delete(`/api/v1/products/${id}`);
 }
 

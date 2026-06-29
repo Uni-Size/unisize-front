@@ -17,6 +17,12 @@ import { getApiErrorMessage } from '@/utils/errorUtils';
 import { formatDate } from '@/utils/dateUtils';
 import { formatGender } from '@/utils/genderUtils';
 import { downloadCSV } from '@/utils/csvUtils';
+import { CATEGORY_GROUP_MAP, CATEGORY_GROUPS } from '@/constants/productCategories';
+
+// label → group 역방향 맵 (API가 한글 레이블로 category를 내려줄 때 대응)
+const CATEGORY_LABEL_TO_GROUP: Record<string, string> = Object.fromEntries(
+  CATEGORY_GROUPS.flatMap(g => g.options.map(o => [o.label, g.label]))
+);
 
 interface StudentRow {
   id: number;
@@ -35,7 +41,7 @@ export const StudentListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('통합검색');
   const [categoryFilter, setCategoryFilter] = useState('전체');
-  const [purchaseFilter, setPurchaseFilter] = useState('전체');
+  const [_purchaseFilter, setPurchaseFilter] = useState('전체');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [students, setStudents] = useState<StudentRow[]>([]);
@@ -151,7 +157,7 @@ export const StudentListPage = () => {
         nameUpper.includes('하복') || nameUpper.includes('SUMMER') ? 'S' : 'A';
       const uniform: import('@components/organisms/StudentModal').UniformItem = {
         id: String(item.id),
-        productId: item.product_id,
+        productId: String(item.product_id),
         name: productName,
         size: item.selected_size,
         supportedQuantity: item.supported_quantity,
@@ -230,10 +236,10 @@ export const StudentListPage = () => {
         nameTagPrice = schoolDetail.name_tag_price;
         nameTagAttachPrice = schoolDetail.name_tag_attach_price;
         for (const u of schoolDetail.uniforms.winter) {
-          availableUniforms.push({ productId: u.product_id, name: u.display_name, season: 'winter', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size) });
+          if (u.product_id) availableUniforms.push({ productId: u.product_id, name: u.display_name, season: 'winter', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size), category: u.category });
         }
         for (const u of schoolDetail.uniforms.summer) {
-          availableUniforms.push({ productId: u.product_id, name: u.display_name, season: 'summer', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size) });
+          if (u.product_id) availableUniforms.push({ productId: u.product_id, name: u.display_name, season: 'summer', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size), category: u.category });
         }
       }
     }
@@ -250,35 +256,88 @@ export const StudentListPage = () => {
     }
 
     // 주문 없을 때 recommended_uniforms를 초기 편집 항목으로 변환
-    const toUniformItem = (r: import('@/api/student').RecommendedUniformItem, idx: number, seasonCode: 'W' | 'S' | 'A'): import('@components/organisms/StudentModal').UniformItem => ({
-      id: `rec-${r.product_id}-${idx}`,
-      productId: r.product_id,
-      name: r.item_id || r.product_name,
-      size: r.recommended_size,
-      availableSizes: r.available_sizes.map(a => a.size),
-      supportedQuantity: r.supported_quantity,
-      additionalQuantity: r.purchase_quantity - r.supported_quantity,
-      unitPrice: r.price,
-      repair: r.customization ?? '',
-      reservation: r.delivery_status === 'reserved',
-      received: r.delivery_status === 'receipt',
-      nameTag: r.name_tag_count ?? null,
-      nameTagName: r.name_tag_name,
-      attachCount: r.name_tag_attach ? 1 : 0,
-      itemStatus: r.delivery_status,
-      seasonCode,
-    });
+    const GROUP_ORDER: Record<string, number> = { '상의': 0, '하의': 1, '체육복': 3 };
+    const categoryOrder = (category: string | undefined): number => {
+      const c = category ?? '';
+      // value 기준 (e.g. 'gym_bottom') → 한글 레이블 기준 (e.g. '체육복 하의') 순서로 시도
+      const g = CATEGORY_GROUP_MAP[c] ?? CATEGORY_LABEL_TO_GROUP[c]
+        ?? (c.includes('체육') || c.includes('생활복') ? '체육복' : undefined);
+      return GROUP_ORDER[g ?? ''] ?? 2;
+    };
+
+    const toUniformItem = (r: import('@/api/student').RecommendedUniformItem, idx: number, seasonCode: 'W' | 'S' | 'A'): import('@components/organisms/StudentModal').UniformItem => {
+      const avail = availableUniforms.find(u => u.productId === r.product_id);
+      return {
+        id: `rec-${r.product_id}-${idx}`,
+        productId: r.product_id,
+        name: r.item_id || r.product_name,
+        size: r.recommended_size,
+        availableSizes: r.available_sizes.map(a => a.size),
+        supportedQuantity: r.supported_quantity,
+        additionalQuantity: r.purchase_quantity - r.supported_quantity,
+        unitPrice: r.price,
+        repair: r.customization ?? '',
+        reservation: r.delivery_status === 'reserved',
+        received: r.delivery_status === 'receipt',
+        nameTag: r.name_tag_count ?? null,
+        nameTagName: r.name_tag_name,
+        attachCount: r.name_tag_attach ? 1 : 0,
+        itemStatus: r.delivery_status,
+        seasonCode,
+        category: avail?.category,
+      };
+    };
+
+    const sortUniforms = (items: import('@components/organisms/StudentModal').UniformItem[]) =>
+      [...items].sort((a, b) => categoryOrder(a.category) - categoryOrder(b.category));
+
+    // 교체 가능 그룹에서 성별에 맞는 품목 하나만 선택
+    // 여학생(F) → 치마(skirt/치마 포함) 우선, 남학생(M) → 바지(pants 포함) 우선
+    const studentGender = detail.gender; // 'M' | 'F' | ...
+    const preferSkirt = (r: import('@/api/student').RecommendedUniformItem) => {
+      const c = (availableUniforms.find(u => u.productId === r.product_id)?.category ?? '').toLowerCase();
+      return c.includes('skirt') || c.includes('치마');
+    };
+    const preferPants = (r: import('@/api/student').RecommendedUniformItem) => {
+      const c = (availableUniforms.find(u => u.productId === r.product_id)?.category ?? '').toLowerCase();
+      return c.includes('pants') || c.includes('바지');
+    };
+
+    const filterSelectableGroup = (items: import('@/api/student').RecommendedUniformItem[]) => {
+      const seenGroupIds = new Set<string>();
+      const result: import('@/api/student').RecommendedUniformItem[] = [];
+      for (const r of items) {
+        if (!r.selectable_with || r.selectable_with.length === 0) {
+          result.push(r);
+          continue;
+        }
+        const groupKey = [r.item_id, ...r.selectable_with].sort().join('|');
+        if (seenGroupIds.has(groupKey)) continue;
+        seenGroupIds.add(groupKey);
+        // 그룹 내 전체 후보 수집 후 성별에 맞는 품목 선택
+        const groupItems = items.filter(i =>
+          i.item_id === r.item_id || r.selectable_with.includes(i.item_id)
+        );
+        const preferred = studentGender === 'F'
+          ? groupItems.find(preferSkirt) ?? r
+          : studentGender === 'M'
+            ? groupItems.find(preferPants) ?? r
+            : r;
+        result.push(preferred);
+      }
+      return result;
+    };
 
     const recWinter = !firstSnapshot
-      ? (detail.recommended_uniforms?.winter ?? []).filter(r => r.season === 'W').map((r, i) => toUniformItem(r, i, 'W'))
+      ? sortUniforms(filterSelectableGroup((detail.recommended_uniforms?.winter ?? []).filter(r => r.season === 'W' && r.supported_quantity > 0)).map((r, i) => toUniformItem(r, i, 'W')))
       : [];
     const recSummer = !firstSnapshot
-      ? (detail.recommended_uniforms?.summer ?? []).filter(r => r.season === 'S').map((r, i) => toUniformItem(r, i, 'S'))
+      ? sortUniforms(filterSelectableGroup((detail.recommended_uniforms?.summer ?? []).filter(r => r.season === 'S' && r.supported_quantity > 0)).map((r, i) => toUniformItem(r, i, 'S')))
       : [];
     const recAll = !firstSnapshot
       ? [
-          ...(detail.recommended_uniforms?.winter ?? []).filter(r => r.season === 'A').map((r, i) => toUniformItem(r, i, 'A')),
-          ...(detail.recommended_uniforms?.summer ?? []).filter(r => r.season === 'A').map((r, i) => toUniformItem(r, i, 'A')),
+          ...filterSelectableGroup((detail.recommended_uniforms?.winter ?? []).filter(r => r.season === 'A')).map((r, i) => toUniformItem(r, i, 'A')),
+          ...filterSelectableGroup((detail.recommended_uniforms?.summer ?? []).filter(r => r.season === 'A')).map((r, i) => toUniformItem(r, i, 'A')),
         ]
       : [];
 
@@ -332,7 +391,23 @@ export const StudentListPage = () => {
       modifiedDate: firstSnapshot?.modifiedDate,
       orderSnapshots,
       availableUniforms,
-      supportAllowances: detail.support_allowances?.map((a) => ({ product_id: a.product_id, remaining: a.remaining })),
+      recommendedUniforms: [
+        ...(detail.recommended_uniforms?.winter ?? []).map((r) => ({
+          productId: r.product_id,
+          name: r.item_id || r.product_name,
+          season: 'winter' as const,
+          price: r.price,
+          availableSizes: r.available_sizes.map((s) => s.size),
+        })),
+        ...(detail.recommended_uniforms?.summer ?? []).map((r) => ({
+          productId: r.product_id,
+          name: r.item_id || r.product_name,
+          season: 'summer' as const,
+          price: r.price,
+          availableSizes: r.available_sizes.map((s) => s.size),
+        })),
+      ],
+      supportAllowances: detail.support_allowances?.map((a) => ({ product_id: a.product_id, display_name: a.display_name, remaining: a.remaining, selectable_with: a.selectable_with })),
       nameTagMinUnit: detail.name_tag_service?.min_unit ?? nameTagMinUnit,
       nameTagPrice: detail.name_tag_service?.unit_price ?? nameTagPrice,
       nameTagAttachPrice: detail.name_tag_service?.attach_price ?? nameTagAttachPrice,
@@ -434,7 +509,7 @@ export const StudentListPage = () => {
     const origSnapshot = selectedStudent?.orderSnapshots?.find(s => s.orderId === orderId);
 
     const mapUniform = (u: typeof data.winterUniforms[0], fallbackSeason: string): AdminOrderUniformItem => ({
-      item_id: u.productId ?? Number(u.id),
+      item_id: u.productId ?? u.id,
       name: u.name,
       season: u.seasonCode ?? fallbackSeason,
       selected_size: u.size,
@@ -483,7 +558,7 @@ export const StudentListPage = () => {
   const handleOrderCreate = async (studentId: number, data: StudentFormInput) => {
     const { submitMeasurementOrder } = await import('@/api/student');
     const mapUniform = (u: typeof data.winterUniforms[0], season: '동복' | '하복') => ({
-      item_id: u.productId as number,
+      item_id: u.productId as string,
       name: u.name,
       season,
       selected_size: u.size,
@@ -632,6 +707,7 @@ export const StudentListPage = () => {
                 <option value="연락처">연락처</option>
               </select>
               <Input
+                size="sm"
                 placeholder="검색어를 입력하세요."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -639,12 +715,12 @@ export const StudentListPage = () => {
             </div>
           </div>
 
-          {/* 학년 + 주관구매 (같은 행) */}
+          {/* 학년 */}
           <div className="flex items-stretch">
             <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
               학년
             </div>
-            <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white border-r border-gray-200">
+            <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white">
               {[
                 { value: '전체', label: '전체' },
                 { value: '신입', label: '신입' },
@@ -655,26 +731,6 @@ export const StudentListPage = () => {
                     type="checkbox"
                     checked={categoryFilter === opt.value}
                     onChange={() => setCategoryFilter(categoryFilter === opt.value ? '전체' : opt.value)}
-                    className="w-4 h-4 accent-gray-500"
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
-              주관구매
-            </div>
-            <div className="flex items-center gap-4 flex-1 px-4 py-3 bg-white">
-              {[
-                { value: '전체', label: '전체' },
-                { value: '신청', label: '신청' },
-                { value: '미신청', label: '미신청' },
-              ].map((opt) => (
-                <label key={opt.value} className="flex items-center gap-1.5 text-14 text-gray-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={purchaseFilter === opt.value}
-                    onChange={() => setPurchaseFilter(purchaseFilter === opt.value ? '전체' : opt.value)}
                     className="w-4 h-4 accent-gray-500"
                   />
                   {opt.label}

@@ -11,8 +11,9 @@ export interface StockAddModalProps {
   products: InventoryProduct[];
   onSubmit: (
     items: {
-      product_id: number;
+      product_id: string;
       size: string;
+      size_type?: "numeric" | "alpha" | "free";
       stock: number;
       round_number?: number;
     }[],
@@ -25,7 +26,7 @@ interface NewRound {
   values: Record<string, string>;
 }
 
-type NewRoundMap = Record<number, NewRound[]>; // product_id → new rounds
+type NewRoundMap = Record<string, NewRound[]>; // product_id → new rounds
 
 type SeasonTab = "동복" | "하복";
 
@@ -117,8 +118,9 @@ export const StockAddModal = ({
 
   const handleSubmit = async () => {
     const items: {
-      product_id: number;
+      product_id: string;
       size: string;
+      size_type?: "numeric" | "alpha" | "free";
       stock: number;
       round_number?: number;
     }[] = [];
@@ -135,6 +137,7 @@ export const StockAddModal = ({
           items.push({
             product_id: product.product_id,
             size,
+            size_type: product.size_type,
             stock: qty,
             round_number: round.roundNumber,
           });

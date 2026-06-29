@@ -280,7 +280,7 @@ export interface UpdateStaffOrderRequest {
 }
 
 export interface AdminOrderUniformItem {
-  item_id: number;
+  item_id: string;
   name: string;
   season: string;
   selected_size: string;
@@ -458,10 +458,11 @@ export async function getInventoryDetail(inventoryId: number): Promise<Inventory
 }
 
 export interface InventoryProduct {
-  product_id: number;
+  product_id: string;
   display_name: string;
   category: string;
   season: 'W' | 'S';
+  size_type?: "numeric" | "alpha" | "free";
   size_stats: InventorySizeStat[];
 }
 
@@ -492,8 +493,9 @@ export async function getOrderInventory(
 // ============================================================================
 
 export interface StockUpdateItem {
-  product_id: number;
+  product_id: string;
   size: string;
+  size_type?: "numeric" | "alpha" | "free";
   stock: number;
   round_number?: number;
 }

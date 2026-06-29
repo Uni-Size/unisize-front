@@ -259,7 +259,7 @@ const ProductDetailModalContent = ({
     const s = editSchools[schoolIdx];
     setSelectableSaving(true);
     try {
-      await updateProductSelectable(Number(product.id), s.school_name, {
+      await updateProductSelectable(product.id, s.school_name, {
         is_selectable: s.is_selectable ?? false,
         selectable_with: (s.selectable_with ?? []).map((sw) => sw.product_id),
       });
@@ -856,7 +856,7 @@ const ProductDetailModalContent = ({
                       {validSizes.map((size) => {
                         const cur = currentSizes.find((s) => s.size === size);
                         return (
-                          <td key={size} className="px-3 py-2 text-center font-medium">{cur?.quantity ?? 0}</td>
+                          <td key={size} className="px-3 py-2 text-center font-medium">{(cur?.quantity ?? 0) === 0 ? "-" : cur?.quantity}</td>
                         );
                       })}
                       {isEditMode && <td></td>}

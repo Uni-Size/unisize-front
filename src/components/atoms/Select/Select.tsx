@@ -97,22 +97,16 @@ export const Select = ({
           <input
             ref={inputRef}
             className={`flex-1 min-w-0 border-none bg-transparent ${textClass} font-normal text-gray-700 outline-none placeholder:text-bg-400 ${disabled ? 'cursor-not-allowed' : ''}`}
-            placeholder={isOpen ? '검색...' : (selectedOption?.label ?? placeholder)}
-            value={isOpen ? search : ''}
-            readOnly={!isOpen}
+            placeholder={selectedOption ? '' : placeholder}
+            value={isOpen ? search : (selectedOption?.label ?? '')}
             disabled={disabled}
-            onFocus={openDropdown}
-            onChange={(e) => setSearch(e.target.value)}
+            onFocus={(e) => { openDropdown(); e.target.select(); }}
+            onChange={(e) => { if (isOpen) setSearch(e.target.value); }}
             onClick={(e) => { e.stopPropagation(); openDropdown(); }}
           />
         ) : (
           <span className={`flex-1 ${textClass} font-normal whitespace-nowrap overflow-hidden text-ellipsis ${!selectedOption ? 'text-bg-400' : 'text-gray-700'}`}>
             {selectedOption ? selectedOption.label : placeholder}
-          </span>
-        )}
-        {searchable && !isOpen && selectedOption && (
-          <span className={`absolute left-2.5 ${textClass} text-gray-700 pointer-events-none`}>
-            {selectedOption.label}
           </span>
         )}
         <svg

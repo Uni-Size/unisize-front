@@ -41,7 +41,7 @@ export interface ProductAddData {
 export interface ProductAddModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: ProductAddData) => void;
+  onSubmit: (data: ProductAddData) => Promise<void> | void;
   onOpenSchoolModal: () => void;
   selectedSchools: SchoolPrice[];
   onRemoveSchool: (schoolId: string) => void;
@@ -114,7 +114,7 @@ export const ProductAddModal = ({
     setSizesWithStock((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const missing: string[] = [];
     if (!displayName.trim() || displayName.trim().length < 2)
       missing.push("표시명(2글자 이상)");
@@ -137,7 +137,7 @@ export const ProductAddModal = ({
           }))
         )
       : validSizes.map(({ size }) => ({ size }));
-    onSubmit({
+    await onSubmit({
       season,
       category,
       gender,
@@ -149,6 +149,7 @@ export const ProductAddModal = ({
       sizes,
       schools: selectedSchools,
     });
+    handleClose();
   };
 
   const handleClose = () => {

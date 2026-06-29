@@ -141,7 +141,7 @@ export interface UniformProduct {
 }
 
 export interface RecommendedUniformItem {
-  product_id: number;
+  product_id: string;
   item_id: string;
   product_name: string;
   season: string;
@@ -560,11 +560,12 @@ export interface AdminStudentOrder {
 export type StudentType = '신입' | '재학' | '전학';
 
 export interface SupportAllowance {
-  product_id: number;
+  product_id: string;
   display_name: string;
   total: number;
   used: number;
   remaining: number;
+  selectable_with?: { product_id: string; display_name: string }[];
 }
 
 export interface AdminStudent {
@@ -715,12 +716,12 @@ export interface UpdateStudentRequest {
   admission_grade?: number;
   phone?: string;
   parent_phone?: string;
-  address?: string;
+  address?: string | null;
+  name_tag_name?: string;
   height?: number;
   weight?: number;
   shoulder?: number;
   waist?: number;
-
 }
 
 /**
@@ -1038,4 +1039,58 @@ export function validatePhoneNumber(phoneNumber: string): boolean {
 export function validateBirthDate(birthDate: string): boolean {
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
   return dateRegex.test(birthDate);
+}
+
+// ============================================================================
+// 학생 감사 로그 (히스토리)
+// ============================================================================
+
+export type AuditAction =
+  | 'student.create'
+  | 'student.update'
+  | 'student.delete'
+  | 'student.checkin'
+  | 'support.set'
+  | 'measurement.start'
+  | 'measurement.complete'
+  | 'measurement.update'
+  | 'order.create'
+  | 'order.update'
+  | 'order.finalize'
+  | 'order.delete';
+
+export interface AuditLog {
+  id: string;
+  student_id: string;
+  actor_id: string | null;
+  action: AuditAction;
+  changes: {
+    before?: Record<string, unknown>;
+    after?: Record<string, unknown>;
+  };
+  memo: string;
+  created_at: string;
+}
+
+export interface AuditLogMeta {
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+}
+
+export interface AuditLogResponse {
+  data: AuditLog[];
+  meta: AuditLogMeta;
+}
+
+export async function getStudentAuditLogs(
+  studentId: string,
+  params?: { page?: number; limit?: number },
+): Promise<AuditLogResponse> {
+  const response = await apiClient.get<{ success: boolean; data: AuditLog[]; meta: AuditLogMeta }>(
+    `/api/v1/students/${studentId}/audit-logs`,
+    { params },
+  );
+  return { data: response.data.data, meta: response.data.meta };
 }

@@ -24,6 +24,11 @@ import { getTargetYear } from "@/utils/schoolUtils";
 import { getApiErrorMessage } from "@/utils/errorUtils";
 import { formatDate } from "@/utils/dateUtils";
 import { downloadCSV } from "@/utils/csvUtils";
+import { CATEGORY_GROUP_MAP, CATEGORY_GROUPS } from "@/constants/productCategories";
+
+const CATEGORY_LABEL_TO_GROUP: Record<string, string> = Object.fromEntries(
+  CATEGORY_GROUPS.flatMap(g => g.options.map(o => [o.label, g.label]))
+);
 import { formatGender } from "@/utils/genderUtils";
 import { getOrderInventory, updateInventoryStock } from "@/api/order";
 import type { InventoryProduct } from "@/api/order";
@@ -390,10 +395,12 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
           nameTagPrice = schoolDetail.name_tag_price;
           nameTagAttachPrice = schoolDetail.name_tag_attach_price;
           for (const u of schoolDetail.uniforms.winter) {
-            availableUniforms.push({ productId: u.product_id, name: u.display_name, season: 'winter', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size) });
+            const pid = Number(u.product_id);
+            if (!isNaN(pid)) availableUniforms.push({ productId: pid, name: u.display_name, season: 'winter', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size), category: u.category });
           }
           for (const u of schoolDetail.uniforms.summer) {
-            availableUniforms.push({ productId: u.product_id, name: u.display_name, season: 'summer', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size) });
+            const pid = Number(u.product_id);
+            if (!isNaN(pid)) availableUniforms.push({ productId: pid, name: u.display_name, season: 'summer', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size), category: u.category });
           }
         }
       }
@@ -409,35 +416,84 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         }
       }
 
-      const toUniformItem = (r: import('@/api/student').RecommendedUniformItem, idx: number, seasonCode: 'W' | 'S' | 'A'): import('@components/organisms/StudentModal').UniformItem => ({
-        id: `rec-${r.product_id}-${idx}`,
-        productId: r.product_id,
-        name: r.item_id || r.product_name,
-        size: r.recommended_size,
-        availableSizes: r.available_sizes.map(a => a.size),
-        supportedQuantity: r.supported_quantity,
-        additionalQuantity: r.purchase_quantity - r.supported_quantity,
-        unitPrice: r.price,
-        repair: r.customization ?? '',
-        reservation: r.delivery_status === 'reserved',
-        received: r.delivery_status === 'receipt',
-        nameTag: r.name_tag_count ?? null,
-        nameTagName: r.name_tag_name,
-        attachCount: r.name_tag_attach ? 1 : 0,
-        itemStatus: r.delivery_status,
-        seasonCode,
-      });
+      const GROUP_ORDER: Record<string, number> = { '상의': 0, '하의': 1, '체육복': 3 };
+      const categoryOrder = (category: string | undefined): number => {
+        const c = category ?? '';
+        const g = CATEGORY_GROUP_MAP[c] ?? CATEGORY_LABEL_TO_GROUP[c]
+          ?? (c.includes('체육') || c.includes('생활복') ? '체육복' : undefined);
+        return GROUP_ORDER[g ?? ''] ?? 2;
+      };
+
+      const toUniformItem = (r: import('@/api/student').RecommendedUniformItem, idx: number, seasonCode: 'W' | 'S' | 'A'): import('@components/organisms/StudentModal').UniformItem => {
+        const avail = availableUniforms.find(u => u.productId === r.product_id);
+        return {
+          id: `rec-${r.product_id}-${idx}`,
+          productId: r.product_id,
+          name: r.item_id || r.product_name,
+          size: r.recommended_size,
+          availableSizes: r.available_sizes.map(a => a.size),
+          supportedQuantity: r.supported_quantity,
+          additionalQuantity: r.purchase_quantity - r.supported_quantity,
+          unitPrice: r.price,
+          repair: r.customization ?? '',
+          reservation: r.delivery_status === 'reserved',
+          received: r.delivery_status === 'receipt',
+          nameTag: r.name_tag_count ?? null,
+          nameTagName: r.name_tag_name,
+          attachCount: r.name_tag_attach ? 1 : 0,
+          itemStatus: r.delivery_status,
+          seasonCode,
+          category: avail?.category,
+        };
+      };
+
+      const sortUniforms = (items: import('@components/organisms/StudentModal').UniformItem[]) =>
+        [...items].sort((a, b) => categoryOrder(a.category) - categoryOrder(b.category));
+
+      const studentGender = detail.gender;
+      const preferSkirt = (r: import('@/api/student').RecommendedUniformItem) => {
+        const c = (availableUniforms.find(u => u.productId === r.product_id)?.category ?? '').toLowerCase();
+        return c.includes('skirt') || c.includes('치마');
+      };
+      const preferPants = (r: import('@/api/student').RecommendedUniformItem) => {
+        const c = (availableUniforms.find(u => u.productId === r.product_id)?.category ?? '').toLowerCase();
+        return c.includes('pants') || c.includes('바지');
+      };
+
+      const filterSelectableGroup = (items: import('@/api/student').RecommendedUniformItem[]) => {
+        const seenGroupIds = new Set<string>();
+        const result: import('@/api/student').RecommendedUniformItem[] = [];
+        for (const r of items) {
+          if (!r.selectable_with || r.selectable_with.length === 0) {
+            result.push(r);
+            continue;
+          }
+          const groupKey = [r.item_id, ...r.selectable_with].sort().join('|');
+          if (seenGroupIds.has(groupKey)) continue;
+          seenGroupIds.add(groupKey);
+          const groupItems = items.filter(i =>
+            i.item_id === r.item_id || r.selectable_with.includes(i.item_id)
+          );
+          const preferred = studentGender === 'F'
+            ? groupItems.find(preferSkirt) ?? r
+            : studentGender === 'M'
+              ? groupItems.find(preferPants) ?? r
+              : r;
+          result.push(preferred);
+        }
+        return result;
+      };
 
       const recWinter = !firstSnapshot
-        ? (detail.recommended_uniforms?.winter ?? []).filter(r => r.season === 'W').map((r, i) => toUniformItem(r, i, 'W'))
+        ? sortUniforms(filterSelectableGroup((detail.recommended_uniforms?.winter ?? []).filter(r => r.season === 'W' && r.supported_quantity > 0)).map((r, i) => toUniformItem(r, i, 'W')))
         : [];
       const recSummer = !firstSnapshot
-        ? (detail.recommended_uniforms?.summer ?? []).filter(r => r.season === 'S').map((r, i) => toUniformItem(r, i, 'S'))
+        ? sortUniforms(filterSelectableGroup((detail.recommended_uniforms?.summer ?? []).filter(r => r.season === 'S' && r.supported_quantity > 0)).map((r, i) => toUniformItem(r, i, 'S')))
         : [];
       const recAll = !firstSnapshot
         ? [
-            ...(detail.recommended_uniforms?.winter ?? []).filter(r => r.season === 'A').map((r, i) => toUniformItem(r, i, 'A')),
-            ...(detail.recommended_uniforms?.summer ?? []).filter(r => r.season === 'A').map((r, i) => toUniformItem(r, i, 'A')),
+            ...filterSelectableGroup((detail.recommended_uniforms?.winter ?? []).filter(r => r.season === 'A')).map((r, i) => toUniformItem(r, i, 'A')),
+            ...filterSelectableGroup((detail.recommended_uniforms?.summer ?? []).filter(r => r.season === 'A')).map((r, i) => toUniformItem(r, i, 'A')),
           ]
         : [];
 
@@ -462,12 +518,12 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
             nameTag: 0,
             attachCount: 0,
             seasonCode: avail.season === 'summer' ? 'S' : 'W',
+            category: avail.category,
           };
           if (avail.season === 'summer') recSummer.push(item);
           else recWinter.push(item);
         }
       }
-
       const detailData: StudentDetailData = {
         id: String(detail.id),
         orderId: firstSnapshot?.orderId,
@@ -650,6 +706,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
               <option value="연락처">연락처</option>
             </select>
             <Input
+              size="sm"
               placeholder="검색어를 입력하세요."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -877,7 +934,7 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
     downloadCSV([], csvRows, `${schoolName}_주문예약`);
   };
 
-  const handleStockSubmit = async (items: { product_id: number; size: string; stock: number; round_number?: number }[]) => {
+  const handleStockSubmit = async (items: { product_id: string; size: string; size_type?: "numeric" | "alpha" | "free"; stock: number; round_number?: number }[]) => {
     await updateInventoryStock(schoolName, { items });
     fetchInventory();
   };

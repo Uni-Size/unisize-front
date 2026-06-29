@@ -29,6 +29,7 @@ import {
   type SchoolListParams,
 } from "@/api/school";
 import { getApiErrorMessage } from "@/utils/errorUtils";
+import { Toast } from "@components/atoms/Toast";
 import { downloadCSV } from "@/utils/csvUtils";
 import { formatDate, formatDateTime } from "@/utils/dateUtils";
 
@@ -100,6 +101,7 @@ export const SchoolListPage = () => {
 
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedSchool, setSelectedSchool] = useState<SchoolListItem | null>(
     null,
@@ -107,6 +109,7 @@ export const SchoolListPage = () => {
   const [isProductAddModalOpen, setIsProductAddModalOpen] = useState(false);
   const [isSchoolSelectModalOpen, setIsSchoolSelectModalOpen] = useState(false);
   const [onProductCreated, setOnProductCreated] = useState<((item: SchoolProductItem) => void) | null>(null);
+  const [onAddToCache, setOnAddToCache] = useState<((cacheKey: string, product: { id: number; name: string; price: number }) => void) | null>(null);
   const [selectedSchoolsForProduct, setSelectedSchoolsForProduct] = useState<
     SchoolPrice[]
   >([]);
@@ -161,17 +164,21 @@ export const SchoolListPage = () => {
       setIsProductAddModalOpen(false);
       setSelectedSchoolsForProduct([]);
       if (onProductCreated) {
+        const seasonCode = data.season === "S" ? "summer" : "winter";
+        const cacheKey = `${data.season}:${data.category}:${data.gender}`;
+        onAddToCache?.(cacheKey, { id: created.id, name: data.displayName, price: data.originalPrice });
         onProductCreated({
           id: `product-${Date.now()}`,
-          productApiId: String(created.id),
+          productApiId: created.id,
           category: data.category,
           gender: data.gender,
           displayName: data.displayName,
           contractPrice: data.originalPrice,
           freeQuantity: 1,
-          season: data.season === "S" ? "summer" : "winter",
+          season: seasonCode,
         });
         setOnProductCreated(null);
+        setOnAddToCache(null);
       }
     } catch (err: unknown) {
       const errData = (
@@ -245,6 +252,7 @@ export const SchoolListPage = () => {
   const handleAddSchool = () => {
     setIsAddModalOpen(false);
     fetchSchools(buildParams());
+    setToast({ message: "학교가 추가되었습니다.", variant: "success" });
   };
 
   const handleOpenDetailModal = (school: SchoolRow) => {
@@ -420,6 +428,7 @@ export const SchoolListPage = () => {
                 <option value="학교명">학교명</option>
               </select>
               <Input
+                size="sm"
                 placeholder="검색어를 입력하세요."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -557,8 +566,9 @@ export const SchoolListPage = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleAddSchool}
-        onAddNewProduct={(onCreated) => {
+        onAddNewProduct={(onCreated, addToCache) => {
           setOnProductCreated(() => onCreated);
+          setOnAddToCache(() => addToCache);
           setIsProductAddModalOpen(true);
         }}
       />
@@ -569,7 +579,11 @@ export const SchoolListPage = () => {
         school={selectedSchool}
         onUpdate={() => fetchSchools(buildParams())}
         onSubmit={handleUpdateSchool}
-        onAddNewProduct={() => setIsProductAddModalOpen(true)}
+        onAddNewProduct={(onCreated, addToCache) => {
+          setOnProductCreated(() => onCreated);
+          setOnAddToCache(() => addToCache);
+          setIsProductAddModalOpen(true);
+        }}
       />
 
       <ProductAddModal
@@ -607,6 +621,9 @@ export const SchoolListPage = () => {
         }}
         zIndex={1200}
       />
+      {toast && (
+        <Toast message={toast.message} variant={toast.variant} onClose={() => setToast(null)} />
+      )}
     </AdminLayout>
   );
 };
