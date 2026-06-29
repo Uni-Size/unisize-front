@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { Modal, Select, Input } from "@components/atoms";
 import { Toast } from "@components/atoms/Toast";
+import { NameTagSection } from "../NameTagSection/NameTagSection";
 import type { SchoolProductItem } from "../SchoolAddModal";
 import { GENDER_OPTIONS } from "@/constants/gender";
 import { getAllProducts, updateProductSelectable, type Product } from "@/api/product";
-import { CATEGORY_OPTIONS } from "@/constants/productCategories";
+import { CATEGORY_GROUPS, getCategoryLabel } from "@/constants/productCategories";
 import type { SchoolListItem, SupportedYear, UpdateUniformItem } from "@/api/school";
 import { getSchoolDetail } from "@/api/school";
 import { getApiErrorString } from "@/utils/errorUtils";
@@ -41,10 +42,7 @@ const yearOptions = Array.from({ length: 10 }, (_, i) => ({
   label: String(currentYear - 5 + i),
 }));
 
-const categoryOptions = CATEGORY_OPTIONS.map((o) => ({
-  value: o.value,
-  label: o.label,
-}));
+const categoryOptions = CATEGORY_GROUPS;
 const genderOptions = GENDER_OPTIONS;
 
 interface EditableYear extends SupportedYear {
@@ -519,17 +517,18 @@ export const SchoolDetailModal = ({
             {isEditMode ? (
               <Select
                 placeholder="카테고리"
-                options={categoryOptions}
+                options={categoryOptions.flatMap((g) => g.options)}
+                groups={categoryOptions}
                 value={product.category}
                 onChange={(v) =>
                   handleProductChange(season, product.id, "category", v)
                 }
+                searchable
                 fullWidth
               />
             ) : (
               <div className="flex items-center h-12.5 px-4 border border-gray-200 rounded-lg bg-white text-15 text-gray-700">
-                {categoryOptions.find((o) => o.value === product.category)
-                  ?.label ?? product.category}
+                {getCategoryLabel(product.category)}
               </div>
             )}
           </div>
@@ -878,127 +877,17 @@ export const SchoolDetailModal = ({
         )}
 
         {/* 명찰 */}
-        {(isEditMode || hasNameTag) && (
-          <div className="flex flex-col gap-2">
-            <span className="text-base font-medium text-bg-800">명찰</span>
-            <div className="flex gap-4 items-center flex-wrap">
-              <label className="flex items-center gap-1.5 text-15 text-gray-700 cursor-pointer">
-                {isEditMode ? (
-                  <input
-                    type="checkbox"
-                    checked={hasNameTag}
-                    onChange={(e) => setHasNameTag(e.target.checked)}
-                    className="w-4 h-4 accent-primary-900"
-                  />
-                ) : (
-                  <input
-                    type="checkbox"
-                    checked={hasNameTag}
-                    readOnly
-                    className="w-4 h-4 accent-primary-900"
-                  />
-                )}
-                명찰
-              </label>
-              {hasNameTag && (
-                <div className="flex gap-2 items-center flex-wrap">
-                  {/* 제작 단가 / 구매 단위 — 하나의 인풋처럼 묶음 */}
-                  <div className="flex flex-col gap-0.5">
-                    <span className="px-1 text-13 text-gray-500">
-                      제작 단가
-                    </span>
-                    {isEditMode ? (
-                      <div className="flex items-center h-10 border border-gray-200 rounded-lg bg-white overflow-hidden">
-                        <div className="flex items-center px-3 gap-1 flex-1">
-                          <input
-                            type="number"
-                            className="min-w-0 w-20 border-none bg-transparent text-14 text-gray-700 text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                            placeholder="-"
-                            value={nameTagPrice}
-                            onChange={(e) =>
-                              setNameTagPrice(
-                                e.target.value === ""
-                                  ? ""
-                                  : Number(e.target.value),
-                              )
-                            }
-                          />
-                          <span className="text-14 text-gray-500 shrink-0">
-                            원
-                          </span>
-                        </div>
-                        <div className="w-px h-5 bg-gray-200 shrink-0" />
-                        <div className="flex items-center px-3 gap-1">
-                          <input
-                            type="number"
-                            className="min-w-0 w-10 border-none bg-transparent text-14 text-gray-700 text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                            placeholder="-"
-                            value={nameTagMinUnit}
-                            onChange={(e) =>
-                              setNameTagMinUnit(
-                                e.target.value === ""
-                                  ? ""
-                                  : Number(e.target.value),
-                              )
-                            }
-                          />
-                          <span className="text-14 text-gray-500 shrink-0">
-                            개 단위
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center h-10 border border-gray-200 rounded-lg bg-white overflow-hidden">
-                        <div className="flex items-center px-3 flex-1 text-14 text-gray-700">
-                          {nameTagPrice !== ""
-                            ? `${Number(nameTagPrice).toLocaleString()}원`
-                            : "-"}
-                        </div>
-                        <div className="w-px h-5 bg-gray-200 shrink-0" />
-                        <div className="flex items-center px-3 text-14 text-gray-700">
-                          {nameTagMinUnit !== ""
-                            ? `${nameTagMinUnit}개 단위`
-                            : "-"}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="px-1 text-13 text-gray-500">
-                      부착 단가
-                    </span>
-                    {isEditMode ? (
-                      <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-white gap-1">
-                        <input
-                          type="number"
-                          className="min-w-0 w-20 border-none bg-transparent text-14 text-gray-700 text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                          placeholder="-"
-                          value={nameTagAttachPrice}
-                          onChange={(e) =>
-                            setNameTagAttachPrice(
-                              e.target.value === ""
-                                ? ""
-                                : Number(e.target.value),
-                            )
-                          }
-                        />
-                        <span className="text-14 text-gray-500 shrink-0">
-                          원
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-white text-14 text-gray-700">
-                        {nameTagAttachPrice !== ""
-                          ? `${Number(nameTagAttachPrice).toLocaleString()}원`
-                          : "-"}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        <NameTagSection
+          isEditMode={isEditMode}
+          hasNameTag={hasNameTag}
+          nameTagPrice={nameTagPrice}
+          nameTagAttachPrice={nameTagAttachPrice}
+          nameTagMinUnit={nameTagMinUnit}
+          onHasNameTagChange={setHasNameTag}
+          onNameTagPriceChange={setNameTagPrice}
+          onNameTagAttachPriceChange={setNameTagAttachPrice}
+          onNameTagMinUnitChange={setNameTagMinUnit}
+        />
 
         {/* 교복 */}
         <div className="flex flex-col gap-2">

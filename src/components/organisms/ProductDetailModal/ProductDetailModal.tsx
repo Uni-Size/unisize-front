@@ -381,6 +381,7 @@ const ProductDetailModalContent = ({
                 groups={CATEGORY_GROUPS}
                 value={category}
                 onChange={setCategory}
+                searchable
                 fullWidth
               />
             ) : (

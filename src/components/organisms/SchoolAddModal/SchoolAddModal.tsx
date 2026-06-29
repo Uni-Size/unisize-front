@@ -1,9 +1,10 @@
 import { useState, useCallback } from "react";
 import { Modal, Select, Input } from "@components/atoms";
 import { Toast } from "@components/atoms/Toast";
+import { NameTagSection } from "../NameTagSection/NameTagSection";
 import { getAllProducts, type Product } from "@/api/product";
 import { GENDER_OPTIONS } from "@/constants/gender";
-import { CATEGORY_OPTIONS } from "@/constants/productCategories";
+import { CATEGORY_GROUPS } from "@/constants/productCategories";
 import {
   addSupportedSchool,
   type UniformItem,
@@ -18,10 +19,7 @@ export interface SchoolProductItem {
   contractPrice: number;
   freeQuantity: number;
   productApiId?: string;
-  hasNameTag?: boolean;
-  nameTagPrice?: number;
-  nameTagAttachPrice?: number;
-  nameTagMinUnit?: number;
+  season?: "winter" | "summer";
 }
 
 export interface SchoolAddData {
@@ -39,7 +37,7 @@ export interface SchoolAddModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: () => void;
-  onAddNewProduct?: () => void;
+  onAddNewProduct?: (onCreated: (item: SchoolProductItem) => void) => void;
 }
 
 const purchaseStatusOptions = [
@@ -54,7 +52,7 @@ const yearOptions = Array.from({ length: 6 }, (_, i) => ({
   label: String(currentYear - 3 + i),
 }));
 
-const categoryOptions = CATEGORY_OPTIONS;
+const categoryOptions = CATEGORY_GROUPS;
 
 const genderOptions = GENDER_OPTIONS;
 
@@ -75,6 +73,10 @@ export const SchoolAddModal = ({
   const [productsCache, setProductsCache] = useState<Record<string, Product[]>>(
     {},
   );
+  const [hasNameTag, setHasNameTag] = useState(false);
+  const [nameTagPrice, setNameTagPrice] = useState<number | "">("");
+  const [nameTagAttachPrice, setNameTagAttachPrice] = useState<number | "">("");
+  const [nameTagMinUnit, setNameTagMinUnit] = useState<number | "">("");
   const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
 
   const fetchProducts = useCallback(
@@ -121,7 +123,7 @@ export const SchoolAddModal = ({
   const handleProductChange = (
     season: "winter" | "summer",
     productId: string,
-    field: keyof SchoolProductItem,
+    field: keyof SchoolProductItem | "displayName_override",
     value: string | number,
   ) => {
     const seasonCode = season === "winter" ? "W" : "S";
@@ -155,6 +157,9 @@ export const SchoolAddModal = ({
             contractPrice: matched?.price ?? p.contractPrice,
           };
         }
+        if (field === "displayName_override") {
+          return { ...p, displayName: value as string };
+        }
         return { ...p, [field]: value };
       });
 
@@ -169,10 +174,10 @@ export const SchoolAddModal = ({
     product_id: Number(p.productApiId),
     contract_price: p.contractPrice,
     quantity: p.freeQuantity,
-    has_name_tag: p.hasNameTag ?? false,
-    name_tag_price: p.hasNameTag ? (p.nameTagPrice ?? undefined) : undefined,
-    name_tag_attach_price: p.hasNameTag ? (p.nameTagAttachPrice ?? undefined) : undefined,
-    name_tag_min_unit: p.hasNameTag ? (p.nameTagMinUnit ?? undefined) : undefined,
+    has_name_tag: hasNameTag,
+    name_tag_price: hasNameTag && nameTagPrice !== "" ? nameTagPrice : undefined,
+    name_tag_attach_price: hasNameTag && nameTagAttachPrice !== "" ? nameTagAttachPrice : undefined,
+    name_tag_min_unit: hasNameTag && nameTagMinUnit !== "" ? nameTagMinUnit : undefined,
   });
 
   const handleSubmit = async () => {
@@ -208,6 +213,10 @@ export const SchoolAddModal = ({
     setWinterProducts([]);
     setSummerProducts([]);
     setProductsCache({});
+    setHasNameTag(false);
+    setNameTagPrice("");
+    setNameTagAttachPrice("");
+    setNameTagMinUnit("");
     onClose();
   };
 
@@ -226,7 +235,7 @@ export const SchoolAddModal = ({
     <div key={product.id} className="flex flex-col gap-1">
       <div className="flex gap-2 items-start">
         <button
-          className="shrink-0 flex items-center justify-center w-14 h-12.5 border border-delete-border rounded-lg bg-delete-bg text-white cursor-pointer hover:bg-delete-bg-hover text-sm font-medium"
+          className="shrink-0 flex items-center justify-center w-9 h-9 border border-delete-border rounded-lg bg-delete-bg text-white cursor-pointer hover:bg-delete-bg-hover text-xs font-medium"
           onClick={() => handleRemoveProduct(season, product.id)}
         >
           삭제
@@ -234,11 +243,14 @@ export const SchoolAddModal = ({
         <div className="w-30 shrink-0">
           <Select
             placeholder="카테고리"
-            options={categoryOptions}
+            options={categoryOptions.flatMap((g) => g.options)}
+            groups={categoryOptions}
             value={product.category}
             onChange={(value) =>
               handleProductChange(season, product.id, "category", value)
             }
+            searchable
+            size="sm"
             fullWidth
           />
         </div>
@@ -250,6 +262,7 @@ export const SchoolAddModal = ({
             onChange={(value) =>
               handleProductChange(season, product.id, "gender", value)
             }
+            size="sm"
             fullWidth
           />
         </div>
@@ -271,7 +284,7 @@ export const SchoolAddModal = ({
                       ? "불러오는 중..."
                       : options.length === 0
                         ? "등록된 아이템이 없습니다"
-                        : "표시명"
+                        : "제품 검색"
                   }
                   options={options}
                   value={product.productApiId ?? ""}
@@ -279,25 +292,38 @@ export const SchoolAddModal = ({
                     handleProductChange(season, product.id, "displayName", value)
                   }
                   disabled={isLoaded && options.length === 0}
+                  searchable
+                  size="sm"
                   fullWidth
                 />
               );
             })()
           ) : (
             <Select
-              placeholder="표시명"
+              placeholder="제품 검색"
               options={[]}
               value=""
               disabled
+              size="sm"
               fullWidth
             />
           )}
         </div>
+        <div className="w-44 shrink-0">
+          <input
+            className="w-full h-9 px-2.5 border border-gray-200 rounded-lg bg-white text-13 text-gray-700 outline-none focus:border-gray-400 placeholder:text-bg-400"
+            placeholder="표시명"
+            value={product.displayName}
+            onChange={(e) =>
+              handleProductChange(season, product.id, "displayName_override", e.target.value)
+            }
+          />
+        </div>
         <div className="w-35 shrink-0">
-          <div className="flex items-center h-12.5 px-3 border border-gray-200 rounded-lg bg-white gap-1">
+          <div className="flex items-center h-9 px-2.5 border border-gray-200 rounded-lg bg-white gap-1">
             <input
               type="number"
-              className="min-w-0 flex-1 border-none bg-transparent text-15 text-gray-700 text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="min-w-0 flex-1 border-none bg-transparent text-13 text-gray-700 text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               placeholder="-"
               value={product.contractPrice || ""}
               onChange={(e) =>
@@ -309,12 +335,12 @@ export const SchoolAddModal = ({
                 )
               }
             />
-            <span className="text-15 text-gray-700 shrink-0">원</span>
+            <span className="text-13 text-gray-700 shrink-0">원</span>
           </div>
         </div>
-        <div className="w-17.5 shrink-0">
+        <div className="w-12 shrink-0">
           <Input
-            placeholder=""
+            placeholder="0"
             type="number"
             value={String(product.freeQuantity || "")}
             onChange={(e) =>
@@ -325,80 +351,17 @@ export const SchoolAddModal = ({
                 Number(e.target.value),
               )
             }
+            size="sm"
             fullWidth
           />
         </div>
-        <div className="w-17.5 shrink-0 flex items-center justify-center h-12.5">
-          <label className="flex items-center gap-1 text-14 text-gray-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={product.hasNameTag ?? false}
-              onChange={(e) => {
-                if (season === "winter") {
-                  setWinterProducts((prev) => prev.map((p) => p.id === product.id ? { ...p, hasNameTag: e.target.checked } : p));
-                } else {
-                  setSummerProducts((prev) => prev.map((p) => p.id === product.id ? { ...p, hasNameTag: e.target.checked } : p));
-                }
-              }}
-              className="w-4 h-4 accent-primary-900"
-            />
-            명찰
-          </label>
-        </div>
       </div>
-      {product.hasNameTag && (
-        <div className="flex gap-2 items-start pl-16">
-          <div className="w-30 shrink-0">
-            <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-white gap-1">
-              <input
-                type="number"
-                className="min-w-0 flex-1 border-none bg-transparent text-14 text-gray-700 text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                placeholder="제작 단가"
-                value={product.nameTagPrice || ""}
-                onChange={(e) =>
-                  handleProductChange(season, product.id, "nameTagPrice", Number(e.target.value))
-                }
-              />
-              <span className="text-14 text-gray-500 shrink-0">원</span>
-            </div>
-          </div>
-          <div className="w-30 shrink-0">
-            <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-white gap-1">
-              <input
-                type="number"
-                className="min-w-0 flex-1 border-none bg-transparent text-14 text-gray-700 text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                placeholder="부착 단가"
-                value={product.nameTagAttachPrice || ""}
-                onChange={(e) =>
-                  handleProductChange(season, product.id, "nameTagAttachPrice", Number(e.target.value))
-                }
-              />
-              <span className="text-14 text-gray-500 shrink-0">원</span>
-            </div>
-          </div>
-          <div className="w-25 shrink-0">
-            <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-white gap-1">
-              <input
-                type="number"
-                className="min-w-0 flex-1 border-none bg-transparent text-14 text-gray-700 text-right outline-none placeholder:text-bg-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                placeholder="최소단위"
-                value={product.nameTagMinUnit || ""}
-                onChange={(e) =>
-                  handleProductChange(season, product.id, "nameTagMinUnit", Number(e.target.value))
-                }
-              />
-              <span className="text-14 text-gray-500 shrink-0">개</span>
-            </div>
-          </div>
-          <span className="text-13 text-gray-400 flex items-center h-10">제작단가 / 부착단가 / 최소주문단위</span>
-        </div>
-      )}
     </div>
   );
 
   const renderProductHeader = () => (
     <div className="flex gap-2 items-start">
-      <div className="w-14 shrink-0" />
+      <div className="w-9 shrink-0" />
       <div className="w-30 shrink-0">
         <span className="px-2 text-base text-bg-800">카테고리</span>
       </div>
@@ -406,16 +369,16 @@ export const SchoolAddModal = ({
         <span className="px-2 text-base text-bg-800">성별</span>
       </div>
       <div className="flex-1 min-w-30">
+        <span className="px-2 text-base text-bg-800">제품 검색</span>
+      </div>
+      <div className="w-44 shrink-0">
         <span className="px-2 text-base text-bg-800">표시명</span>
       </div>
       <div className="w-35 shrink-0">
         <span className="px-2 text-base text-bg-800">계약가격</span>
       </div>
-      <div className="w-17.5 shrink-0">
+      <div className="w-12 shrink-0">
         <span className="px-2 text-base text-bg-800">무상</span>
-      </div>
-      <div className="w-17.5 shrink-0">
-        <span className="px-2 text-base text-bg-800">명찰</span>
       </div>
     </div>
   );
@@ -493,7 +456,15 @@ export const SchoolAddModal = ({
               label="측정기간"
               type="date"
               value={measurementStartDate}
-              onChange={(e) => setMeasurementStartDate(e.target.value)}
+              onChange={(e) => {
+                const start = e.target.value;
+                setMeasurementStartDate(start);
+                if (start) {
+                  const d = new Date(start);
+                  d.setDate(d.getDate() + 3);
+                  setMeasurementEndDate(d.toISOString().slice(0, 10));
+                }
+              }}
               fullWidth
             />
           </div>
@@ -516,7 +487,13 @@ export const SchoolAddModal = ({
             <span className="text-base font-medium text-bg-800">교복</span>
             <button
               className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 cursor-pointer hover:opacity-80"
-              onClick={onAddNewProduct}
+              onClick={() => onAddNewProduct?.((item) => {
+                if (item.season === "summer") {
+                  setSummerProducts((prev) => [...prev, item]);
+                } else {
+                  setWinterProducts((prev) => [...prev, item]);
+                }
+              })}
             >
               신규품목 추가
             </button>
@@ -570,6 +547,18 @@ export const SchoolAddModal = ({
             </button>
           </div>
         </div>
+
+        {/* 명찰 */}
+        <NameTagSection
+          hasNameTag={hasNameTag}
+          nameTagPrice={nameTagPrice}
+          nameTagAttachPrice={nameTagAttachPrice}
+          nameTagMinUnit={nameTagMinUnit}
+          onHasNameTagChange={setHasNameTag}
+          onNameTagPriceChange={setNameTagPrice}
+          onNameTagAttachPriceChange={setNameTagAttachPrice}
+          onNameTagMinUnitChange={setNameTagMinUnit}
+        />
       </div>
     </Modal>
     {toast && (

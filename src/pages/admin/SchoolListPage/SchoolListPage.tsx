@@ -12,6 +12,7 @@ import type {
   SchoolPrice,
   ProductAddData,
 } from "@components/organisms/ProductAddModal";
+import type { SchoolProductItem } from "@components/organisms/SchoolAddModal";
 import { createProduct } from "@/api/product";
 
 import { Table } from "@components/atoms/Table";
@@ -105,6 +106,7 @@ export const SchoolListPage = () => {
   );
   const [isProductAddModalOpen, setIsProductAddModalOpen] = useState(false);
   const [isSchoolSelectModalOpen, setIsSchoolSelectModalOpen] = useState(false);
+  const [onProductCreated, setOnProductCreated] = useState<((item: SchoolProductItem) => void) | null>(null);
   const [selectedSchoolsForProduct, setSelectedSchoolsForProduct] = useState<
     SchoolPrice[]
   >([]);
@@ -136,7 +138,7 @@ export const SchoolListPage = () => {
 
   const handleAddProduct = async (data: ProductAddData) => {
     try {
-      await createProduct({
+      const created = await createProduct({
         category: data.category,
         gender: data.gender,
         is_repair:
@@ -158,6 +160,19 @@ export const SchoolListPage = () => {
       });
       setIsProductAddModalOpen(false);
       setSelectedSchoolsForProduct([]);
+      if (onProductCreated) {
+        onProductCreated({
+          id: `product-${Date.now()}`,
+          productApiId: String(created.id),
+          category: data.category,
+          gender: data.gender,
+          displayName: data.displayName,
+          contractPrice: data.originalPrice,
+          freeQuantity: 1,
+          season: data.season === "S" ? "summer" : "winter",
+        });
+        setOnProductCreated(null);
+      }
     } catch (err: unknown) {
       const errData = (
         err as {
@@ -542,7 +557,10 @@ export const SchoolListPage = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleAddSchool}
-        onAddNewProduct={() => setIsProductAddModalOpen(true)}
+        onAddNewProduct={(onCreated) => {
+          setOnProductCreated(() => onCreated);
+          setIsProductAddModalOpen(true);
+        }}
       />
 
       <SchoolDetailModal

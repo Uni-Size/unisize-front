@@ -4,12 +4,14 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   fullWidth?: boolean;
+  size?: 'sm' | 'md';
 }
 
 export const Input = ({
   label,
   error,
   fullWidth = false,
+  size = 'md',
   className = '',
   id,
   ...props
@@ -25,7 +27,7 @@ export const Input = ({
       )}
       <input
         id={inputId}
-        className={`flex items-center ${fullWidth ? 'w-full' : 'w-86'} h-12.5 px-4 border border-gray-200 rounded-lg text-15 font-normal leading-none text-gray-700 bg-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:border-bg-400 placeholder:text-bg-400 ${error ? 'border-error focus:border-error' : ''} ${className}`}
+        className={`flex items-center ${fullWidth ? 'w-full' : 'w-86'} ${size === 'sm' ? 'h-9 px-2.5 text-13' : 'h-12.5 px-4 text-15'} border border-gray-200 rounded-lg font-normal leading-none text-gray-700 bg-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:border-bg-400 placeholder:text-bg-400 ${error ? 'border-error focus:border-error' : ''} ${className}`}
         {...props}
       />
       {error && <span className="text-xs text-error">{error}</span>}
