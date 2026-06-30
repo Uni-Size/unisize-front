@@ -4,7 +4,6 @@ import { Input } from '../../../components/atoms/Input';
 import { Button } from '../../../components/atoms/Button';
 import { login } from '@/api/auth';
 import { useAuthStore } from '@/stores/authStore';
-import { DEMO_CREDENTIALS, DEMO_STAFF } from '@/mocks/mockData';
 
 export const LoginPage = () => {
   const [id, setId] = useState('');
@@ -26,13 +25,6 @@ export const LoginPage = () => {
 
     setError('');
     setIsLoading(true);
-
-    if (id === DEMO_CREDENTIALS.employee_id && password === DEMO_CREDENTIALS.password) {
-      setAuth(DEMO_STAFF, 'demo-token', undefined, true);
-      setIsLoading(false);
-      navigate('/admin');
-      return;
-    }
 
     try {
       const data = await login({ employee_id: id, password });

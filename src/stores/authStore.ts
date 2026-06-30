@@ -21,7 +21,6 @@ export interface StaffInfo {
 interface AuthState {
   // 상태
   isAuthenticated: boolean;
-  isDemoMode: boolean;
   staff: StaffInfo | null;
   accessToken: string | null;
   refreshToken: string | null;
@@ -30,8 +29,7 @@ interface AuthState {
   setAuth: (
     staff: StaffInfo,
     accessToken: string,
-    refreshToken?: string,
-    demoMode?: boolean
+    refreshToken?: string
   ) => void;
   clearAuth: () => void;
   updateStaff: (staff: StaffInfo) => void;
@@ -42,16 +40,14 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       // 초기 상태
       isAuthenticated: false,
-      isDemoMode: false,
       staff: null,
       accessToken: null,
       refreshToken: null,
 
       // 로그인 성공 시 호출
-      setAuth: (staff, accessToken, refreshToken, demoMode = false) => {
+      setAuth: (staff, accessToken, refreshToken) => {
         set({
           isAuthenticated: true,
-          isDemoMode: demoMode,
           staff,
           accessToken,
           refreshToken: refreshToken || null,
@@ -66,7 +62,6 @@ export const useAuthStore = create<AuthState>()(
 
         set({
           isAuthenticated: false,
-          isDemoMode: false,
           staff: null,
           accessToken: null,
           refreshToken: null,
@@ -79,11 +74,9 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: "auth-storage", // localStorage 키 이름
+      name: "auth-storage",
       partialize: (state) => ({
-        // persist할 상태만 선택 (토큰은 localStorage에 별도 저장되므로 제외 가능)
         isAuthenticated: state.isAuthenticated,
-        isDemoMode: state.isDemoMode,
         staff: state.staff,
       }),
     }

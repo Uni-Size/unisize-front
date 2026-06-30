@@ -289,7 +289,7 @@ export interface AdminOrderUniformItem {
   customization?: string;
   name_tag_count?: number;
   name_tag_name?: string;
-  name_tag_attach?: boolean;
+  name_tag_attach?: number;
 }
 
 export interface AdminOrderSupplyItem {
@@ -312,7 +312,7 @@ export interface UpdateAdminOrderRequest {
  * PUT /api/v1/admin/orders/:id
  */
 export async function updateAdminOrder(
-  orderId: number,
+  orderId: string | number,
   data: UpdateAdminOrderRequest,
 ): Promise<void> {
   await apiClient.put<ApiResponse<void>>(
@@ -369,7 +369,7 @@ export async function updateOrder(
  * PUT /api/v1/orders/:id/status
  */
 export async function updateOrderStatus(
-  orderId: number,
+  orderId: string | number,
   status: OrderStatus,
 ): Promise<void> {
   await apiClient.put<ApiResponse<void>>(`/api/v1/orders/${orderId}/status`, { status });

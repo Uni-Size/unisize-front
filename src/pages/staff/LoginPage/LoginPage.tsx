@@ -6,7 +6,6 @@ import { login } from '../../../api/auth';
 import { useAuthStore } from '../../../stores/authStore';
 import { AxiosError } from 'axios';
 import type { ApiResponse } from '../../../api/auth';
-import { DEMO_CREDENTIALS, DEMO_STAFF } from '@/mocks/mockData';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -34,13 +33,6 @@ export const LoginPage = () => {
 
     setError('');
     setIsLoading(true);
-
-    if (employeeId === DEMO_CREDENTIALS.employee_id && password === DEMO_CREDENTIALS.password) {
-      setAuth(DEMO_STAFF, 'demo-token', undefined, true);
-      setIsLoading(false);
-      navigate('/admin');
-      return;
-    }
 
     try {
       const loginResponse = await login({

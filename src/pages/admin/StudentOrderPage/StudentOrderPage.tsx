@@ -23,34 +23,7 @@ interface StudentOrder {
   registeredDate: string;
 }
 
-const mockStudentOrders: StudentOrder[] = [
-  {
-    id: '1',
-    studentName: '김민수',
-    phone: '010-1234-5678',
-    school: '가경중학교',
-    grade: '1',
-    className: '3',
-    gender: 'M',
-    items: ['하복 상의', '하복 하의', '체육복'],
-    totalAmount: 350000,
-    status: 'pending',
-    registeredDate: '2024-01-15',
-  },
-  {
-    id: '2',
-    studentName: '이영희',
-    phone: '010-2345-6789',
-    school: '가경중학교',
-    grade: '2',
-    className: '1',
-    gender: 'F',
-    items: ['동복 상의', '동복 하의'],
-    totalAmount: 280000,
-    status: 'measured',
-    registeredDate: '2024-01-14',
-  },
-];
+const mockStudentOrders: StudentOrder[] = [];
 
 const getStatusBadge = (status: StudentOrder['status']) => {
   const variants = {

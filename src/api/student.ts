@@ -247,7 +247,7 @@ export interface CompleteMeasurementRequest {
 }
 
 export interface MeasurementOrderItem {
-  item_id: number;
+  item_id: string | number;
   name: string;
   season: "동복" | "하복";
   selected_size: string | number;
@@ -255,7 +255,7 @@ export interface MeasurementOrderItem {
   is_reserved?: boolean;
   customization?: string;
   name_tag_count?: number;
-  name_tag_attach?: boolean;
+  name_tag_attach?: number;
 }
 
 export interface SupplyOrderItem {
@@ -453,7 +453,7 @@ export async function startMeasurement(
  * POST /api/v1/students/:studentId/measurement-order
  */
 export async function submitMeasurementOrder(
-  studentId: number,
+  studentId: string | number,
   orderData: MeasurementOrderRequest,
 ): Promise<void> {
   await apiClient.post(
@@ -513,7 +513,7 @@ export interface AdminOrderItem {
   unit_price: number;
   subtotal: number;
   name_tag_count: number;
-  name_tag_attach: boolean;
+  name_tag_attach: number;
   name_tag_name?: string;
   customization?: string;
   delivery_status: DeliveryStatus;
@@ -548,10 +548,7 @@ export interface AdminStudentOrder {
     min_unit: number;
   };
   name_tag_name?: string;
-  can_cancel_order: boolean;
-  can_modify_order: boolean;
-  is_order_completed: boolean;
-  is_order_cancelled: boolean;
+  total_name_tag_count?: number;
   order_items: AdminOrderItem[];
   created_at: string;
   updated_at: string;
@@ -693,7 +690,7 @@ export async function createStudent(data: CreateStudentRequest): Promise<AdminSt
  * 학생 상세 조회 (주문 기록 포함)
  * GET /api/v1/students/:id
  */
-export async function getStudentDetail(id: number): Promise<AdminStudent> {
+export async function getStudentDetail(id: string | number): Promise<AdminStudent> {
   const response = await apiClient.get<ApiResponse<AdminStudent>>(`/api/v1/students/${id}`);
   return response.data.data;
 }
@@ -729,7 +726,7 @@ export interface UpdateStudentRequest {
  * PUT /api/v1/students/:id
  */
 export async function updateStudent(
-  id: number,
+  id: string | number,
   data: UpdateStudentRequest,
 ): Promise<AdminStudent> {
   const response = await apiClient.put<ApiResponse<AdminStudent>>(
@@ -866,7 +863,7 @@ export interface OrderHistoriesData {
  * GET /api/v1/orders/:id/history
  */
 export async function getOrderHistory(
-  orderId: number,
+  orderId: string | number,
 ): Promise<OrderHistoriesData> {
   const response = await apiClient.get<ApiResponse<OrderHistoriesData>>(
     `/api/v1/orders/${orderId}/history`,
@@ -932,7 +929,7 @@ export interface UpdateOrderRequest {
  * PUT /api/v1/admin/orders/:id
  */
 export async function updateAdminOrder(
-  orderId: number,
+  orderId: string | number,
   data: UpdateOrderRequest,
 ): Promise<void> {
   await apiClient.put(`/api/v1/admin/orders/${orderId}`, data);
@@ -1062,12 +1059,18 @@ export type AuditAction =
 export interface AuditLog {
   id: string;
   student_id: string;
-  actor_id: string | null;
+  actor: {
+    id: string;
+    employee_id: string;
+    employee_name: string;
+  } | null;
   action: AuditAction;
-  changes: {
-    before?: Record<string, unknown>;
-    after?: Record<string, unknown>;
-  };
+  diff: {
+    field: string;
+    before: unknown;
+    after: unknown;
+  }[] | null;
+  meta: unknown | null;
   memo: string;
   created_at: string;
 }

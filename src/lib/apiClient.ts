@@ -1,5 +1,4 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
-import { handleMockRequest } from "@/mocks/mockHandlers";
 
 // API 베이스 URL
 const API_BASE_URL =
@@ -30,29 +29,9 @@ function isAllowedBaseURL(url: string | undefined): boolean {
   }
 }
 
-function isDemoMode(): boolean {
-  try {
-    const stored = localStorage.getItem("auth-storage");
-    if (!stored) return false;
-    const parsed = JSON.parse(stored);
-    return parsed?.state?.isDemoMode === true;
-  } catch {
-    return false;
-  }
-}
-
 // 요청 인터셉터
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // 데모 모드: 실제 API 요청 대신 mock 응답 반환
-    if (isDemoMode()) {
-      const mockResponse = handleMockRequest(config);
-      if (mockResponse) {
-        // axios 어댑터를 덮어써서 mock 응답을 즉시 반환
-        config.adapter = () => Promise.resolve(mockResponse);
-      }
-    }
-
     // baseURL 검증 (SSRF 방지)
     if (config.baseURL && !isAllowedBaseURL(config.baseURL)) {
       return Promise.reject(new Error("허용되지 않은 요청 URL입니다."));

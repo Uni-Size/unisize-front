@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm /Users/kiseon/Documents/Dev/unisize/unisize-front/src/pages/admin/SchoolDetailPage/schoolDetailDummyData.ts)",
+      "Bash(rm /Users/kiseon/Documents/Dev/unisize/unisize-front/src/pages/admin/SchoolDetailPage/orderDummyData.ts)"
+    ]
+  }
+}

@@ -12,6 +12,8 @@ import type { Column } from '@components/atoms/Table';
 import { getStudents, getStudentDetail, deleteStudent, getOrderHistory, updateAdminOrder, createStudent } from '@/api/student';
 import { updateAdminOrder as updateAdminOrderNew, type AdminOrderUniformItem } from '@/api/order';
 import type { AdminStudent } from '@/api/student';
+import { Toast } from '@components/atoms/Toast';
+import type { ToastVariant } from '@components/atoms/Toast';
 import { getSchoolDetail } from '@/api/school';
 import { getApiErrorMessage } from '@/utils/errorUtils';
 import { formatDate } from '@/utils/dateUtils';
@@ -47,6 +49,7 @@ export const StudentListPage = () => {
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ReactNode>(null);
+  const [toast, setToast] = useState<{ message: string; variant: ToastVariant } | null>(null);
   const itemsPerPage = 10;
 
   // 모달 state
@@ -108,34 +111,42 @@ export const StudentListPage = () => {
   };
 
   const handleAddStudent = async (data: StudentFormInput) => {
-    await createStudent({
-      name: data.name,
-      admission_year: data.admissionYear as number,
-      admission_grade: data.admissionGrade as number,
-      admission_school: data.admissionSchool,
-      ...(data.previousSchool ? { previous_school: data.previousSchool } : {}),
-      ...(data.birthDate ? { birth_date: data.birthDate } : {}),
-      ...(data.gender ? { gender: data.gender } : {}),
-      ...(data.studentPhone ? { student_phone: data.studentPhone } : {}),
-      ...(data.guardianPhone ? { guardian_phone: data.guardianPhone } : {}),
-      ...(data.address ? { address: data.address } : {}),
-      ...(data.height !== "" || data.weight !== "" || data.shoulder !== "" || data.waist !== ""
-        ? {
-            body: {
-              ...(data.height !== "" ? { height: data.height as number } : {}),
-              ...(data.weight !== "" ? { weight: data.weight as number } : {}),
-              ...(data.shoulder !== "" ? { shoulder: data.shoulder as number } : {}),
-              ...(data.waist !== "" ? { waist: data.waist as number } : {}),
-            },
-          }
-        : {}),
-    });
-    fetchStudents(currentPage);
+    try {
+      await createStudent({
+        name: data.name,
+        admission_year: data.admissionYear as number,
+        admission_grade: data.admissionGrade as number,
+        admission_school: data.admissionSchool,
+        ...(data.previousSchool ? { previous_school: data.previousSchool } : {}),
+        ...(data.birthDate ? { birth_date: data.birthDate } : {}),
+        ...(data.gender ? { gender: data.gender } : {}),
+        ...(data.studentPhone ? { student_phone: data.studentPhone } : {}),
+        ...(data.guardianPhone ? { guardian_phone: data.guardianPhone } : {}),
+        ...(data.address ? { address: data.address } : {}),
+        ...(data.height !== "" || data.weight !== "" || data.shoulder !== "" || data.waist !== ""
+          ? {
+              body: {
+                ...(data.height !== "" ? { height: data.height as number } : {}),
+                ...(data.weight !== "" ? { weight: data.weight as number } : {}),
+                ...(data.shoulder !== "" ? { shoulder: data.shoulder as number } : {}),
+                ...(data.waist !== "" ? { waist: data.waist as number } : {}),
+              },
+            }
+          : {}),
+      });
+      setToast({ message: '학생이 추가되었습니다.', variant: 'success' });
+      fetchStudents(currentPage);
+    } catch (err) {
+      console.error('학생 추가 실패:', err);
+      setToast({ message: '학생 추가에 실패했습니다.', variant: 'error' });
+      throw err;
+    }
   };
 
   const parseAdminOrderItems = (
     orderItems: import('@/api/student').AdminOrderItem[],
     nameTagService?: import('@/api/student').AdminStudentOrder['name_tag_service'],
+    availableUniforms: AvailableUniform[] = [],
   ): {
     winterUniforms: import('@components/organisms/StudentModal').UniformItem[];
     summerUniforms: import('@components/organisms/StudentModal').UniformItem[];
@@ -155,9 +166,12 @@ export const StudentListPage = () => {
         rawSeason === 'A' ? 'A' :
         nameUpper.includes('동복') || nameUpper.includes('WINTER') ? 'W' :
         nameUpper.includes('하복') || nameUpper.includes('SUMMER') ? 'S' : 'A';
+      // availableUniforms에서 이름으로 매칭해 UUID product_id(itemId) 조회
+      const matchedAvail = availableUniforms.find(u => u.name === productName);
       const uniform: import('@components/organisms/StudentModal').UniformItem = {
         id: String(item.id),
         productId: String(item.product_id),
+        itemId: matchedAvail?.productId,
         name: productName,
         size: item.selected_size,
         supportedQuantity: item.supported_quantity,
@@ -168,7 +182,7 @@ export const StudentListPage = () => {
         received: item.delivery_status === 'receipt',
         nameTag: item.name_tag_count || null,
         nameTagName: item.name_tag_name || undefined,
-        attachCount: item.name_tag_attach ? 1 : 0,
+        attachCount: item.name_tag_attach ?? 0,
         nameTagUnitPrice: nameTagService?.unit_price ?? undefined,
         nameTagAttachPrice: nameTagService?.attach_price ?? undefined,
         itemStatus: item.delivery_status,
@@ -182,12 +196,34 @@ export const StudentListPage = () => {
     return { winterUniforms, summerUniforms, allUniforms };
   };
 
-  const fetchStudentDetail = async (studentId: number): Promise<StudentDetailData> => {
+  const fetchStudentDetail = async (studentId: string | number): Promise<StudentDetailData> => {
     const detail = await getStudentDetail(studentId);
     const adminOrders = detail.orders ?? [];
+
+    // 학교 정보 먼저 조회 (itemId 매칭에 필요)
+    const schoolName = detail.admission_school ?? detail.school_name ?? '';
+    const availableUniforms: AvailableUniform[] = [];
+    let nameTagMinUnit: number | undefined;
+    let nameTagPrice: number | null | undefined;
+    let nameTagAttachPrice: number | null | undefined;
+    if (schoolName) {
+      const schoolDetail = await getSchoolDetail(schoolName).catch(() => null);
+      if (schoolDetail) {
+        nameTagMinUnit = schoolDetail.name_tag_min_unit ?? undefined;
+        nameTagPrice = schoolDetail.name_tag_price;
+        nameTagAttachPrice = schoolDetail.name_tag_attach_price;
+        for (const u of schoolDetail.uniforms.winter) {
+          if (u.product_id) availableUniforms.push({ productId: u.product_id, name: u.display_name, season: 'winter', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size), category: u.category });
+        }
+        for (const u of schoolDetail.uniforms.summer) {
+          if (u.product_id) availableUniforms.push({ productId: u.product_id, name: u.display_name, season: 'summer', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size), category: u.category });
+        }
+      }
+    }
+
     const orderSnapshots: import('@components/organisms/StudentModal').OrderSnapshot[] = adminOrders.map(
       (order: import('@/api/student').AdminStudentOrder) => {
-        const { winterUniforms, summerUniforms, allUniforms } = parseAdminOrderItems(order.order_items ?? [], order.name_tag_service);
+        const { winterUniforms, summerUniforms, allUniforms } = parseAdminOrderItems(order.order_items ?? [], order.name_tag_service, availableUniforms);
         return {
           orderId: order.id,
           date: order.order_date ?? order.created_at,
@@ -199,7 +235,7 @@ export const StudentListPage = () => {
           history: [],
           modifiedDate: formatDate(order.updated_at),
           name_tag_service: order.name_tag_service,
-          nameTagName: order.name_tag_name,
+          totalNameTagCount: order.total_name_tag_count,
         };
       },
     );
@@ -222,26 +258,6 @@ export const StudentListPage = () => {
 
     if (firstSnapshot) {
       firstSnapshot.history = firstHistory;
-    }
-
-    const schoolName = detail.admission_school ?? detail.school_name ?? '';
-    const availableUniforms: AvailableUniform[] = [];
-    let nameTagMinUnit: number | undefined;
-    let nameTagPrice: number | null | undefined;
-    let nameTagAttachPrice: number | null | undefined;
-    if (schoolName) {
-      const schoolDetail = await getSchoolDetail(schoolName).catch(() => null);
-      if (schoolDetail) {
-        nameTagMinUnit = schoolDetail.name_tag_min_unit ?? undefined;
-        nameTagPrice = schoolDetail.name_tag_price;
-        nameTagAttachPrice = schoolDetail.name_tag_attach_price;
-        for (const u of schoolDetail.uniforms.winter) {
-          if (u.product_id) availableUniforms.push({ productId: u.product_id, name: u.display_name, season: 'winter', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size), category: u.category });
-        }
-        for (const u of schoolDetail.uniforms.summer) {
-          if (u.product_id) availableUniforms.push({ productId: u.product_id, name: u.display_name, season: 'summer', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size), category: u.category });
-        }
-      }
     }
 
     // 기존 주문 아이템에 availableSizes backfill (product_id로 학교 정보와 매칭)
@@ -270,9 +286,10 @@ export const StudentListPage = () => {
       return {
         id: `rec-${r.product_id}-${idx}`,
         productId: r.product_id,
-        name: r.item_id || r.product_name,
+        itemId: r.item_id,
+        name: avail?.name ?? r.product_name,
         size: r.recommended_size,
-        availableSizes: r.available_sizes.map(a => a.size),
+        availableSizes: avail?.availableSizes ?? r.available_sizes.map(a => a.size),
         supportedQuantity: r.supported_quantity,
         additionalQuantity: r.purchase_quantity - r.supported_quantity,
         unitPrice: r.price,
@@ -391,27 +408,12 @@ export const StudentListPage = () => {
       modifiedDate: firstSnapshot?.modifiedDate,
       orderSnapshots,
       availableUniforms,
-      recommendedUniforms: [
-        ...(detail.recommended_uniforms?.winter ?? []).map((r) => ({
-          productId: r.product_id,
-          name: r.item_id || r.product_name,
-          season: 'winter' as const,
-          price: r.price,
-          availableSizes: r.available_sizes.map((s) => s.size),
-        })),
-        ...(detail.recommended_uniforms?.summer ?? []).map((r) => ({
-          productId: r.product_id,
-          name: r.item_id || r.product_name,
-          season: 'summer' as const,
-          price: r.price,
-          availableSizes: r.available_sizes.map((s) => s.size),
-        })),
-      ],
+      recommendedUniforms: availableUniforms,
       supportAllowances: detail.support_allowances?.map((a) => ({ product_id: a.product_id, display_name: a.display_name, remaining: a.remaining, selectable_with: a.selectable_with })),
       nameTagMinUnit: detail.name_tag_service?.min_unit ?? nameTagMinUnit,
       nameTagPrice: detail.name_tag_service?.unit_price ?? nameTagPrice,
       nameTagAttachPrice: detail.name_tag_service?.attach_price ?? nameTagAttachPrice,
-      nameTagName: firstSnapshot?.nameTagName ?? detail.name,
+      nameTagName: detail.name_tag_name || detail.name,
       winterUniforms: firstSnapshot?.winterUniforms ?? recWinter,
       summerUniforms: firstSnapshot?.summerUniforms ?? recSummer,
       allUniforms: firstSnapshot?.allUniforms ?? recAll,
@@ -449,7 +451,7 @@ export const StudentListPage = () => {
     }
   };
 
-  const handleEditSave = async (orderId: number, data: StudentFormInput) => {
+  const handleEditSave = async (orderId: string | number, data: StudentFormInput) => {
     try {
       const uniformItems = [
         ...data.winterUniforms.filter((u) => !u.isDeleted).map((u) => ({
@@ -493,31 +495,34 @@ export const StudentListPage = () => {
       });
 
       // 저장 후 해당 학생 데이터 재조회해서 view 모드로 전환
-      const studentId = Number(selectedStudent?.id);
+      const studentId = selectedStudent?.id;
       if (studentId) {
         const refreshed = await fetchStudentDetail(studentId);
         setSelectedStudent(refreshed);
       }
+      setToast({ message: '주문이 수정되었습니다.', variant: 'success' });
       fetchStudents(currentPage);
     } catch (error) {
       console.error('주문 수정 실패:', error);
+      setToast({ message: '주문 수정에 실패했습니다.', variant: 'error' });
+      throw error;
     }
   };
 
-  const handleOrderUpdate = async (orderId: number, data: StudentFormInput) => {
+  const handleOrderUpdate = async (orderId: string | number, data: StudentFormInput) => {
     // 원본 스냅샷 (변경 감지용)
     const origSnapshot = selectedStudent?.orderSnapshots?.find(s => s.orderId === orderId);
 
     const mapUniform = (u: typeof data.winterUniforms[0], fallbackSeason: string): AdminOrderUniformItem => ({
-      item_id: u.productId ?? u.id,
+      item_id: u.itemId ?? u.productId ?? u.id,
       name: u.name,
       season: u.seasonCode ?? fallbackSeason,
       selected_size: u.size,
       purchase_count: u.supportedQuantity + u.additionalQuantity,
       delivery_status: u.itemStatus as AdminOrderUniformItem['delivery_status'] || undefined,
       customization: u.repair || undefined,
-      name_tag_count: (u.nameTag ?? 0) > 0 ? (u.nameTag ?? 0) : undefined,
-      name_tag_attach: u.attachCount > 0 ? true : undefined,
+      name_tag_count: u.nameTag ?? 0,
+      name_tag_attach: u.attachCount,
     });
 
     const origDate = origSnapshot?.date ? (origSnapshot.date.slice(0, 10)) : '';
@@ -530,9 +535,9 @@ export const StudentListPage = () => {
 
     const payload: import('@/api/order').UpdateAdminOrderRequest = {
       uniform_items: [
-        ...data.winterUniforms.filter((u) => !u.isDeleted).map((u) => mapUniform(u, 'W')),
-        ...data.summerUniforms.filter((u) => !u.isDeleted).map((u) => mapUniform(u, 'S')),
-        ...(data.allUniforms ?? []).filter((u) => !u.isDeleted).map((u) => mapUniform(u, 'A')),
+        ...data.winterUniforms.map((u) => mapUniform(u, 'W')),
+        ...data.summerUniforms.map((u) => mapUniform(u, 'S')),
+        ...(data.allUniforms ?? []).map((u) => mapUniform(u, 'A')),
       ],
       ...(suppliesChanged ? {
         supply_items: data.supplies.filter((s) => s.quantity > 0).map((s) => ({
@@ -543,30 +548,35 @@ export const StudentListPage = () => {
         })),
       } : {}),
       ...(dateChanged ? { order_date: data.orderDate } : {}),
-      name_tag_name: data.nameTagName || undefined,
     };
 
-    await updateAdminOrderNew(orderId, payload);
-    const studentId = Number(selectedStudent?.id);
-    if (studentId) {
-      const refreshed = await fetchStudentDetail(studentId);
-      setSelectedStudent(refreshed);
+    try {
+      await updateAdminOrderNew(orderId, payload);
+      const studentId = selectedStudent?.id;
+      if (studentId) {
+        const refreshed = await fetchStudentDetail(studentId);
+        setSelectedStudent(refreshed);
+      }
+      fetchStudents(currentPage);
+    } catch (err) {
+      console.error('주문 수정 실패:', err);
+      setToast({ message: '주문 수정에 실패했습니다.', variant: 'error' });
+      throw err;
     }
-    fetchStudents(currentPage);
   };
 
-  const handleOrderCreate = async (studentId: number, data: StudentFormInput) => {
+  const handleOrderCreate = async (studentId: string, data: StudentFormInput) => {
     const { submitMeasurementOrder } = await import('@/api/student');
     const mapUniform = (u: typeof data.winterUniforms[0], season: '동복' | '하복') => ({
-      item_id: u.productId as string,
+      item_id: u.itemId ?? u.productId ?? '',
       name: u.name,
       season,
       selected_size: u.size,
       purchase_count: u.supportedQuantity + u.additionalQuantity,
       is_reserved: u.reservation || undefined,
       customization: u.repair || undefined,
-      name_tag_count: (u.nameTag ?? 0) > 0 ? (u.nameTag ?? 0) : undefined,
-      name_tag_attach: u.attachCount > 0 ? true : undefined,
+      name_tag_count: u.nameTag ?? 0,
+      name_tag_attach: u.attachCount,
     });
     const uniformItems = [
       ...data.winterUniforms.filter((u) => !u.isDeleted).map((u) => mapUniform(u, '동복')),
@@ -580,21 +590,26 @@ export const StudentListPage = () => {
         selected_size: s.size || undefined,
         purchase_count: s.quantity,
       }));
-    await submitMeasurementOrder(studentId, {
-      uniform_items: uniformItems,
-      supply_items: supplyItems,
-      notes: '',
-      name_tag_name: data.nameTagName || undefined,
-    });
-    const refreshed = await fetchStudentDetail(studentId);
-    setSelectedStudent(refreshed);
-    fetchStudents(currentPage);
+    try {
+      await submitMeasurementOrder(studentId, {
+        uniform_items: uniformItems,
+        supply_items: supplyItems,
+        notes: '',
+      });
+      const refreshed = await fetchStudentDetail(studentId);
+      setSelectedStudent(refreshed);
+      fetchStudents(currentPage);
+    } catch (err) {
+      console.error('주문 생성 실패:', err);
+      setToast({ message: '주문 생성에 실패했습니다.', variant: 'error' });
+      throw err;
+    }
   };
 
-  const handleStatusChange = async (orderId: number, status: import('@components/organisms/StudentModal').OrderStatusValue) => {
+  const handleStatusChange = async (orderId: string | number, status: import('@components/organisms/StudentModal').OrderStatusValue) => {
     const { updateOrderStatus } = await import('@/api/order');
     await updateOrderStatus(orderId, status as import('@/api/order').OrderStatus);
-    const studentId = Number(selectedStudent?.id);
+    const studentId = selectedStudent?.id;
     if (studentId) {
       const refreshed = await fetchStudentDetail(studentId);
       setSelectedStudent(refreshed);
@@ -767,11 +782,19 @@ export const StudentListPage = () => {
           student={selectedStudent}
           onSubmit={handleAddStudent}
           onEditSave={handleEditSave}
+          onStudentUpdated={() => fetchStudents(currentPage)}
           onOrderCreate={handleOrderCreate}
           onOrderUpdate={handleOrderUpdate}
           onStatusChange={handleStatusChange}
         />
       </div>
+      {toast && (
+        <Toast
+          message={toast.message}
+          variant={toast.variant}
+          onClose={() => setToast(null)}
+        />
+      )}
     </AdminLayout>
   );
 };
