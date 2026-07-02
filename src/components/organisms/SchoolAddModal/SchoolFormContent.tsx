@@ -1,10 +1,9 @@
 import { useState, useCallback } from "react";
 import { Select, Input } from "@components/atoms";
 import { NameTagSection } from "../NameTagSection/NameTagSection";
-import { getAllProducts, updateProductSelectable, type Product } from "@/api/product";
+import { getAllProducts, type Product } from "@/api/product";
 import { GENDER_OPTIONS } from "@/constants/gender";
 import { CATEGORY_GROUPS, getCategoryLabel } from "@/constants/productCategories";
-import { getApiErrorString } from "@/utils/errorUtils";
 
 export interface SchoolProductItem {
   id: string;
@@ -18,7 +17,7 @@ export interface SchoolProductItem {
 }
 
 export interface EditableProduct extends SchoolProductItem {
-  uniformApiId?: number;
+  uniformApiId?: string;
   is_selectable?: boolean;
   selectable_with?: { product_id: string; display_name: string }[];
 }
@@ -43,7 +42,7 @@ export interface SchoolFormState {
   years: EditableYear[];
   winterProducts: EditableProduct[];
   summerProducts: EditableProduct[];
-  productsCache: Record<string, Product[]>;
+  productsCache: Record<string, { id: string; name: string; price: number }[]>;
   allWinterProducts: Product[];
   allSummerProducts: Product[];
 }
@@ -56,7 +55,7 @@ export interface SchoolFormContentProps {
   onMeasurementStartChange?: (id: string, value: string) => void;
   onAddNewProduct?: (
     onCreated: (item: SchoolProductItem) => void,
-    addToCache: (cacheKey: string, product: { id: number; name: string; price: number }) => void,
+    addToCache: (cacheKey: string, product: { id: string; name: string; price: number }) => void,
   ) => void;
   /** 디테일 모드 전용: 교체 가능 저장 */
   onSelectableSave?: (product: EditableProduct) => Promise<void>;

@@ -143,7 +143,7 @@ export const MyPage = () => {
       is_reserved: u.reservation,
       customization: u.repair || undefined,
       name_tag_count: u.nameTagCount || undefined,
-      name_tag_attach: u.nameTagAttach || undefined,
+      name_tag_attach: u.nameTagAttach ? u.nameTagCount : undefined,
     })),
     supply_items: form.supplies
       .filter((s) => s.quantity > 0)

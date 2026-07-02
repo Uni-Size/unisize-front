@@ -18,7 +18,7 @@ export interface SchoolAddModalProps {
   onSubmit: () => void;
   onAddNewProduct?: (
     onCreated: (item: SchoolProductItem) => void,
-    addToCache: (cacheKey: string, product: { id: number; name: string; price: number }) => void,
+    addToCache: (cacheKey: string, product: { id: string; name: string; price: number }) => void,
   ) => void;
 }
 

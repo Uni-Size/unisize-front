@@ -28,7 +28,7 @@ export interface ProductSchoolDetail {
   quantity: number;
   is_selectable?: boolean;
   free_support_count?: number;
-  selectable_with?: { product_id: number; display_name: string; free_support_count?: number }[];
+  selectable_with?: { product_id: string; display_name: string; free_support_count?: number }[];
 }
 
 export interface ProductDetailData {
@@ -243,7 +243,7 @@ const ProductDetailModalContent = ({
   const updateSchoolField = (
     index: number,
     field: keyof ProductSchoolDetail,
-    value: string | number | boolean | { product_id: number; display_name: string }[],
+    value: string | number | boolean | { product_id: string; display_name: string }[],
   ) => {
     setEditSchools((prev) =>
       prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)),

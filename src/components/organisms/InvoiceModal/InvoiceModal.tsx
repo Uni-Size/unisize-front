@@ -17,7 +17,7 @@ export interface InvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   student?: StudentDetailData | null;
-  onPaymentComplete?: (orderId: number) => void;
+  onPaymentComplete?: (orderId: string | number) => void;
 }
 
 const sizeOptions = [
@@ -60,7 +60,7 @@ export const InvoiceModal = ({
   onPaymentComplete,
 }: InvoiceModalProps) => {
   const [activeDateKey, setActiveDateKey] = useState<string>("");
-  const [snapshotStates, setSnapshotStates] = useState<Map<number, SnapshotState>>(new Map());
+  const [snapshotStates, setSnapshotStates] = useState<Map<string | number, SnapshotState>>(new Map());
   const [activeHistory, setActiveHistory] = useState<HistoryItem[]>([]);
   const [nameTagName, setNameTagName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -90,7 +90,7 @@ export const InvoiceModal = ({
     const firstKey = snapshots.length > 0 ? toDateKey(snapshots[0].date) : "";
     setActiveDateKey(firstKey);
 
-    const map = new Map<number, SnapshotState>();
+    const map = new Map<string | number, SnapshotState>();
     for (const s of snapshots) {
       map.set(s.orderId, {
         winterUniforms: s.winterUniforms,
@@ -115,7 +115,7 @@ export const InvoiceModal = ({
   };
 
   const handleUniformChange = (
-    orderId: number,
+    orderId: string | number,
     season: "winter" | "summer" | "all",
     itemId: string,
     field: keyof UniformItem,
@@ -142,7 +142,7 @@ export const InvoiceModal = ({
   };
 
   const handleSupplyChange = (
-    orderId: number,
+    orderId: string | number,
     itemId: string,
     field: keyof SupplyItem,
     value: string | number,
@@ -174,15 +174,14 @@ export const InvoiceModal = ({
             uniform_items: [...winterUniforms, ...summerUniforms, ...allUniforms]
               .filter((i) => !i.isDeleted)
               .map((i) => ({
-                item_id: Number(i.id),
+                item_id: i.id,
                 name: i.name,
                 season: winterUniforms.includes(i) ? "winter" : summerUniforms.includes(i) ? "summer" : "all",
                 selected_size: i.size,
                 purchase_count: i.supportedQuantity + i.additionalQuantity,
-                is_reserved: i.reservation,
-                customization: i.repair,
-                name_tag_count: i.nameTag ?? 0,
-                name_tag_attach: i.attachCount > 0,
+                customization: i.repair || undefined,
+                name_tag_count: (i.nameTag ?? 0) > 0 ? (i.nameTag ?? 0) : undefined,
+                name_tag_attach: i.attachCount > 0 ? i.attachCount : undefined,
               })),
             supply_items: supplies
               .filter((i) => i.quantity > 0)
@@ -246,7 +245,7 @@ export const InvoiceModal = ({
   // 교복 테이블
   // ============================================================================
 
-  const renderUniformTable = (title: string, items: UniformItem[], season: "winter" | "summer" | "all", orderId: number, readOnly = false) => {
+  const renderUniformTable = (title: string, items: UniformItem[], season: "winter" | "summer" | "all", orderId: string | number, readOnly = false) => {
     const showPrice = hasPrice;
     const sectionTotal = items.reduce((sum, i) => {
       if (i.isDeleted || i.unitPrice == null) return sum;
@@ -412,7 +411,7 @@ export const InvoiceModal = ({
   // 용품 테이블
   // ============================================================================
 
-  const renderSupplyTable = (supplies: SupplyItem[], orderId: number, readOnly = false) => {
+  const renderSupplyTable = (supplies: SupplyItem[], orderId: string | number, readOnly = false) => {
     const grouped: { category: string; items: SupplyItem[] }[] = [];
     supplies.forEach((item) => {
       const existing = grouped.find((g) => g.category === item.category);

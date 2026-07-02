@@ -160,7 +160,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     fetchStudents(currentPage);
   };
 
-  const handleEditSave = async (orderId: number, data: StudentFormInput) => {
+  const handleEditSave = async (orderId: string | number, data: StudentFormInput) => {
     try {
       const uniformItems = [
         ...data.winterUniforms.filter((u) => !u.isDeleted).map((u) => ({
@@ -208,11 +208,11 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     }
   };
 
-  const handleOrderUpdate = async (orderId: number, data: StudentFormInput) => {
+  const handleOrderUpdate = async (orderId: string | number, data: StudentFormInput) => {
     const origSnapshot = selectedStudent?.orderSnapshots?.find(s => s.orderId === orderId);
 
     const mapUniform = (u: typeof data.winterUniforms[0], fallbackSeason: string): AdminOrderUniformItem => ({
-      item_id: u.productId ?? Number(u.id),
+      item_id: u.productId ?? u.id,
       name: u.name,
       season: u.seasonCode ?? fallbackSeason,
       selected_size: u.size,
@@ -253,10 +253,10 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     fetchStudents(currentPage);
   };
 
-  const handleOrderCreate = async (studentId: number, data: StudentFormInput) => {
+  const handleOrderCreate = async (studentId: string, data: StudentFormInput) => {
     const { submitMeasurementOrder } = await import('@/api/student');
     const mapUniform = (u: typeof data.winterUniforms[0], season: '동복' | '하복') => ({
-      item_id: u.productId as number,
+      item_id: u.productId ?? u.id,
       name: u.name,
       season,
       selected_size: u.size,
@@ -287,7 +287,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     fetchStudents(currentPage);
   };
 
-  const handleStatusChange = async (orderId: number, status: import('@components/organisms/StudentModal').OrderStatusValue) => {
+  const handleStatusChange = async (orderId: string | number, status: import('@components/organisms/StudentModal').OrderStatusValue) => {
     const { updateOrderStatus } = await import('@/api/order');
     await updateOrderStatus(orderId, status as import('@/api/order').OrderStatus);
   };
@@ -316,7 +316,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         nameUpper.includes("하복") || nameUpper.includes("SUMMER") ? 'S' : 'A';
       const uniform: import("@components/organisms/StudentModal").UniformItem = {
         id: String(item.id),
-        productId: item.product_id,
+        productId: String(item.product_id),
         name: productName,
         size: item.selected_size,
         supportedQuantity: item.supported_quantity,
@@ -395,12 +395,10 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
           nameTagPrice = schoolDetail.name_tag_price;
           nameTagAttachPrice = schoolDetail.name_tag_attach_price;
           for (const u of schoolDetail.uniforms.winter) {
-            const pid = Number(u.product_id);
-            if (!isNaN(pid)) availableUniforms.push({ productId: pid, name: u.display_name, season: 'winter', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size), category: u.category });
+            availableUniforms.push({ productId: u.product_id, name: u.display_name, season: 'winter', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size), category: u.category });
           }
           for (const u of schoolDetail.uniforms.summer) {
-            const pid = Number(u.product_id);
-            if (!isNaN(pid)) availableUniforms.push({ productId: pid, name: u.display_name, season: 'summer', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size), category: u.category });
+            availableUniforms.push({ productId: u.product_id, name: u.display_name, season: 'summer', price: u.contract_price, availableSizes: u.stock_by_sizes.map(s => s.size), category: u.category });
           }
         }
       }
@@ -547,7 +545,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         modifiedDate: firstSnapshot?.modifiedDate,
         orderSnapshots,
         availableUniforms,
-        supportAllowances: detail.support_allowances?.map((a) => ({ product_id: a.product_id, remaining: a.remaining })),
+        supportAllowances: detail.support_allowances?.map((a) => ({ product_id: a.product_id, display_name: a.display_name, remaining: a.remaining, selectable_with: a.selectable_with })),
         nameTagMinUnit: detail.name_tag_service?.min_unit ?? nameTagMinUnit,
         nameTagPrice: detail.name_tag_service?.unit_price ?? nameTagPrice,
         nameTagAttachPrice: detail.name_tag_service?.attach_price ?? nameTagAttachPrice,

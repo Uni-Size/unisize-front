@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Modal } from "@components/atoms";
 import { Toast } from "@components/atoms/Toast";
 import { updateProductSelectable } from "@/api/product";
@@ -37,7 +37,7 @@ export interface SchoolDetailModalProps {
   ) => Promise<void>;
   onAddNewProduct?: (
     onCreated: (item: import("../SchoolAddModal/SchoolFormContent").SchoolProductItem) => void,
-    addToCache: (cacheKey: string, product: { id: number; name: string; price: number }) => void,
+    addToCache: (cacheKey: string, product: { id: string; name: string; price: number }) => void,
   ) => void;
 }
 
@@ -61,7 +61,7 @@ export const SchoolDetailModal = ({
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectableSaving, setSelectableSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
-  const { state, onChange, reset } = useSchoolFormState();
+  const { state, onChange } = useSchoolFormState();
 
   useEffect(() => {
     if (!school) return;

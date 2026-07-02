@@ -66,7 +66,7 @@ export const StockAddModal = ({
     return { id: Date.now() + Math.random(), roundNumber, values };
   }
 
-  function addRound(productId: number, sizes: string[]) {
+  function addRound(productId: string, sizes: string[]) {
     setNewRoundMap((prev) => {
       const rounds = prev[productId] ?? [];
       const maxNum = rounds.reduce((m, r) => Math.max(m, r.roundNumber), 0);
@@ -77,7 +77,7 @@ export const StockAddModal = ({
     });
   }
 
-  function removeRound(productId: number, roundId: number) {
+  function removeRound(productId: string, roundId: number) {
     setNewRoundMap((prev) => {
       const rounds = (prev[productId] ?? []).filter((r) => r.id !== roundId);
       return { ...prev, [productId]: rounds };
@@ -85,7 +85,7 @@ export const StockAddModal = ({
   }
 
   function handleValueChange(
-    productId: number,
+    productId: string,
     roundId: number,
     size: string,
     value: string,

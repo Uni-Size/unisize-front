@@ -102,7 +102,7 @@ export const MainPage = () => {
         nameUpper.includes("하복") || nameUpper.includes("SUMMER") ? "S" : "A";
       const uniform: import("@components/organisms/StudentModal").UniformItem = {
         id: String(item.id),
-        productId: item.product_id,
+        productId: String(item.product_id),
         name: productName,
         size: item.selected_size,
         supportedQuantity: item.supported_quantity,
@@ -296,10 +296,10 @@ export const MainPage = () => {
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         student={selectedStudent}
-        onPaymentComplete={async (orderId: number) => {
+        onPaymentComplete={async (orderId) => {
           const amount = orders.find((o) => o.orderId === orderId)?.remainingAmountRaw ?? 0;
           try {
-            await completePayment(orderId, { amount, method: "cash" });
+            await completePayment(Number(orderId), { amount, method: "cash" });
             setIsDetailOpen(false);
             setPaymentSuccess(true);
             fetchOrders(currentPage);

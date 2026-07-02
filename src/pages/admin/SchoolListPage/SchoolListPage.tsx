@@ -109,7 +109,7 @@ export const SchoolListPage = () => {
   const [isProductAddModalOpen, setIsProductAddModalOpen] = useState(false);
   const [isSchoolSelectModalOpen, setIsSchoolSelectModalOpen] = useState(false);
   const [onProductCreated, setOnProductCreated] = useState<((item: SchoolProductItem) => void) | null>(null);
-  const [onAddToCache, setOnAddToCache] = useState<((cacheKey: string, product: { id: number; name: string; price: number }) => void) | null>(null);
+  const [onAddToCache, setOnAddToCache] = useState<((cacheKey: string, product: { id: string; name: string; price: number }) => void) | null>(null);
   const [selectedSchoolsForProduct, setSelectedSchoolsForProduct] = useState<
     SchoolPrice[]
   >([]);
