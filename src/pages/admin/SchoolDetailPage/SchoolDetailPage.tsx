@@ -264,7 +264,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
       is_reserved: u.reservation || undefined,
       customization: u.repair || undefined,
       name_tag_count: (u.nameTag ?? 0) > 0 ? (u.nameTag ?? 0) : undefined,
-      name_tag_attach: u.attachCount > 0 ? true : undefined,
+      name_tag_attach: u.attachCount > 0 ? u.attachCount : undefined,
     });
     const uniformItems = [
       ...data.winterUniforms.filter((u) => !u.isDeleted).map((u) => mapUniform(u, '동복')),
