@@ -220,7 +220,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
       delivery_status: u.itemStatus as AdminOrderUniformItem['delivery_status'] || undefined,
       customization: u.repair || undefined,
       name_tag_count: (u.nameTag ?? 0) > 0 ? (u.nameTag ?? 0) : undefined,
-      name_tag_attach: u.attachCount > 0 ? true : undefined,
+      name_tag_attach: u.attachCount > 0 ? u.attachCount : undefined,
     });
 
     const origDate = origSnapshot?.date ? origSnapshot.date.slice(0, 10) : '';
