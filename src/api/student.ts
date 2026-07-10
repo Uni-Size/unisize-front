@@ -455,11 +455,12 @@ export async function startMeasurement(
 export async function submitMeasurementOrder(
   studentId: string | number,
   orderData: MeasurementOrderRequest,
-): Promise<void> {
-  await apiClient.post(
+): Promise<AdminStudentOrder> {
+  const response = await apiClient.post<ApiResponse<AdminStudentOrder>>(
     `/api/v1/students/${studentId}/measurement-order`,
     orderData,
   );
+  return response.data.data;
 }
 
 /**
@@ -669,6 +670,7 @@ export interface CreateStudentRequest {
   delivery?: boolean;
   privacy_consent?: boolean;
   previous_school?: string;
+  name_tag_name?: string;
   body?: {
     height?: number;
     weight?: number;

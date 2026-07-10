@@ -3,8 +3,8 @@ import { Modal, Select } from "@components/atoms";
 import { Toast } from "@components/atoms/Toast";
 import type { ToastVariant } from "@components/atoms/Toast";
 import { GENDER_OPTIONS_MF } from "@/constants/gender";
-import { updateStudent, getStudentAuditLogs } from "@/api/student";
-import type { AuditLog, AuditAction } from "@/api/student";
+import { updateStudent, getStudentAuditLogs, getOrderHistory } from "@/api/student";
+import type { AuditLog, AuditAction, OrderHistory } from "@/api/student";
 import { getSchoolList } from "@/api/school";
 import {
   formatDate,
@@ -49,6 +49,32 @@ const AUDIT_FIELD_LABELS: Record<string, string> = {
   delivery_status: "배송 상태",
   name_tag_count: "명찰 수량",
   name_tag_attach: "명찰 부착",
+};
+
+const ORDER_HISTORY_ACTION_LABELS: Record<string, string> = {
+  created: "주문 생성",
+  updated: "주문 수정",
+  deleted: "주문 삭제",
+  cancelled: "주문 취소",
+  confirmed: "주문 확정",
+  status_changed: "상태 변경",
+};
+
+const ORDER_HISTORY_FIELD_LABELS: Record<string, string> = {
+  order_status: "주문 상태",
+  order_date: "주문일",
+  notes: "메모",
+  selected_size: "사이즈",
+  purchase_count: "구매수량",
+  supported_quantity: "지원수량",
+  name_tag_count: "명찰 수량",
+  name_tag_attach: "명찰 부착",
+  delivery_status: "배송 상태",
+};
+
+const ORDER_HISTORY_ROLE_LABELS: Record<string, string> = {
+  admin: "관리자",
+  staff: "스태프",
 };
 
 function formatAuditValue(value: unknown): string {
@@ -221,7 +247,7 @@ export interface StudentModalProps {
   onClose: () => void;
   mode: "add" | "edit" | "view";
   student?: StudentDetailData | null;
-  onSubmit?: (data: StudentFormInput) => void;
+  onSubmit?: (data: StudentFormInput) => Promise<void> | void;
   onEditSave?: (orderId: string | number, data: StudentFormInput) => void;
   onStudentUpdated?: () => void;
   onPaymentComplete?: (orderId: string | number) => void;
@@ -339,6 +365,9 @@ export const StudentModal = ({
   // 학생 감사 로그
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [auditLogsLoading, setAuditLogsLoading] = useState(false);
+  // 주문별 히스토리 캐시 (orderId → OrderHistory[])
+  const [orderHistoryMap, setOrderHistoryMap] = useState<Map<string, OrderHistory[]>>(new Map());
+  const [orderHistoryLoading, setOrderHistoryLoading] = useState(false);
   const [auditTab, setAuditTab] = useState<'student' | string>(() => {
     const snap = student?.orderSnapshots?.[activeDateIndexRef.current];
     return snap ? String(snap.orderId) : 'student';
@@ -383,6 +412,20 @@ export const StudentModal = ({
     };
   };
 
+  const fetchOrderHistoryIfNeeded = useCallback((orderId: string | number) => {
+    const key = String(orderId);
+    if (orderHistoryMap.has(key)) return;
+    setOrderHistoryLoading(true);
+    getOrderHistory(orderId)
+      .then((data) => {
+        setOrderHistoryMap((prev) => new Map(prev).set(key, data.histories));
+      })
+      .catch(() => {
+        setOrderHistoryMap((prev) => new Map(prev).set(key, []));
+      })
+      .finally(() => setOrderHistoryLoading(false));
+  }, [orderHistoryMap]);
+
   const handleDateTabClick = (index: number) => {
     if (index === activeDateIndex) return;
     setActiveDateIndexSync(index);
@@ -390,6 +433,7 @@ export const StudentModal = ({
     if (snapshot) {
       applyOrderSnapshot(snapshot);
       setAuditTab(String(snapshot.orderId));
+      fetchOrderHistoryIfNeeded(snapshot.orderId);
     }
   };
 
@@ -568,11 +612,20 @@ export const StudentModal = ({
       if (student.id) {
         const initialSnap = student.orderSnapshots?.[activeDateIndexRef.current];
         setAuditTab(initialSnap ? String(initialSnap.orderId) : 'student');
+        setOrderHistoryMap(new Map());
         setAuditLogsLoading(true);
         getStudentAuditLogs(student.id, { limit: 50 })
           .then((res) => setAuditLogs(res.data))
           .catch(() => setAuditLogs([]))
           .finally(() => setAuditLogsLoading(false));
+        if (initialSnap) {
+          const key = String(initialSnap.orderId);
+          setOrderHistoryLoading(true);
+          getOrderHistory(initialSnap.orderId)
+            .then((data) => setOrderHistoryMap((prev) => new Map(prev).set(key, data.histories)))
+            .catch(() => setOrderHistoryMap((prev) => new Map(prev).set(key, [])))
+            .finally(() => setOrderHistoryLoading(false));
+        }
       }
 
       const ntn =
@@ -880,8 +933,12 @@ export const StudentModal = ({
         setIsCreatingOrder(false);
       }
     } else {
-      onSubmit?.(formData);
-      handleClose();
+      try {
+        await onSubmit?.(formData);
+        handleClose();
+      } catch {
+        // 에러는 onSubmit 구현부에서 처리
+      }
     }
   };
 
@@ -1845,6 +1902,10 @@ export const StudentModal = ({
                           e.target.value === "" ? "" : Number(e.target.value),
                         )
                       }
+                      onBlur={(e) => {
+                        const v = Number(e.target.value);
+                        if (v >= 0 && v <= 99) setAdmissionYear(2000 + v);
+                      }}
                     />
                     <span className="text-sm text-gray-400 px-1">/</span>
                     <input
@@ -2186,20 +2247,13 @@ export const StudentModal = ({
                               )}
                           </>
                         ) : (
-                          !isOrderCreateMode && (
-                            <>
-                              <span className="text-sm text-bg-400">
-                                주문 없음
-                              </span>
-                              {onOrderCreate && (
-                                <button
-                                  className="text-sm px-1 py-0.5 border-none bg-transparent cursor-pointer text-blue-600 hover:text-blue-800 font-medium"
-                                  onClick={() => enterOrderCreateMode(true)}
-                                >
-                                  + 주문 생성
-                                </button>
-                              )}
-                            </>
+                          !isOrderCreateMode && onOrderCreate && (
+                            <button
+                              className="text-sm px-1 py-0.5 border-none bg-transparent cursor-pointer text-blue-600 hover:text-blue-800 font-medium"
+                              onClick={() => enterOrderCreateMode(true)}
+                            >
+                              + 주문 생성
+                            </button>
                           )
                         )}
                       </div>
@@ -2430,14 +2484,9 @@ export const StudentModal = ({
                   ))}
                 </div>
                 {/* 로그 목록 */}
-                {(() => {
+                {auditTab === 'student' ? (() => {
                   const studentActions: AuditAction[] = ['student.create', 'student.update', 'student.delete', 'student.checkin', 'support.set', 'measurement.start', 'measurement.complete', 'measurement.update'];
-                  const filtered = auditTab === 'student'
-                    ? auditLogs.filter(l => studentActions.includes(l.action))
-                    : auditLogs.filter(l => {
-                        const meta = l.meta as { order_id?: string } | null;
-                        return meta?.order_id === auditTab;
-                      });
+                  const filtered = auditLogs.filter(l => studentActions.includes(l.action));
                   if (auditLogsLoading) return <span className="text-sm text-bg-400">불러오는 중...</span>;
                   if (filtered.length === 0) return <span className="text-sm text-bg-400">히스토리 없음</span>;
                   return filtered.map((log) => (
@@ -2460,6 +2509,37 @@ export const StudentModal = ({
                           </div>
                         )}
                         {log.memo ? <span className="text-xs text-gray-400">{log.memo}</span> : null}
+                      </div>
+                    </div>
+                  ));
+                })() : (() => {
+                  const histories = orderHistoryMap.get(auditTab);
+                  if (orderHistoryLoading && !histories) return <span className="text-sm text-bg-400">불러오는 중...</span>;
+                  if (!histories || histories.length === 0) return <span className="text-sm text-bg-400">히스토리 없음</span>;
+                  return histories.map((h) => (
+                    <div key={h.id} className="flex gap-2 py-1 border-b border-gray-100 last:border-0">
+                      <span className="text-sm text-gray-500 w-40 flex-none">
+                        {formatDateTime(h.createdAt)}
+                      </span>
+                      <div className="flex flex-col gap-0.5 flex-1">
+                        <span className="text-sm font-medium text-gray-800">
+                          {ORDER_HISTORY_ACTION_LABELS[h.action] ?? h.action}
+                          {h.changedBy && (
+                            <span className="font-normal text-gray-500">
+                              {" · "}{h.changedBy.employeeName}
+                              <span className="text-xs text-gray-400 ml-1">({ORDER_HISTORY_ROLE_LABELS[h.changedBy.role] ?? h.changedBy.role})</span>
+                            </span>
+                          )}
+                        </span>
+                        {h.fieldName && (
+                          <span className="text-xs text-gray-500">
+                            {ORDER_HISTORY_FIELD_LABELS[h.fieldName] ?? h.fieldName}
+                            {h.oldValue != null || h.newValue != null ? (
+                              <>: <span className="line-through text-gray-400">{h.oldValue ?? "-"}</span> → <span className="text-gray-700">{h.newValue ?? "-"}</span></>
+                            ) : null}
+                          </span>
+                        )}
+                        {h.reason && <span className="text-xs text-gray-400">{h.reason}</span>}
                       </div>
                     </div>
                   ));

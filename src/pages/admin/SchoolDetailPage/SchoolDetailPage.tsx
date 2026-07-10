@@ -21,7 +21,9 @@ import type { AdminStudent, AdminStudentOrder, AdminOrderItem } from "@/api/stud
 import { getSchoolDetail } from "@/api/school";
 import { getSupportedSchoolsByYear } from "@/api/school";
 import { getTargetYear } from "@/utils/schoolUtils";
-import { getApiErrorMessage } from "@/utils/errorUtils";
+import { getApiErrorMessage, getApiErrorString } from "@/utils/errorUtils";
+import { Toast } from "@components/atoms/Toast";
+import type { ToastVariant } from "@components/atoms/Toast";
 import { formatDate } from "@/utils/dateUtils";
 import { downloadCSV } from "@/utils/csvUtils";
 import { CATEGORY_GROUP_MAP, CATEGORY_GROUPS } from "@/constants/productCategories";
@@ -63,6 +65,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
   const [error, setError] = useState<ReactNode>(null);
   const itemsPerPage = 10;
 
+  const [toast, setToast] = useState<{ message: string; variant: ToastVariant } | null>(null);
   const [modalMode, setModalMode] = useState<'add' | 'view' | null>(null);
   const [selectedStudent, setSelectedStudent] =
     useState<StudentDetailData | null>(null);
@@ -135,29 +138,36 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
   };
 
   const handleAddStudent = async (data: StudentFormInput) => {
-    await createStudent({
-      name: data.name,
-      admission_year: data.admissionYear as number,
-      admission_grade: data.admissionGrade as number,
-      admission_school: data.admissionSchool || schoolName,
-      ...(data.previousSchool ? { previous_school: data.previousSchool } : {}),
-      ...(data.birthDate ? { birth_date: data.birthDate } : {}),
-      ...(data.gender ? { gender: data.gender } : {}),
-      ...(data.studentPhone ? { student_phone: data.studentPhone } : {}),
-      ...(data.guardianPhone ? { guardian_phone: data.guardianPhone } : {}),
-      ...(data.address ? { address: data.address } : {}),
-      ...(data.height !== "" || data.weight !== "" || data.shoulder !== "" || data.waist !== ""
-        ? {
-            body: {
-              ...(data.height !== "" ? { height: data.height as number } : {}),
-              ...(data.weight !== "" ? { weight: data.weight as number } : {}),
-              ...(data.shoulder !== "" ? { shoulder: data.shoulder as number } : {}),
-              ...(data.waist !== "" ? { waist: data.waist as number } : {}),
-            },
-          }
-        : {}),
-    });
-    fetchStudents(currentPage);
+    try {
+      await createStudent({
+        name: data.name,
+        admission_year: data.admissionYear as number,
+        admission_grade: data.admissionGrade as number,
+        admission_school: data.admissionSchool || schoolName,
+        ...(data.previousSchool ? { previous_school: data.previousSchool } : {}),
+        ...(data.birthDate ? { birth_date: data.birthDate } : {}),
+        ...(data.gender ? { gender: data.gender } : {}),
+        ...(data.studentPhone ? { student_phone: data.studentPhone } : {}),
+        ...(data.guardianPhone ? { guardian_phone: data.guardianPhone } : {}),
+        ...(data.address ? { address: data.address } : {}),
+        ...(data.nameTagName ? { name_tag_name: data.nameTagName } : {}),
+        ...(data.height !== "" || data.weight !== "" || data.shoulder !== "" || data.waist !== ""
+          ? {
+              body: {
+                ...(data.height !== "" ? { height: data.height as number } : {}),
+                ...(data.weight !== "" ? { weight: data.weight as number } : {}),
+                ...(data.shoulder !== "" ? { shoulder: data.shoulder as number } : {}),
+                ...(data.waist !== "" ? { waist: data.waist as number } : {}),
+              },
+            }
+          : {}),
+      });
+      setToast({ message: '학생이 추가되었습니다.', variant: 'success' });
+      fetchStudents(currentPage);
+    } catch (err) {
+      setToast({ message: getApiErrorString(err, '학생 추가에 실패했습니다.'), variant: 'error' });
+      throw err;
+    }
   };
 
   const handleEditSave = async (orderId: string | number, data: StudentFormInput) => {
@@ -278,12 +288,45 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         selected_size: s.size || undefined,
         purchase_count: s.quantity,
       }));
-    await submitMeasurementOrder(studentId, {
+    const createdOrder = await submitMeasurementOrder(studentId, {
       uniform_items: uniformItems,
       supply_items: supplyItems,
       notes: '',
       name_tag_name: data.nameTagName || undefined,
     });
+
+    const { winterUniforms, summerUniforms, allUniforms } = parseAdminOrderItems(
+      createdOrder.order_items ?? [],
+      createdOrder.name_tag_service,
+    );
+    const newSnapshot: import('@components/organisms/StudentModal').OrderSnapshot = {
+      orderId: createdOrder.id,
+      date: createdOrder.order_date ?? createdOrder.created_at,
+      status: createdOrder.order_status,
+      winterUniforms,
+      summerUniforms,
+      allUniforms,
+      supplies: [],
+      history: [],
+      modifiedDate: formatDate(createdOrder.updated_at),
+      name_tag_service: createdOrder.name_tag_service,
+      nameTagName: createdOrder.name_tag_name,
+    };
+
+    setSelectedStudent((prev) => {
+      if (!prev) return prev;
+      const snapshots = [newSnapshot, ...(prev.orderSnapshots ?? [])];
+      return {
+        ...prev,
+        orderId: createdOrder.id,
+        orderSnapshots: snapshots,
+        winterUniforms,
+        summerUniforms,
+        allUniforms,
+        modifiedDate: formatDate(createdOrder.updated_at),
+      };
+    });
+
     fetchStudents(currentPage);
   };
 
@@ -549,7 +592,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         nameTagMinUnit: detail.name_tag_service?.min_unit ?? nameTagMinUnit,
         nameTagPrice: detail.name_tag_service?.unit_price ?? nameTagPrice,
         nameTagAttachPrice: detail.name_tag_service?.attach_price ?? nameTagAttachPrice,
-        nameTagName: firstSnapshot?.nameTagName ?? detail.name,
+        nameTagName: firstSnapshot?.nameTagName ?? detail.name_tag_name ?? detail.name,
         winterUniforms: firstSnapshot?.winterUniforms ?? recWinter,
         summerUniforms: firstSnapshot?.summerUniforms ?? recSummer,
         allUniforms: firstSnapshot?.allUniforms ?? recAll,
@@ -815,6 +858,14 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         onOrderUpdate={handleOrderUpdate}
         onStatusChange={handleStatusChange}
       />
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          variant={toast.variant}
+          onClose={() => setToast(null)}
+        />
+      )}
     </>
   );
 };

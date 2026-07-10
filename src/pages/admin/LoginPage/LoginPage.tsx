@@ -88,6 +88,7 @@ export const LoginPage = () => {
             placeholder="아이디"
             value={id}
             onChange={(e) => setId(e.target.value)}
+            autoComplete="username"
             fullWidth
           />
           <Input
@@ -95,6 +96,7 @@ export const LoginPage = () => {
             placeholder="비밀번호"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
             fullWidth
           />
           {error && <p className="text-15 text-red-700 text-center m-0">{error}</p>}
