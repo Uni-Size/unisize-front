@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(rm /Users/kiseon/Documents/Dev/unisize/unisize-front/src/pages/admin/SchoolDetailPage/schoolDetailDummyData.ts)",
-      "Bash(rm /Users/kiseon/Documents/Dev/unisize/unisize-front/src/pages/admin/SchoolDetailPage/orderDummyData.ts)"
+      "Bash(rm /Users/kiseon/Documents/Dev/unisize/unisize-front/src/pages/admin/SchoolDetailPage/orderDummyData.ts)",
+      "Read(//Users/kiseon/Documents/Dev/unisize/unisize-server/**)",
+      "Bash(go build *)",
+      "Bash(/usr/bin/env bash -c 'cd /Users/kiseon/Documents/Dev/unisize/unisize-server && pwd && go build ./... 2>&1 | tail -100')"
     ]
   }
 }

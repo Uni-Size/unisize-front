@@ -39,7 +39,6 @@ interface SchoolRow {
   type: string;
   supportYears: string;
   isActive: "O" | "-";
-  isPermanent: boolean;
   measurementPeriod: string;
   registeredDate: string;
   modifiedDate: string;
@@ -71,7 +70,6 @@ const toSchoolRow = (item: SchoolListItem, index: number): SchoolRow => ({
   supportYears:
     item.supported_years.map((sy) => `${sy.year}`).join(", ") || "-",
   isActive: item.is_active ? "O" : "-",
-  isPermanent: item.is_permanent,
   measurementPeriod: getMeasurementPeriod(item),
   registeredDate: formatDateTime(item.created_at),
   modifiedDate: formatDateTime(item.updated_at),
@@ -296,7 +294,6 @@ export const SchoolListPage = () => {
         "지원년도",
         "학교명",
         "지원여부",
-        "상시지원",
         "측정기간",
         "등록일",
         "수정일",
@@ -307,7 +304,6 @@ export const SchoolListPage = () => {
         s.supportYears,
         s.school_name,
         s.isActive,
-        s.isPermanent ? "O" : "-",
         s.measurementPeriod,
         s.registeredDate,
         s.modifiedDate,

@@ -21,7 +21,6 @@ export interface SchoolDetailModalProps {
     schoolName: string,
     data: {
       school_name: string;
-      is_permanent?: boolean;
       years?: {
         year: number;
         expected_student_count?: number;
@@ -67,7 +66,6 @@ export const SchoolDetailModal = ({
     if (!school) return;
     onChange({
       schoolName: school.school_name,
-      isPermanent: school.is_permanent,
       years: school.supported_years.map((sy: SupportedYear) => ({
         _id: `sy-${sy.year}`,
         year: sy.year,
@@ -185,7 +183,7 @@ const handleSelectableSave = async (product: EditableProduct) => {
 
   const handleSave = async () => {
     if (!school) return;
-    const { schoolName, isPermanent, hasNameTag, nameTagPrice, nameTagAttachPrice, nameTagMinUnit, years, winterProducts, summerProducts } = state;
+    const { schoolName, hasNameTag, nameTagPrice, nameTagAttachPrice, nameTagMinUnit, years, winterProducts, summerProducts } = state;
 
     const winter = winterProducts.filter((p) => p.productApiId).map(toUpdateUniform);
     const summer = summerProducts.filter((p) => p.productApiId).map(toUpdateUniform);
@@ -193,7 +191,6 @@ const handleSelectableSave = async (product: EditableProduct) => {
     try {
       await onSubmit(school.school_name, {
         school_name: schoolName,
-        is_permanent: isPermanent,
         has_name_tag: hasNameTag,
         name_tag_price: hasNameTag && nameTagPrice !== "" ? nameTagPrice : null,
         name_tag_attach_price: hasNameTag && nameTagAttachPrice !== "" ? nameTagAttachPrice : null,

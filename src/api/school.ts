@@ -41,7 +41,6 @@ export interface SchoolListItem {
   school_type: SchoolType;
   supported_years: SupportedYear[];
   is_active: boolean;
-  is_permanent: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -114,7 +113,6 @@ export interface SchoolDetailUniform {
 export interface SchoolDetailResponse {
   school_name: string;
   school_type: SchoolTypeFull;
-  is_permanent: boolean;
   is_active: boolean;
   has_name_tag: boolean;
   name_tag_price: number | null;
@@ -150,7 +148,6 @@ export interface UpdateSchoolYearInfo {
 
 export interface UpdateSchoolRequest {
   school_name: string;
-  is_permanent?: boolean;
   has_name_tag?: boolean;
   name_tag_price?: number | null;
   name_tag_attach_price?: number | null;

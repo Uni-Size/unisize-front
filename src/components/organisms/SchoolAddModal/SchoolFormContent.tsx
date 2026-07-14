@@ -34,7 +34,6 @@ export type SchoolFormMode = "add" | "view" | "edit";
 
 export interface SchoolFormState {
   schoolName: string;
-  isPermanent: boolean;
   hasNameTag: boolean;
   nameTagPrice: number | "";
   nameTagAttachPrice: number | "";
@@ -91,7 +90,6 @@ export const SchoolFormContent = ({
 }: SchoolFormContentProps) => {
   const {
     schoolName,
-    isPermanent,
     hasNameTag,
     nameTagPrice,
     nameTagAttachPrice,
@@ -675,20 +673,6 @@ export const SchoolFormContent = ({
             </div>
           )}
         </div>
-        {!isAdd && (
-          <div className="flex items-center h-12.5 gap-2 px-2 pb-0.5">
-            <label className="flex items-center gap-1.5 text-15 text-gray-700 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isPermanent}
-                onChange={isEdit ? (e) => onChange({ isPermanent: e.target.checked }) : undefined}
-                readOnly={!isEdit}
-                className="w-4 h-4"
-              />
-              상시지원
-            </label>
-          </div>
-        )}
       </div>
 
       {/* 학교추가 모드: 단일 년도 인라인 */}
@@ -903,7 +887,6 @@ export function makeEmptyFormState(): SchoolFormState {
   const currentYr = new Date().getFullYear();
   return {
     schoolName: "",
-    isPermanent: false,
     hasNameTag: false,
     nameTagPrice: "",
     nameTagAttachPrice: "",
