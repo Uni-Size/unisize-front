@@ -121,6 +121,7 @@ export const OrderListPage = ({ schoolType }: OrderListPageProps) => {
             columns={columns}
             data={paginatedData}
             onRowClick={(student) => console.log('Student clicked:', student)}
+            getRowKey={(row) => row.id}
           />
           <Pagination
             currentPage={currentPage}

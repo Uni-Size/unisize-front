@@ -13,6 +13,7 @@ export interface TableProps<T> {
   data: T[];
   onRowClick?: (item: T) => void;
   emptyMessage?: ReactNode;
+  getRowKey?: (item: T, index: number) => string | number;
 }
 
 export const Table = <T extends object>({
@@ -20,6 +21,7 @@ export const Table = <T extends object>({
   data,
   onRowClick,
   emptyMessage = '데이터가 없습니다.',
+  getRowKey,
 }: TableProps<T>) => {
   return (
     <div className="w-full overflow-x-auto bg-white rounded-xl border border-gray-200">
@@ -47,7 +49,7 @@ export const Table = <T extends object>({
           ) : (
             data.map((item, index) => (
               <tr
-                key={index}
+                key={getRowKey ? getRowKey(item, index) : index}
                 className={`transition-colors duration-200 ease-in-out hover:bg-gray-100 [&:last-child_td]:border-b-0 ${onRowClick ? 'cursor-pointer' : ''}`}
                 onClick={() => onRowClick?.(item)}
               >

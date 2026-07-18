@@ -766,6 +766,7 @@ export const StudentListPage = () => {
             columns={columns}
             data={loading ? [] : students}
             onRowClick={handleRowClick}
+            getRowKey={(row) => row.id}
             emptyMessage={loading ? "로딩 중..." : error ?? "데이터가 없습니다."}
           />
           <Pagination

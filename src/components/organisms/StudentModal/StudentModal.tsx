@@ -294,6 +294,7 @@ export const StudentModal = ({
   // view 모드에서 수정 버튼 클릭 시 편집 상태
   const [isEditing, setIsEditing] = useState(false);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const [isSavingStudent, setIsSavingStudent] = useState(false);
   const [isOrderCreateMode, setIsOrderCreateMode] = useState(false);
   const [isOrderEditMode, setIsOrderEditMode] = useState(false);
   const isView =
@@ -812,6 +813,8 @@ export const StudentModal = ({
   };
 
   const handleSubmit = async () => {
+    if (isSavingStudent || isCreatingOrder) return;
+
     const formData: StudentFormInput = {
       admissionSchool,
       admissionYear,
@@ -838,6 +841,7 @@ export const StudentModal = ({
 
     if (isEditing) {
       const studentId = student?.id ?? undefined;
+      setIsSavingStudent(true);
       try {
         const orig = originalStudentRef.current;
         const studentChanged =
@@ -901,6 +905,8 @@ export const StudentModal = ({
       } catch (err) {
         console.error("학생 정보 수정 실패:", err);
         setToast({ message: "저장에 실패했습니다.", variant: "error" });
+      } finally {
+        setIsSavingStudent(false);
       }
     } else if (isOrderEditMode) {
       const orderId = activeOrderId ?? student?.orderId;
@@ -933,11 +939,14 @@ export const StudentModal = ({
         setIsCreatingOrder(false);
       }
     } else {
+      setIsSavingStudent(true);
       try {
         await onSubmit?.(formData);
         handleClose();
       } catch {
         // 에러는 onSubmit 구현부에서 처리
+      } finally {
+        setIsSavingStudent(false);
       }
     }
   };
@@ -1808,10 +1817,10 @@ export const StudentModal = ({
               <button
                 className="px-6 py-2.5 bg-primary-900 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
                 onClick={handleSubmit}
-                disabled={isEditing && !gender}
+                disabled={isSavingStudent || (isEditing && !gender)}
                 title={isEditing && !gender ? "성별을 선택해주세요" : undefined}
               >
-                {mode === "add" ? "추가" : "저장"}
+                {isSavingStudent ? "저장 중..." : mode === "add" ? "추가" : "저장"}
               </button>
             </>
           )

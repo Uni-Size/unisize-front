@@ -5,7 +5,12 @@
       "Bash(rm /Users/kiseon/Documents/Dev/unisize/unisize-front/src/pages/admin/SchoolDetailPage/orderDummyData.ts)",
       "Read(//Users/kiseon/Documents/Dev/unisize/unisize-server/**)",
       "Bash(go build *)",
-      "Bash(/usr/bin/env bash -c 'cd /Users/kiseon/Documents/Dev/unisize/unisize-server && pwd && go build ./... 2>&1 | tail -100')"
+      "Bash(/usr/bin/env bash -c 'cd /Users/kiseon/Documents/Dev/unisize/unisize-server && pwd && go build ./... 2>&1 | tail -100')",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(/usr/bin/env bash -c 'cd /Users/kiseon/Documents/Dev/unisize/unisize-server && cat .env 2>/dev/null | grep -iv password; echo \"---\"; ls .env* 2>/dev/null')",
+      "Bash(kill 99376)",
+      "Bash(lsof -ti:3001)"
     ]
   }
 }

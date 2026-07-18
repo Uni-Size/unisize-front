@@ -70,6 +70,7 @@ export const ProductAddModal = ({
   const [numericStep, setNumericStep] = useState("");
   const [sizesWithStock, setSizesWithStock] = useState<SizeWithStock[]>([]);
   const [stockRows, setStockRows] = useState<{ round: string; quantities: Record<string, string> }[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSizeTypeChange = (value: string) => {
     setSizeType(value);
@@ -115,6 +116,8 @@ export const ProductAddModal = ({
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+
     const missing: string[] = [];
     if (!displayName.trim() || displayName.trim().length < 2)
       missing.push("표시명(2글자 이상)");
@@ -137,19 +140,25 @@ export const ProductAddModal = ({
           }))
         )
       : validSizes.map(({ size }) => ({ size }));
-    await onSubmit({
-      season,
-      category,
-      gender,
-      displayName,
-      originalPrice: Number(originalPrice),
-      isRepairable,
-      isRepairRequired,
-      sizeType,
-      sizes,
-      schools: selectedSchools,
-    });
-    handleClose();
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        season,
+        category,
+        gender,
+        displayName,
+        originalPrice: Number(originalPrice),
+        isRepairable,
+        isRepairRequired,
+        sizeType,
+        sizes,
+        schools: selectedSchools,
+      });
+      handleClose();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -179,14 +188,16 @@ export const ProductAddModal = ({
           <button
             className="px-6 py-2.5 bg-neutral-500 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
             onClick={handleClose}
+            disabled={isSubmitting}
           >
             취소
           </button>
           <button
-            className="px-6 py-2.5 bg-primary-900 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
+            className="px-6 py-2.5 bg-primary-900 text-bg-050 text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={handleSubmit}
+            disabled={isSubmitting}
           >
-            추가
+            {isSubmitting ? "추가 중..." : "추가"}
           </button>
         </>
       }

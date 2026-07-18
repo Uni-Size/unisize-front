@@ -147,6 +147,7 @@ export const StudentOrderPage = () => {
             columns={columns}
             data={paginatedOrders}
             onRowClick={(order) => console.log('Student order clicked:', order)}
+            getRowKey={(row) => row.id}
           />
           <Pagination
             currentPage={currentPage}

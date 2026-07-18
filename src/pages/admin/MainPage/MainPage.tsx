@@ -280,6 +280,7 @@ export const MainPage = () => {
             columns={columns}
             data={loading ? [] : orders}
             onRowClick={(order) => console.log("Order clicked:", order)}
+            getRowKey={(row) => row.id}
             emptyMessage={
               loading ? "로딩 중..." : (error ?? "데이터가 없습니다.")
             }

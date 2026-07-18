@@ -146,6 +146,7 @@ export const StaffListPage = () => {
             columns={columns}
             data={loading ? [] : staffList}
             onRowClick={(staff) => console.log('Staff clicked:', staff)}
+            getRowKey={(row) => row.id}
             emptyMessage={loading ? "로딩 중..." : error ?? "데이터가 없습니다."}
           />
           <Pagination

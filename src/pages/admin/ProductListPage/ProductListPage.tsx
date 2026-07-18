@@ -463,6 +463,7 @@ export const ProductListPage = () => {
                   currentPage,
                   categoryFilter,
                   genderFilter,
+                  seasonFilter,
                   searchTerm,
                 );
               } catch (error) {
@@ -611,6 +612,7 @@ export const ProductListPage = () => {
             columns={columns}
             data={loading ? [] : products}
             onRowClick={(product) => handleOpenDetailModal(product)}
+            getRowKey={(row) => row.id}
             emptyMessage={loading ? "로딩 중..." : error ?? "데이터가 없습니다."}
           />
           <Pagination

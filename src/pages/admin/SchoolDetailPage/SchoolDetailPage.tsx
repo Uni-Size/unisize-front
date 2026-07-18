@@ -21,6 +21,7 @@ import type { AdminStudent, AdminStudentOrder, AdminOrderItem } from "@/api/stud
 import { getSchoolDetail } from "@/api/school";
 import { getSupportedSchoolsByYear } from "@/api/school";
 import { getTargetYear } from "@/utils/schoolUtils";
+import { sortSizes } from "@/constants/product";
 import { getApiErrorMessage, getApiErrorString } from "@/utils/errorUtils";
 import { Toast } from "@components/atoms/Toast";
 import type { ToastVariant } from "@components/atoms/Toast";
@@ -835,6 +836,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
           columns={columns}
           data={loading ? [] : students}
           onRowClick={handleRowClick}
+          getRowKey={(row) => row.id}
           emptyMessage={
             loading ? "로딩 중..." : (error ?? "데이터가 없습니다.")
           }
@@ -941,14 +943,18 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
 
   const handleExportCSV = () => {
     const sectionBlocks = visibleProducts.map((product) => {
-      const sizes = product.size_stats.map((s) => s.size);
+      const sortedSizeOrder = sortSizes(product.size_stats.map((s) => s.size));
+      const sizeStats = sortedSizeOrder.map(
+        (size) => product.size_stats.find((s) => s.size === size)!,
+      );
+      const sizes = sizeStats.map((s) => s.size);
       const headerRow = [`[${product.display_name}]`, ...sizes];
-      const stockRow = ['재고', ...product.size_stats.map((s) => s.stock)];
-      const orderedRow = ['주문', ...product.size_stats.map((s) => s.ordered)];
-      const remainRow = ['잔여', ...product.size_stats.map((s) => s.remaining)];
+      const stockRow = ['재고', ...sizeStats.map((s) => s.stock)];
+      const orderedRow = ['주문', ...sizeStats.map((s) => s.ordered)];
+      const remainRow = ['잔여', ...sizeStats.map((s) => s.remaining)];
 
       // 사이즈별 visibleOrders 모으기 (이름 중복 제거)
-      const sizeOrders = product.size_stats.map((s) => {
+      const sizeOrders = sizeStats.map((s) => {
         const seenNames = new Set<string>();
         return s.orders.filter((o) => {
           if (seenNames.has(o.name)) return false;

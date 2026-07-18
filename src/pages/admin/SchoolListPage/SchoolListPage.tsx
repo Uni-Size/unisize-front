@@ -548,6 +548,7 @@ export const SchoolListPage = () => {
             columns={columns}
             data={loading ? [] : paginatedSchools}
             onRowClick={(school) => handleOpenDetailModal(school)}
+            getRowKey={(row) => row.school_name}
             emptyMessage={emptyMessage}
           />
           <Pagination

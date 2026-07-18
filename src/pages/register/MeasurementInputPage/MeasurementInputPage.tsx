@@ -31,11 +31,34 @@ export const MeasurementInputPage = () => {
     if (m.waist) setBodyMeasurements('waist', m.waist);
   }, []);
 
+  const inRange = (value: number, range: { min: number; max: number }) =>
+    value >= range.min && value <= range.max;
+
   const isFormValid =
-    formData.body.height > 0 &&
-    formData.body.weight > 0 &&
-    formData.body.shoulder > 0 &&
-    formData.body.waist > 0;
+    inRange(formData.body.height, VALIDATION_RANGES.height) &&
+    inRange(formData.body.weight, VALIDATION_RANGES.weight) &&
+    inRange(formData.body.shoulder, VALIDATION_RANGES.shoulder) &&
+    inRange(formData.body.waist, VALIDATION_RANGES.waist);
+
+  const FIELD_LABELS: Record<keyof typeof VALIDATION_RANGES, string> = {
+    height: '키',
+    weight: '몸무게',
+    shoulder: '어깨넓이',
+    waist: '허리둘레',
+  };
+
+  const rangeErrorMessage = (
+    Object.keys(VALIDATION_RANGES) as (keyof typeof VALIDATION_RANGES)[]
+  )
+    .filter((field) => {
+      const value = formData.body[field];
+      return value > 0 && !inRange(value, VALIDATION_RANGES[field]);
+    })
+    .map((field) => {
+      const { min, max } = VALIDATION_RANGES[field];
+      return `${FIELD_LABELS[field]}은(는) ${min}~${max} 사이여야 합니다.`;
+    })
+    .join(' ');
 
   const handleBack = () => {
     navigate('/register/measurement-guide');
@@ -176,6 +199,10 @@ export const MeasurementInputPage = () => {
             fullWidth
           />
         </div>
+
+        {rangeErrorMessage && (
+          <p className="text-red-500 text-sm text-center">{rangeErrorMessage}</p>
+        )}
 
         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
