@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStudentFormStore } from '@/stores/useStudentFormStore';
 import { Button } from '@/components/atoms/Button';
@@ -18,10 +18,18 @@ export const StudentInfoPage = () => {
   const { formData, setFormData } = useStudentFormStore();
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (!formData.admissionSchool) {
+      navigate('/register/school-info', { replace: true });
+    }
+  }, [formData.admissionSchool, navigate]);
+
+  const isValidPhone = (value: string) => value.replace(/[^0-9]/g, '').length >= 10;
+
   const isFormValid =
     formData.name.trim() !== '' &&
-    formData.studentPhone.trim() !== '' &&
-    formData.guardianPhone.trim() !== '' &&
+    isValidPhone(formData.studentPhone) &&
+    isValidPhone(formData.guardianPhone) &&
     formData.birthDate !== '' &&
     (formData.gender === 'M' || formData.gender === 'F') &&
     formData.privacyConsent === true;

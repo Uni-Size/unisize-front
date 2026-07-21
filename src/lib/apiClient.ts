@@ -1,4 +1,5 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
+import { useAuthStore } from "@/stores/authStore";
 
 // API 베이스 URL
 const API_BASE_URL =
@@ -37,17 +38,15 @@ apiClient.interceptors.request.use(
       return Promise.reject(new Error("허용되지 않은 요청 URL입니다."));
     }
 
-    // 인증 토큰이 있으면 헤더에 추가
-    const token = localStorage.getItem("accessToken");
+    // 인증 토큰이 있으면 헤더에 추가 (authStore가 유일한 토큰 소스)
+    const token = useAuthStore.getState().accessToken;
     if (token && config.headers) {
       // 토큰 형식 기본 검증 (JWT 구조: xxx.yyy.zzz)
       if (/^[\w-]+\.[\w-]+\.[\w-]+$/.test(token)) {
         config.headers.Authorization = `Bearer ${token}`;
       } else {
         // 잘못된 형식의 토큰이면 제거
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("auth-storage");
+        useAuthStore.getState().clearAuth();
       }
     }
 
@@ -99,15 +98,7 @@ apiClient.interceptors.response.use(
       const isLoginPage = loginPaths.some((p) => currentPath === p);
 
       if (!isLoginPage) {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("auth-storage");
-
-        // 쿠키 삭제 (Secure 플래그 포함)
-        const cookiesToClear = ["accessToken", "refreshToken", "userRole"];
-        cookiesToClear.forEach((name) => {
-          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;SameSite=Lax`;
-        });
+        useAuthStore.getState().clearAuth();
 
         // admin 경로면 admin 로그인으로, 아니면 staff 로그인으로
         const redirectPath = currentPath.startsWith("/admin")

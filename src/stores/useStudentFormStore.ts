@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { getTargetYear } from '@/utils/schoolUtils';
 
 interface BodyMeasurements {
@@ -57,21 +58,28 @@ const initialFormData: FormData = {
   delivery: false,
 };
 
-export const useStudentFormStore = create<FormStore>((set) => ({
-  formData: initialFormData,
+export const useStudentFormStore = create<FormStore>()(
+  persist(
+    (set) => ({
+      formData: initialFormData,
 
-  setFormData: (field, value) =>
-    set((state) => ({
-      formData: { ...state.formData, [field]: value },
-    })),
+      setFormData: (field, value) =>
+        set((state) => ({
+          formData: { ...state.formData, [field]: value },
+        })),
 
-  setBodyMeasurements: (field, value) =>
-    set((state) => ({
-      formData: {
-        ...state.formData,
-        body: { ...state.formData.body, [field]: value },
-      },
-    })),
+      setBodyMeasurements: (field, value) =>
+        set((state) => ({
+          formData: {
+            ...state.formData,
+            body: { ...state.formData.body, [field]: value },
+          },
+        })),
 
-  resetFormData: () => set({ formData: initialFormData }),
-}));
+      resetFormData: () => set({ formData: initialFormData }),
+    }),
+    {
+      name: 'student-form-storage',
+    }
+  )
+);

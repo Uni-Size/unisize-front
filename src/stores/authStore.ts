@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { deleteCookie } from "@/utils/cookieUtils";
 
 // 스태프 정보 타입 (API 응답의 user 객체)
 export interface StaffInfo {
@@ -56,9 +57,13 @@ export const useAuthStore = create<AuthState>()(
 
       // 로그아웃 시 호출
       clearAuth: () => {
-        // localStorage에서 제거
+        // 과거 버전에서 남아있을 수 있는 레거시 키 정리
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+
+        deleteCookie("accessToken");
+        deleteCookie("refreshToken");
+        deleteCookie("userRole");
 
         set({
           isAuthenticated: false,
@@ -75,10 +80,6 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-storage",
-      partialize: (state) => ({
-        isAuthenticated: state.isAuthenticated,
-        staff: state.staff,
-      }),
     }
   )
 );

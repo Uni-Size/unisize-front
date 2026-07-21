@@ -8,19 +8,25 @@ import { Input } from '@/components/atoms/Input';
 
 const VALIDATION_RANGES = {
   height: { min: 130, max: 200 },
-  weight: { min: 30, max: 150 },
-  shoulder: { min: 30, max: 60 },
-  waist: { min: 20, max: 40 },
+  weight: { min: 30, max: 149 },
+  shoulder: { min: 21, max: 59 },
+  waist: { min: 41, max: 119 },
 };
 
 export const MeasurementInputPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const fromExisting = location.state?.fromExisting ?? false;
-  const { formData, setBodyMeasurements, resetFormData } = useStudentFormStore();
+  const { formData, setBodyMeasurements } = useStudentFormStore();
   const { setStudentData, checkinData } = useStudentResponseStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (fromExisting ? !checkinData : !formData.name) {
+      navigate(fromExisting ? '/register/existing-lookup' : '/register/student-info', { replace: true });
+    }
+  }, [fromExisting, checkinData, formData.name, navigate]);
 
   useEffect(() => {
     if (!fromExisting || !checkinData?.body_measurements) return;
@@ -80,12 +86,14 @@ export const MeasurementInputPage = () => {
             waist: formData.body.waist,
           });
         }
-        resetFormData();
+        // formData 리셋은 여기서 하지 않는다 — resetFormData()를 호출하면 이 페이지가
+        // 아직 구독 중인 동안 formData가 비워져 스텝 가드가 먼저 반응해 엉뚱한 페이지로
+        // 밀려나는 문제가 있었다(navigate 이후에도 언마운트 타이밍을 보장할 수 없음).
+        // 대신 도착 페이지인 CompletePage 마운트 시점에 리셋한다.
         navigate('/register/complete');
       } else {
         const result = await addStudent(formData);
         setStudentData(result);
-        resetFormData();
         navigate('/register/complete');
       }
     } catch (err) {

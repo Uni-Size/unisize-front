@@ -1,22 +1,6 @@
 import { apiClient } from "@/lib/apiClient";
-import type { StaffInfo } from "@/stores/authStore";
-
-// ============================================================================
-// 쿠키 관리 헬퍼 함수
-// ============================================================================
-
-function setCookie(name: string, value: string, days: number = 7) {
-  const expires = new Date();
-  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
-  const secure = window.location.protocol === "https:" ? ";Secure" : "";
-  // HttpOnly는 서버에서만 설정 가능하므로 JS에서는 SameSite=Strict으로 CSRF 방지
-  document.cookie = `${name}=${encodeURIComponent(value)};expires=${expires.toUTCString()};path=/;SameSite=Strict${secure}`;
-}
-
-function deleteCookie(name: string) {
-  const secure = window.location.protocol === "https:" ? ";Secure" : "";
-  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;SameSite=Strict${secure}`;
-}
+import { useAuthStore, type StaffInfo } from "@/stores/authStore";
+import { setCookie } from "@/utils/cookieUtils";
 
 // ============================================================================
 // 타입 정의
@@ -73,18 +57,10 @@ export async function login(credentials: LoginRequest): Promise<LoginResponseDat
 
   const loginData = response.data.data;
 
-  // 토큰을 localStorage에 저장 (authStore.setAuth에서도 저장하지만 apiClient 인터셉터가 즉시 사용할 수 있도록 선행 저장)
-  if (loginData.access_token) {
-    localStorage.setItem("accessToken", loginData.access_token);
-
-    if (loginData.refresh_token) {
-      localStorage.setItem("refreshToken", loginData.refresh_token);
-    }
-
-    // role 정보를 쿠키에 저장 (라우터 가드용, 민감하지 않은 정보만)
-    if (loginData.user?.role) {
-      setCookie("userRole", loginData.user.role, 7);
-    }
+  // role 정보를 쿠키에 저장 (라우터 가드용, 민감하지 않은 정보만)
+  // 토큰 자체는 authStore.setAuth가 유일한 소스로 저장한다.
+  if (loginData.user?.role) {
+    setCookie("userRole", loginData.user.role, 7);
   }
 
   return loginData;
@@ -115,11 +91,7 @@ export async function logout(): Promise<void> {
   try {
     await apiClient.post("/api/v1/auth/logout");
   } finally {
-    // 에러가 발생해도 로컬 토큰과 쿠키는 삭제
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    deleteCookie("accessToken");
-    deleteCookie("refreshToken");
-    deleteCookie("userRole");
+    // 에러가 발생해도 로컬 인증 상태(토큰/쿠키)는 반드시 정리한다.
+    useAuthStore.getState().clearAuth();
   }
 }

@@ -22,6 +22,12 @@ export const SchoolInputPage = () => {
   const currentYear = new Date().getFullYear();
 
   useEffect(() => {
+    if (!formData.studentType) {
+      navigate('/register/school', { replace: true });
+    }
+  }, [formData.studentType, navigate]);
+
+  useEffect(() => {
     const fetchSchools = async () => {
       setIsLoadingSchools(true);
       try {

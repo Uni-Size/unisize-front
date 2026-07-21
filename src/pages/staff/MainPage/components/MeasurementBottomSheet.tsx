@@ -96,18 +96,29 @@ const SignatureCanvas = ({ onSign, initialSignature }: { onSign: (dataUrl: strin
     const wrapper = wrapperRef.current;
     if (!canvas || !wrapper) return;
 
+    // 리사이즈로 인한 재동기화인지 추적 - 최초 1회는 initialSignature를 복원하고,
+    // 이후 리사이즈(ResizeObserver 재호출)에서는 캔버스 재설정 직전 내용을 보존해 복원한다.
+    let hasSyncedOnce = false;
+
     const sync = () => {
       const dpr = window.devicePixelRatio || 1;
       const { width, height } = wrapper.getBoundingClientRect();
+      if (width === 0 || height === 0) return;
+
+      const preserved = hasSyncedOnce ? canvas.toDataURL() : null;
+      hasSyncedOnce = true;
+
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.scale(dpr, dpr);
-      if (initialSignature) {
+
+      const restoreSrc = preserved ?? initialSignature;
+      if (restoreSrc) {
         const img = new Image();
         img.onload = () => ctx.drawImage(img, 0, 0, width, height);
-        img.src = initialSignature;
+        img.src = restoreSrc;
       }
     };
 
@@ -632,7 +643,7 @@ export const MeasurementBottomSheet = ({
                 const qty = item.supportedQuantity + item.additionalQuantity;
                 const isLast = idx === active.length - 1;
                 return (
-                  <tr key={`${item.productId}`} className={isLast ? '' : 'border-b border-gray-100'}>
+                  <tr key={item.rowId} className={isLast ? '' : 'border-b border-gray-100'}>
                     <td className={`${td} text-left`}>
                       <div>{item.name}</div>
                       {(item.repair || item.reservation || item.received) && (
@@ -692,7 +703,7 @@ export const MeasurementBottomSheet = ({
         {supported.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {supported.map((item) => (
-              <span key={item.productId} className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5">
+              <span key={item.rowId} className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
                 {item.name} ({item.selectedSize}) · 지원 {item.supportedQuantity}
               </span>
@@ -732,7 +743,7 @@ export const MeasurementBottomSheet = ({
                 </thead>
                 <tbody>
                   {supplies.filter((s) => s.quantity > 0).map((item, idx, arr) => (
-                    <tr key={item.productId} className={idx < arr.length - 1 ? 'border-b border-gray-100' : ''}>
+                    <tr key={item.rowId} className={idx < arr.length - 1 ? 'border-b border-gray-100' : ''}>
                       <td className="px-3 py-2.5 text-sm text-gray-700">{item.name}</td>
                       <td className="px-3 py-2.5 text-sm text-center text-gray-700">{item.selectedSize || '-'}</td>
                       <td className="px-3 py-2.5 text-sm text-center tabular-nums text-gray-700">{item.quantity}</td>

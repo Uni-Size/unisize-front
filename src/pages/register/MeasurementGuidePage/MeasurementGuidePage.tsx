@@ -1,10 +1,21 @@
+import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useStudentFormStore } from '@/stores/useStudentFormStore';
+import { useStudentResponseStore } from '@/stores/useStudentResponseStore';
 import { Button } from '@/components/atoms/Button';
 
 export const MeasurementGuidePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const fromExisting = location.state?.fromExisting ?? false;
+  const { formData } = useStudentFormStore();
+  const { checkinData } = useStudentResponseStore();
+
+  useEffect(() => {
+    if (fromExisting ? !checkinData : !formData.name) {
+      navigate(fromExisting ? '/register/existing-lookup' : '/register/student-info', { replace: true });
+    }
+  }, [fromExisting, checkinData, formData.name, navigate]);
 
   const handleBack = () => {
     navigate('/register/student-info');

@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStudentResponseStore } from '@/stores/useStudentResponseStore';
+import { useStudentFormStore } from '@/stores/useStudentFormStore';
 import { type RecommendedSizeItem } from '@/api/student';
 
 const itemData = {
@@ -48,11 +50,31 @@ const toUniformData = (items: RecommendedSizeItem[] | undefined): UniformData[] 
     gender: item.gender,
   })) ?? [];
 
+const NO_DATA_REDIRECT_DELAY_MS = 3000;
+
 export const CompletePage = () => {
+  const navigate = useNavigate();
   const { studentData, checkinData } = useStudentResponseStore();
+  const { resetFormData } = useStudentFormStore();
   const [activeTab, setActiveTab] = useState<SeasonType>('동복');
+  const hasNoData = !studentData && !checkinData;
 
   const tabs: SeasonType[] = ['동복', '하복'];
+
+  // 등록 위저드의 formData 초기화는 여기서 한다. 제출 페이지(MeasurementInputPage)에서
+  // navigate 직후 리셋하면, 그 페이지가 완전히 언마운트되기 전에 formData 구독이 갱신되어
+  // 스텝 가드가 먼저 반응해 엉뚱한 페이지로 밀려나는 문제가 있었다. 도착 페이지가
+  // 마운트된 시점에는 그 문제가 없다.
+  useEffect(() => {
+    resetFormData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!hasNoData) return;
+    const timer = setTimeout(() => navigate('/register', { replace: true }), NO_DATA_REDIRECT_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [hasNoData, navigate]);
 
   const name = studentData?.name ?? checkinData?.name ?? '';
   const schoolName = studentData?.school_name ?? checkinData?.school_name ?? '';
@@ -62,11 +84,19 @@ export const CompletePage = () => {
     (recommendedUniforms?.winter?.length ?? 0) > 0 ||
     (recommendedUniforms?.summer?.length ?? 0) > 0;
 
-  if (!studentData && !checkinData) {
+  if (hasNoData) {
     return (
       <section className="max-w-[24rem] mx-auto p-4 min-h-screen">
-        <div className="flex justify-center items-center min-h-[50vh] text-slate-600">
-          <p>데이터를 불러오는 중...</p>
+        <div className="flex flex-col justify-center items-center gap-3 min-h-[50vh] text-center text-slate-600">
+          <p>등록 정보를 찾을 수 없습니다.</p>
+          <p className="text-sm text-slate-400">잠시 후 처음 화면으로 이동합니다.</p>
+          <button
+            type="button"
+            onClick={() => navigate('/register', { replace: true })}
+            className="mt-2 text-sm text-primary-600 underline bg-none border-none cursor-pointer"
+          >
+            지금 처음으로 이동
+          </button>
         </div>
       </section>
     );

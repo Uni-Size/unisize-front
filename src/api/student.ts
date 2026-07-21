@@ -305,7 +305,7 @@ export async function addStudent(
   };
 
   const response = await apiClient.post<ApiResponse<AddStudentResponse>>(
-    "api/v1/students/register",
+    "/api/v1/students/register",
     requestData,
   );
 
