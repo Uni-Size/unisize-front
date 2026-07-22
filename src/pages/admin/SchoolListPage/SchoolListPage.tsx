@@ -32,6 +32,7 @@ import { getApiErrorMessage } from "@/utils/errorUtils";
 import { Toast } from "@components/atoms/Toast";
 import { downloadCSV } from "@/utils/csvUtils";
 import { formatDate, formatDateTime } from "@/utils/dateUtils";
+import { getTargetYear } from "@/utils/schoolUtils";
 
 interface SchoolRow {
   school_name: string;
@@ -53,7 +54,10 @@ const SCHOOL_TYPE_LABEL: Record<SchoolTypeCode, string> = {
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-const YEAR_OPTIONS = [2023, 2024, 2025, 2026];
+const YEAR_OPTIONS = Array.from(
+  { length: getTargetYear() - 2023 + 1 },
+  (_, i) => 2023 + i,
+);
 
 const getMeasurementPeriod = (item: SchoolListItem): string => {
   const currentYearEntry =
@@ -264,10 +268,10 @@ export const SchoolListPage = () => {
   };
 
   const handleUpdateSchool = async (
-    originalName: string,
+    schoolId: string,
     data: Parameters<typeof updateSupportedSchool>[1],
   ) => {
-    await updateSupportedSchool(originalName, data);
+    await updateSupportedSchool(schoolId, data);
   };
 
   // 클라이언트 측 검색어 필터 (서버 필터 후 추가 필터링)

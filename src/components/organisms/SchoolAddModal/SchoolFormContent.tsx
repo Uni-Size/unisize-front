@@ -1,7 +1,13 @@
-import { useState, useCallback } from "react";
-import { Select, Input } from "@components/atoms";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { Select, Input, Button } from "@components/atoms";
 import { NameTagSection } from "../NameTagSection/NameTagSection";
 import { getAllProducts, type Product } from "@/api/product";
+import {
+  searchSchools,
+  getPreviousYearSettings,
+  type SchoolMasterItem,
+  type PreviousYearUniformItem,
+} from "@/api/school";
 import { GENDER_OPTIONS } from "@/constants/gender";
 import { CATEGORY_GROUPS, getCategoryLabel } from "@/constants/productCategories";
 
@@ -34,6 +40,7 @@ export type SchoolFormMode = "add" | "view" | "edit";
 
 export interface SchoolFormState {
   schoolName: string;
+  schoolId: string | null;
   hasNameTag: boolean;
   nameTagPrice: number | "";
   nameTagAttachPrice: number | "";
@@ -77,6 +84,110 @@ const addYearOptions = Array.from({ length: 6 }, (_, i) => ({
 const categoryOptions = CATEGORY_GROUPS;
 const genderOptions = GENDER_OPTIONS;
 
+interface SchoolNameComboboxProps {
+  value: string;
+  onChangeText: (text: string) => void;
+  onSelectSchool: (schoolId: string, name: string) => void;
+}
+
+const SchoolNameCombobox = ({ value, onChangeText, onSelectSchool }: SchoolNameComboboxProps) => {
+  const [suggestions, setSuggestions] = useState<SchoolMasterItem[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleChange = (text: string) => {
+    onChangeText(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!text.trim()) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    debounceRef.current = setTimeout(() => {
+      searchSchools(text.trim())
+        .then((results) => {
+          setSuggestions(results);
+          setShowSuggestions(results.length > 0);
+        })
+        .catch(() => {});
+    }, 250);
+  };
+
+  const handleSelect = (item: SchoolMasterItem) => {
+    onSelectSchool(item.school_id, item.name);
+    setShowSuggestions(false);
+    setSuggestions([]);
+  };
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <Input
+        label="학교명"
+        placeholder="학교명을 입력하세요"
+        value={value}
+        onChange={(e) => handleChange(e.target.value)}
+        onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+        autoComplete="off"
+        fullWidth
+      />
+      {showSuggestions && (
+        <div className="absolute left-0 top-full z-50 w-full bg-white border border-gray-200 rounded-b-lg shadow-lg max-h-52 overflow-y-auto">
+          {suggestions.map((s) => (
+            <button
+              key={s.school_id}
+              type="button"
+              className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-bg-050 border-none bg-transparent cursor-pointer"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelect(s);
+              }}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const buildProductsCache = (
+  list: { productApiId?: string; displayName: string; contractPrice: number; category: string; gender: string }[],
+  seasonCode: string,
+): Record<string, { id: string; name: string; price: number }[]> => {
+  const cache: Record<string, { id: string; name: string; price: number }[]> = {};
+  for (const p of list) {
+    if (!p.productApiId) continue;
+    const key = `${seasonCode}:${p.category}:${p.gender}`;
+    if (!cache[key]) cache[key] = [];
+    if (!cache[key].some((item) => item.id === p.productApiId)) {
+      cache[key].push({ id: p.productApiId, name: p.displayName, price: p.contractPrice });
+    }
+  }
+  return cache;
+};
+
+const toEditableFromPrev = (u: PreviousYearUniformItem): EditableProduct => ({
+  id: `prev-${u.id}`,
+  category: u.category,
+  gender: u.gender,
+  displayName: u.display_name,
+  contractPrice: u.contract_price,
+  freeQuantity: u.free_support_count,
+  productApiId: u.product_id,
+});
+
 export const SchoolFormContent = ({
   mode,
   state,
@@ -90,6 +201,7 @@ export const SchoolFormContent = ({
 }: SchoolFormContentProps) => {
   const {
     schoolName,
+    schoolId,
     hasNameTag,
     nameTagPrice,
     nameTagAttachPrice,
@@ -104,6 +216,42 @@ export const SchoolFormContent = ({
 
   const isAdd = mode === "add";
   const isEdit = mode === "add" || mode === "edit";
+
+  const [prevYearLoading, setPrevYearLoading] = useState(false);
+  const [prevYearError, setPrevYearError] = useState<string | null>(null);
+
+  const handleLoadPreviousYear = async () => {
+    if (!schoolId || years.length === 0) return;
+    const targetYear = years[0].year;
+    setPrevYearLoading(true);
+    setPrevYearError(null);
+    try {
+      const prev = await getPreviousYearSettings(schoolId, targetYear);
+      if (!prev.has_previous) {
+        setPrevYearError("이전 연도 데이터가 없습니다.");
+        return;
+      }
+      const winter = (prev.uniforms?.winter ?? []).map(toEditableFromPrev);
+      const summer = (prev.uniforms?.summer ?? []).map(toEditableFromPrev);
+      onChange({
+        hasNameTag: prev.has_name_tag ?? false,
+        nameTagPrice: prev.name_tag_price ?? "",
+        nameTagAttachPrice: prev.name_tag_attach_price ?? "",
+        nameTagMinUnit: prev.name_tag_min_unit ?? "",
+        winterProducts: winter,
+        summerProducts: summer,
+        productsCache: {
+          ...productsCache,
+          ...buildProductsCache(winter, "W"),
+          ...buildProductsCache(summer, "S"),
+        },
+      });
+    } catch {
+      setPrevYearError("전년도 데이터를 불러오지 못했습니다.");
+    } finally {
+      setPrevYearLoading(false);
+    }
+  };
 
   const fetchProducts = useCallback(
     async (season: string, category: string, gender: string) => {
@@ -656,7 +804,13 @@ export const SchoolFormContent = ({
       {/* 학교명 */}
       <div className="flex gap-2 items-end">
         <div className="flex-1 min-w-0">
-          {isEdit ? (
+          {isAdd ? (
+            <SchoolNameCombobox
+              value={schoolName}
+              onChangeText={(text) => onChange({ schoolName: text, schoolId: null })}
+              onSelectSchool={(id, name) => onChange({ schoolName: name, schoolId: id })}
+            />
+          ) : isEdit ? (
             <Input
               label="학교명"
               placeholder="학교명"
@@ -679,6 +833,7 @@ export const SchoolFormContent = ({
       {isAdd && years.length > 0 && (() => {
         const y = years[0];
         return (
+          <>
           <div className="flex gap-2 items-end">
             <div className="flex-none w-30 min-w-0">
               <Select
@@ -734,6 +889,23 @@ export const SchoolFormContent = ({
               />
             </div>
           </div>
+          {schoolId && (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="small"
+                onClick={handleLoadPreviousYear}
+                disabled={prevYearLoading}
+              >
+                {prevYearLoading ? "불러오는 중..." : "전년도 불러오기"}
+              </Button>
+              {prevYearError && (
+                <span className="text-13 text-error">{prevYearError}</span>
+              )}
+            </div>
+          )}
+          </>
         );
       })()}
 
@@ -887,6 +1059,7 @@ export function makeEmptyFormState(): SchoolFormState {
   const currentYr = new Date().getFullYear();
   return {
     schoolName: "",
+    schoolId: null,
     hasNameTag: false,
     nameTagPrice: "",
     nameTagAttachPrice: "",

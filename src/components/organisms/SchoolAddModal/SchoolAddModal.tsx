@@ -54,7 +54,7 @@ export const SchoolAddModal = ({
 
   const handleSubmit = async () => {
     try {
-      const { schoolName, years, winterProducts, summerProducts, hasNameTag, nameTagPrice, nameTagAttachPrice, nameTagMinUnit } = state;
+      const { schoolName, schoolId, years, winterProducts, summerProducts, hasNameTag, nameTagPrice, nameTagAttachPrice, nameTagMinUnit } = state;
       const y = years[0];
       const winter = winterProducts
         .filter((p) => p.productApiId)
@@ -64,6 +64,7 @@ export const SchoolAddModal = ({
         .map((p) => toUniformItem(p, hasNameTag, nameTagPrice, nameTagAttachPrice, nameTagMinUnit));
 
       await addSupportedSchool({
+        school_id: schoolId ?? undefined,
         school_name: schoolName,
         year: y ? Number(y.year) : new Date().getFullYear(),
         expected_student_count: y?.expected_student_count || undefined,

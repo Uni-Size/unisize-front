@@ -37,6 +37,7 @@ export interface SupportedYear {
 
 export interface SchoolListItem {
   id?: number;
+  school_id: string;
   school_name: string;
   school_type: SchoolType;
   supported_years: SupportedYear[];
@@ -111,6 +112,7 @@ export interface SchoolDetailUniform {
 }
 
 export interface SchoolDetailResponse {
+  school_id: string;
   school_name: string;
   school_type: SchoolTypeFull;
   is_active: boolean;
@@ -128,6 +130,7 @@ export interface SchoolDetailResponse {
 }
 
 export interface AddSchoolRequest {
+  school_id?: string;
   school_name: string;
   year: number;
   expected_student_count?: number;
@@ -209,12 +212,74 @@ export async function getSupportedSchoolsByYear(year: number): Promise<School[]>
 // ============================================================================
 
 /**
- * 학교 상세 조회
+ * 학교 상세 조회 (학교명 기준)
  * GET /api/v1/schools/supported/detail?school_name=...
+ *
+ * 학생의 admissionSchool(문자열, school_id 미연결)로 조회하는 소비처(StudentListPage, SchoolDetailPage)가 있어
+ * 이름 기반 조회는 유지한다. school_id가 있는 컨텍스트에서는 getSchoolDetailById를 사용할 것.
  */
 export async function getSchoolDetail(schoolName: string): Promise<SchoolDetailResponse> {
   const response = await apiClient.get<ApiResponse<SchoolDetailResponse>>(
     `/api/v1/schools/supported/detail?school_name=${encodeURIComponent(schoolName)}`
+  );
+  return response.data.data;
+}
+
+/**
+ * 학교 상세 조회 (school_id 기준)
+ * GET /api/v1/schools/supported/detail?school_id=...
+ */
+export async function getSchoolDetailById(schoolId: string): Promise<SchoolDetailResponse> {
+  const response = await apiClient.get<ApiResponse<SchoolDetailResponse>>(
+    `/api/v1/schools/supported/detail?school_id=${encodeURIComponent(schoolId)}`
+  );
+  return response.data.data;
+}
+
+/**
+ * 학교 마스터 검색 (자동완성)
+ * GET /api/v1/schools/master?query=...
+ */
+export interface SchoolMasterItem {
+  school_id: string;
+  name: string;
+}
+
+export async function searchSchools(query: string): Promise<SchoolMasterItem[]> {
+  const response = await apiClient.get<ApiResponse<SchoolMasterItem[]>>(
+    `/api/v1/schools/master${query ? `?query=${encodeURIComponent(query)}` : ''}`
+  );
+  return response.data.data;
+}
+
+/**
+ * 전년도 설정 불러오기 (측정기간 제외: 교복구성/무상수량/명찰정책만)
+ * GET /api/v1/schools/supported/previous-year?school_id=...&before_year=...
+ */
+export type PreviousYearUniformItem = Omit<
+  SchoolDetailUniform,
+  'has_name_tag' | 'name_tag_price' | 'name_tag_attach_price' | 'name_tag_min_unit'
+>;
+
+export interface PreviousYearSettingsResponse {
+  has_previous: boolean;
+  year?: number;
+  has_name_tag?: boolean;
+  name_tag_price?: number | null;
+  name_tag_attach_price?: number | null;
+  name_tag_min_unit?: number | null;
+  uniforms?: {
+    winter: PreviousYearUniformItem[];
+    summer: PreviousYearUniformItem[];
+  };
+}
+
+export async function getPreviousYearSettings(
+  schoolId: string,
+  beforeYear: number,
+): Promise<PreviousYearSettingsResponse> {
+  const response = await apiClient.get<ApiResponse<PreviousYearSettingsResponse>>(
+    `/api/v1/schools/supported/previous-year?school_id=${encodeURIComponent(schoolId)}&before_year=${beforeYear}`
   );
   return response.data.data;
 }
@@ -232,11 +297,11 @@ export async function addSupportedSchool(data: AddSchoolRequest): Promise<void> 
 
 /**
  * 지원 학교 수정
- * PUT /api/v1/schools/supported/by-name/:schoolName
+ * PUT /api/v1/schools/supported/by-id/:schoolId
  */
-export async function updateSupportedSchool(schoolName: string, data: UpdateSchoolRequest): Promise<void> {
+export async function updateSupportedSchool(schoolId: string, data: UpdateSchoolRequest): Promise<void> {
   await apiClient.put<ApiResponse<void>>(
-    `/api/v1/schools/supported/by-name/${encodeURIComponent(schoolName)}`,
+    `/api/v1/schools/supported/by-id/${encodeURIComponent(schoolId)}`,
     data
   );
 }

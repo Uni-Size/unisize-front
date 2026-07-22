@@ -3,7 +3,7 @@ import { Modal } from "@components/atoms";
 import { Toast } from "@components/atoms/Toast";
 import { updateProductSelectable } from "@/api/product";
 import type { SchoolListItem, SupportedYear, UpdateUniformItem } from "@/api/school";
-import { getSchoolDetail } from "@/api/school";
+import { getSchoolDetailById } from "@/api/school";
 import { getApiErrorString } from "@/utils/errorUtils";
 import {
   SchoolFormContent,
@@ -18,7 +18,7 @@ export interface SchoolDetailModalProps {
   school: SchoolListItem | null;
   onUpdate: () => void;
   onSubmit: (
-    schoolName: string,
+    schoolId: string,
     data: {
       school_name: string;
       years?: {
@@ -66,6 +66,7 @@ export const SchoolDetailModal = ({
     if (!school) return;
     onChange({
       schoolName: school.school_name,
+      schoolId: school.school_id,
       years: school.supported_years.map((sy: SupportedYear) => ({
         _id: `sy-${sy.year}`,
         year: sy.year,
@@ -77,7 +78,7 @@ export const SchoolDetailModal = ({
       productsCache: {},
     });
 
-    getSchoolDetail(school.school_name)
+    getSchoolDetailById(school.school_id)
       .then((detail) => {
         const toEditable = (u: (typeof detail.uniforms.winter)[number]): EditableProduct => ({
           id: `uniform-${u.id}`,
@@ -189,7 +190,7 @@ const handleSelectableSave = async (product: EditableProduct) => {
     const summer = summerProducts.filter((p) => p.productApiId).map(toUpdateUniform);
 
     try {
-      await onSubmit(school.school_name, {
+      await onSubmit(school.school_id, {
         school_name: schoolName,
         has_name_tag: hasNameTag,
         name_tag_price: hasNameTag && nameTagPrice !== "" ? nameTagPrice : null,
