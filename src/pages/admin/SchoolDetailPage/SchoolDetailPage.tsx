@@ -1109,23 +1109,32 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
 export const SchoolDetailPage = () => {
   const { schoolId } = useParams<{ schoolId: string }>();
   const location = useLocation();
-  const [schoolName, setSchoolName] = useState("");
+  // 숫자 ID(school_id)로 조회한 학교명은 비동기 API 응답이 필요하므로 상태로 관리한다.
+  const [fetchedSchoolName, setFetchedSchoolName] = useState("");
 
   const isOrdersPage = location.pathname.endsWith("/orders");
 
+  const numericId = schoolId !== undefined ? Number(schoolId) : NaN;
+  const isNumericSchoolId = schoolId !== undefined && !isNaN(numericId);
+
   useEffect(() => {
-    if (!schoolId) return;
-    const numericId = Number(schoolId);
-    if (!isNaN(numericId)) {
-      const targetYear = getTargetYear();
-      getSupportedSchoolsByYear(targetYear).then((schools) => {
-        const found = schools.find((s) => s.id === numericId);
-        if (found) setSchoolName(found.name);
-      });
-    } else {
-      setSchoolName(decodeURIComponent(schoolId));
-    }
-  }, [schoolId]);
+    if (!isNumericSchoolId) return;
+    const targetYear = getTargetYear();
+    let cancelled = false;
+    getSupportedSchoolsByYear(targetYear).then((schools) => {
+      if (cancelled) return;
+      const found = schools.find((s) => s.id === numericId);
+      if (found) setFetchedSchoolName(found.name);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isNumericSchoolId, numericId]);
+
+  // schoolId가 숫자가 아니면 URL 파라미터 자체가 (인코딩된) 학교명이므로,
+  // 별도 상태/effect 없이 렌더 중 순수하게 디코딩해서 사용한다.
+  const schoolName =
+    schoolId && !isNumericSchoolId ? decodeURIComponent(schoolId) : fetchedSchoolName;
 
   return (
     <AdminLayout>

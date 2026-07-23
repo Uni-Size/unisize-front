@@ -5,10 +5,10 @@ import { addSupportedSchool, type UniformItem } from "@/api/school";
 import { getApiErrorString } from "@/utils/errorUtils";
 import {
   SchoolFormContent,
-  useSchoolFormState,
   type SchoolProductItem,
   type EditableProduct,
 } from "./SchoolFormContent";
+import { useSchoolFormState } from "./useSchoolFormState";
 
 export type { SchoolProductItem, EditableProduct };
 
