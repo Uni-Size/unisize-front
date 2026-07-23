@@ -14,7 +14,7 @@ import type {
 } from '../../../api/student';
 import { formatGender } from '../../../utils/genderUtils';
 import type { StaffProfile, PaymentPendingOrder } from '../../../api/staff';
-import Toast from '../../../components/ui/Toast';
+import { Toast } from '@components/atoms/Toast';
 import { useToast } from '../../../hooks/useToast';
 import { formatDateTime } from '@/utils/dateUtils';
 import { MeasurementBottomSheet } from '../MainPage/components';
