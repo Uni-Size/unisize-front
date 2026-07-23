@@ -136,10 +136,17 @@ GitHub Actions가 브랜치별로 자동 배포합니다.
 
 정직하게 적어둡니다. 헷갈리기 쉬운 부분들입니다.
 
-- **CI가 사실상 게이트 역할을 못 함**: `ci-cd.yml`의 lint 스텝은 `continue-on-error: true`라 실패해도 그냥 통과되고, 타입체크(`tsc --noEmit`)는 주석 처리돼서 아예 안 돕니다. 즉 PR이 초록불이어도 타입 에러나 린트 에러가 섞여 들어갈 수 있습니다.
-- **테스트 스크립트가 없음**: Vitest, `@vitest/browser-playwright`, Playwright가 devDependency로 깔려있지만 `package.json`에 `test` 스크립트가 없습니다. Storybook의 vitest addon을 통해서만 간접적으로 쓸 수 있는 상태로, 실질적으로 자동화된 테스트는 거의 없다고 보는 게 맞습니다.
 - **컴포넌트 중복**: `components/ui/Button`,`Toast`와 `components/atoms/Button`,`Toast`가 둘 다 존재하고 실제로 서로 다른 화면에서 각각 import됩니다. `StudentTable`도 `components/staff/`와 `pages/staff/MainPage/components/`에 두 벌이 있습니다. 새 코드를 어디에 둘지 헷갈리면 일단 기존 사용처를 grep해서 확인하는 게 안전합니다. 언젠가 정리가 필요한 부채입니다.
-- **디자인 토큰 파이프라인은 없음**: Tailwind 4의 CSS-first 설정만 쓰고 있고, Style Dictionary 같은 토큰 빌드 스텝은 존재하지 않습니다 (예전 README에는 있었지만 실제로 도입된 적이 없습니다).
+
+## 디자인 토큰 파이프라인
+
+색상/폰트 값은 이제 `tokens/*.json`(`color.json`, `typography.json`)이 유일한 소스입니다. Style Dictionary(`style-dictionary.config.mjs`)가 이 JSON을 읽어 `src/styles/tokens.generated.css`를 생성하고, 여기에 Tailwind 4의 CSS-first `@theme { ... }` 블록이 들어갑니다. `src/styles/global.css`는 이 생성 파일을 `@import`만 할 뿐, 값을 직접 갖고 있지 않습니다.
+
+```bash
+npm run tokens:build   # tokens/*.json → src/styles/tokens.generated.css
+```
+
+`tokens.generated.css`는 빌드 산출물이라 커밋되지 않습니다(`.gitignore`). 대신 `dev`/`build`/`storybook`/`build-storybook` 스크립트 각각에 `pre*` 훅으로 `tokens:build`가 연결돼 있어서 따로 신경 쓰지 않아도 항상 최신 상태로 생성됩니다. 색상/폰트 값을 바꾸려면 `tokens/*.json`만 고치면 됩니다 — `global.css`를 함께 손대야 할 일은 없습니다.
 
 ## 개발 인원
 

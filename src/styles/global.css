@@ -1,83 +1,16 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css');
 @import "tailwindcss";
 
-@theme {
-  /* Primary Colors */
-  --color-primary-050: #f5f6fd;
-  --color-primary-100: #dbe0f8;
-  --color-primary-500: #6a73a7;
-  --color-primary-600: #525a8d;
-  --color-primary-700: #42497a;
-  --color-primary-900: #1f234f;
-
-  /* Gray Colors */
-  --color-gray-100: #e1e1e1;
-  --color-gray-200: #c6c6c6;
-  --color-gray-300: #a3a3a3;
-  --color-gray-600: #5d5d5d;
-  --color-gray-700: #4c4c4c;
-  --color-gray-900: #262626;
-
-  /* Background Colors */
-  --color-bg-canvas: #ffffff;
-  --color-bg-050: #f9fafb;
-  --color-bg-100: #e1e1e1;
-  --color-bg-200: #c6c6c6;
-  --color-bg-400: #959595;
-  --color-bg-500: #767676;
-  --color-bg-600: #5d5d5d;
-  --color-bg-700: #4c4c4c;
-  --color-bg-800: #393939;
-  --color-bg-900: #262626;
-
-  /* Semantic Colors */
-  --color-red-050: #fee2e2;
-  --color-red-100: #ffd8d7;
-  --color-red-200: #fecaca;
-  --color-red-500: #ef4444;
-  --color-red-600: #dc2626;
-  --color-red-700: #991b1b;
-  --color-red-900: #570000;
-
-  --color-yellow-050: #fef3c7;
-  --color-yellow-700: #7a3c00;
-
-  --color-green-050: #dcfce7;
-  --color-green-700: #166534;
-
-  --color-blue-050: #dbeafe;
-  --color-blue-700: #1e40af;
-
-  --color-neutral-050: #e5e7eb;
-  --color-neutral-500: #6c757d;
-  --color-neutral-600: #545b62;
-
-  /* Tailwind-compatible grays (for register pages) */
-  --color-slate-800: #1f2937;
-  --color-slate-600: #4b5563;
-  --color-slate-500: #6b7280;
-
-  /* Delete button colors */
-  --color-delete-bg: #9b7373;
-  --color-delete-bg-hover: #7a5555;
-  --color-delete-border: #c6a8a8;
-
-  /* Primary dark hover */
-  --color-primary-800: #2a2f5a;
-
-  --color-error: #ef4444;
-  --color-success: #22c55e;
-
-  /* Font Size */
-  --text-11: 11px;
-  --text-13: 13px;
-  --text-14: 14px;
-  --text-15: 15px;
-  --text-17: 17px;
-
-  /* Font Family */
-  --font-family-pretendard: 'Pretendard Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
+/*
+ * Design tokens (colors, font sizes, font family) live in `tokens/*.json`
+ * and are compiled by Style Dictionary into `tokens.generated.css`, which
+ * declares the `@theme { ... }` block Tailwind reads its custom properties
+ * from. Run `npm run tokens:build` after editing the token source — this
+ * generated file is a build artifact and is not committed (see .gitignore).
+ * `npm run dev` / `npm run build` / `npm run storybook` regenerate it
+ * automatically via pre* hooks.
+ */
+@import "./tokens.generated.css";
 
 @utility scrollbar-hide {
   scrollbar-width: none;

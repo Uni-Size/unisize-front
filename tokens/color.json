@@ -1,0 +1,71 @@
+{
+  "color": {
+    "primary": {
+      "050": { "value": "#f5f6fd" },
+      "100": { "value": "#dbe0f8" },
+      "500": { "value": "#6a73a7" },
+      "600": { "value": "#525a8d" },
+      "700": { "value": "#42497a" },
+      "800": { "value": "#2a2f5a" },
+      "900": { "value": "#1f234f" }
+    },
+    "gray": {
+      "100": { "value": "#e1e1e1" },
+      "200": { "value": "#c6c6c6" },
+      "300": { "value": "#a3a3a3" },
+      "600": { "value": "#5d5d5d" },
+      "700": { "value": "#4c4c4c" },
+      "900": { "value": "#262626" }
+    },
+    "bg": {
+      "canvas": { "value": "#ffffff" },
+      "050": { "value": "#f9fafb" },
+      "100": { "value": "#e1e1e1" },
+      "200": { "value": "#c6c6c6" },
+      "400": { "value": "#959595" },
+      "500": { "value": "#767676" },
+      "600": { "value": "#5d5d5d" },
+      "700": { "value": "#4c4c4c" },
+      "800": { "value": "#393939" },
+      "900": { "value": "#262626" }
+    },
+    "red": {
+      "050": { "value": "#fee2e2" },
+      "100": { "value": "#ffd8d7" },
+      "200": { "value": "#fecaca" },
+      "500": { "value": "#ef4444" },
+      "600": { "value": "#dc2626" },
+      "700": { "value": "#991b1b" },
+      "900": { "value": "#570000" }
+    },
+    "yellow": {
+      "050": { "value": "#fef3c7" },
+      "700": { "value": "#7a3c00" }
+    },
+    "green": {
+      "050": { "value": "#dcfce7" },
+      "700": { "value": "#166534" }
+    },
+    "blue": {
+      "050": { "value": "#dbeafe" },
+      "700": { "value": "#1e40af" }
+    },
+    "neutral": {
+      "050": { "value": "#e5e7eb" },
+      "500": { "value": "#6c757d" },
+      "600": { "value": "#545b62" }
+    },
+    "slate": {
+      "500": { "value": "#6b7280" },
+      "600": { "value": "#4b5563" },
+      "800": { "value": "#1f2937" }
+    },
+    "delete": {
+      "bg": { "value": "#9b7373" },
+      "bg-hover": { "value": "#7a5555" },
+      "border": { "value": "#c6a8a8" }
+    },
+    "error": { "value": "#ef4444" },
+    "success": { "value": "#22c55e" }
+  }
+}
