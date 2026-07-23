@@ -1,0 +1,121 @@
+name: Deploy Dev to Home Server
+
+on:
+  # 이전 워크플로우(CI/CD)가 develop 브랜치에서 완료된 후에만 실행
+  workflow_run:
+    workflows: ["Build & Test"]
+    types: [completed]
+    branches: [develop]
+  # 수동 배포 트리거
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: "Force deployment"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  deploy:
+    name: Deploy Dev to Home Server
+    # workflow_run에서 트리거된 경우, CI/CD 워크플로우가 성공했을 때만 실행
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.SSH_PORT || '2022' }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Pre-flight connectivity check
+        run: |
+          HOST="${{ secrets.SSH_HOST }}"
+          PORT="${{ secrets.SSH_PORT || '2022' }}"
+
+          echo "🔎 Resolving DNS for ${HOST}..."
+          if ! getent hosts "${HOST}" && ! nslookup "${HOST}" >/dev/null 2>&1; then
+            echo "⚠️ DNS resolution failed or host is an IP literal — continuing anyway"
+          fi
+
+          echo "🔎 Checking TCP reachability to ${HOST}:${PORT} (10s timeout)..."
+          if timeout 10 bash -c "cat < /dev/null > /dev/tcp/${HOST}/${PORT}" 2>/dev/null; then
+            echo "✅ Port ${PORT} is reachable on ${HOST}"
+          else
+            echo "❌ Cannot reach ${HOST}:${PORT} from GitHub Actions runner."
+            echo "   Likely causes:"
+            echo "   - Home server is offline or router port-forwarding is misconfigured"
+            echo "   - Dynamic public IP changed and SSH_HOST secret is stale"
+            echo "   - Firewall/ISP is blocking inbound connections on this port"
+            echo "   This is a network/infra issue, not a code issue — verify the server and SSH_HOST/SSH_PORT secrets."
+            exit 1
+          fi
+
+      - name: Deploy to server
+        run: |
+          echo "🚀 Starting dev deployment..."
+
+          SSH_CMD="ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || '2022' }} ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}"
+          DEPLOY_PATH="/opt/unisize/frontend-dev"
+
+          # Test connection
+          $SSH_CMD "echo 'Connected to server'"
+
+          # Create deploy directory if not exists (isolated from prod's /opt/unisize/frontend)
+          echo "📁 Creating dev deployment directory..."
+          $SSH_CMD "mkdir -p ${DEPLOY_PATH}"
+
+          # Copy all necessary files to server
+          echo "📤 Uploading files..."
+          rsync -avz --delete -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || '2022' }}" \
+            --exclude 'node_modules' \
+            --exclude 'dist' \
+            --exclude '.git' \
+            ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${DEPLOY_PATH}/
+
+          # Build and deploy on server
+          echo "🐳 Building and deploying dev containers on server..."
+          $SSH_CMD "cd ${DEPLOY_PATH} && \
+            docker-compose -f docker-compose.dev.yml build && \
+            docker-compose -f docker-compose.dev.yml up -d"
+
+          echo "✅ Dev deployment completed"
+
+      - name: Health check
+        run: |
+          echo "🧪 Running health check..."
+
+          for i in {1..30}; do
+            echo "Attempt $i/30..."
+            if curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.SSH_HOST }}:3001 | grep -q "200"; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "❌ Health check failed"
+          exit 1
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+
+      - name: Deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Dev deployment successful!"
+            echo "Frontend: http://${{ secrets.SSH_HOST }}:3001"
+          else
+            echo "❌ Dev deployment failed!"
+          fi

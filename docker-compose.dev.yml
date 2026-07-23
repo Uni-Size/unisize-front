@@ -1,5 +1,7 @@
 version: "3.8"
 
+name: frontend-dev
+
 # dev.unisize.org로 노출할 프론트엔드 dev 빌드입니다.
 # docker-compose.yml(prod)이 이미 호스트 3000번 포트를 쓰고 있으므로
 # 충돌을 피하기 위해 이 컨테이너는 3001번 포트를 사용합니다.
