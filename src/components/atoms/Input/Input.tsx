@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { InputHTMLAttributes } from 'react';
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
@@ -16,7 +17,8 @@ export const Input = ({
   id,
   ...props
 }: InputProps) => {
-  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+  const generatedId = useId();
+  const inputId = id || generatedId;
 
   return (
     <div className={`flex flex-col gap-2 ${fullWidth ? 'w-full' : ''}`}>
