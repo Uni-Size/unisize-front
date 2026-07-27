@@ -94,7 +94,7 @@ export interface UpdateProductRequest {
     price?: number;
     quantity?: number;
     is_selectable?: boolean | null;
-    selectable_with?: number[] | null;
+    selectable_with?: string[] | null;
   }[];
 }
 
