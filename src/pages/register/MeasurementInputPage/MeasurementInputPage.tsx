@@ -22,9 +22,6 @@ export const MeasurementInputPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // dev 사이트에서는 신규 등록 시 신체 정보 입력을 생략할 수 있다 (백엔드는 이미 이 값들을 선택 항목으로 처리함)
-  const allowSkipMeasurements = import.meta.env.DEV && !fromExisting;
-
   useEffect(() => {
     if (fromExisting ? !checkinData : !formData.name) {
       navigate(fromExisting ? '/register/existing-lookup' : '/register/student-info', { replace: true });
@@ -43,8 +40,21 @@ export const MeasurementInputPage = () => {
   const inRange = (value: number, range: { min: number; max: number }) =>
     value >= range.min && value <= range.max;
 
+  // dev 환경(로컬 `npm run dev`, 또는 VITE_OPTIONAL_MEASUREMENT=true로 빌드된
+  // dev 사이트)에서는 신체 사이즈 입력을 선택 사항으로 둔다 — 값이 없으면(0) 통과,
+  // 값이 있으면 그 값은 여전히 범위를 만족해야 한다.
+  const isMeasurementOptional =
+    import.meta.env.DEV || import.meta.env.VITE_OPTIONAL_MEASUREMENT === 'true';
+
   const isFieldValid = (value: number, range: { min: number; max: number }) =>
-    (allowSkipMeasurements && value === 0) || inRange(value, range);
+    isMeasurementOptional ? value === 0 || inRange(value, range) : inRange(value, range);
+
+  // 한글 단어 끝음절의 받침 유무에 따라 "은/는" 조사를 고른다.
+  const eunNeun = (word: string) => {
+    const lastChar = word.charCodeAt(word.length - 1);
+    if (lastChar < 0xac00 || lastChar > 0xd7a3) return '은(는)';
+    return (lastChar - 0xac00) % 28 === 0 ? '는' : '은';
+  };
 
   const isFormValid =
     isFieldValid(formData.body.height, VALIDATION_RANGES.height) &&
@@ -68,7 +78,8 @@ export const MeasurementInputPage = () => {
     })
     .map((field) => {
       const { min, max } = VALIDATION_RANGES[field];
-      return `${FIELD_LABELS[field]}은(는) ${min}~${max} 사이여야 합니다.`;
+      const label = FIELD_LABELS[field];
+      return `${label}${eunNeun(label)} ${min}~${max} 사이여야 합니다.`;
     })
     .join(' ');
 
@@ -149,7 +160,7 @@ export const MeasurementInputPage = () => {
         있습니다.
       </p>
 
-      {allowSkipMeasurements && (
+      {isMeasurementOptional && (
         <p className="text-sm text-center mb-10 text-slate-500">
           (dev) 신체 정보는 비워두고 제출할 수 있습니다.
         </p>
