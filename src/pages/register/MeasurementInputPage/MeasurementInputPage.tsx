@@ -22,6 +22,9 @@ export const MeasurementInputPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // dev 사이트에서는 신규 등록 시 신체 정보 입력을 생략할 수 있다 (백엔드는 이미 이 값들을 선택 항목으로 처리함)
+  const allowSkipMeasurements = import.meta.env.DEV && !fromExisting;
+
   useEffect(() => {
     if (fromExisting ? !checkinData : !formData.name) {
       navigate(fromExisting ? '/register/existing-lookup' : '/register/student-info', { replace: true });
@@ -40,11 +43,14 @@ export const MeasurementInputPage = () => {
   const inRange = (value: number, range: { min: number; max: number }) =>
     value >= range.min && value <= range.max;
 
+  const isFieldValid = (value: number, range: { min: number; max: number }) =>
+    (allowSkipMeasurements && value === 0) || inRange(value, range);
+
   const isFormValid =
-    inRange(formData.body.height, VALIDATION_RANGES.height) &&
-    inRange(formData.body.weight, VALIDATION_RANGES.weight) &&
-    inRange(formData.body.shoulder, VALIDATION_RANGES.shoulder) &&
-    inRange(formData.body.waist, VALIDATION_RANGES.waist);
+    isFieldValid(formData.body.height, VALIDATION_RANGES.height) &&
+    isFieldValid(formData.body.weight, VALIDATION_RANGES.weight) &&
+    isFieldValid(formData.body.shoulder, VALIDATION_RANGES.shoulder) &&
+    isFieldValid(formData.body.waist, VALIDATION_RANGES.waist);
 
   const FIELD_LABELS: Record<keyof typeof VALIDATION_RANGES, string> = {
     height: '키',
@@ -136,12 +142,18 @@ export const MeasurementInputPage = () => {
       <h2 className="text-2xl font-bold text-center mb-2 text-bg-900">
         학생의 신체 사이즈를 측정해주세요
       </h2>
-      <p className="text-lg font-medium text-center mb-14 text-slate-800 leading-relaxed">
+      <p className="text-lg font-medium text-center mb-4 text-slate-800 leading-relaxed">
         두꺼운 옷을 입으신 경우,
         <br />
         교복 반팔을 매장에서 구매 후 착용하시면 <br /> 더 편리하게 측정할 수
         있습니다.
       </p>
+
+      {allowSkipMeasurements && (
+        <p className="text-sm text-center mb-10 text-slate-500">
+          (dev) 신체 정보는 비워두고 제출할 수 있습니다.
+        </p>
+      )}
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
