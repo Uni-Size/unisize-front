@@ -40,11 +40,16 @@ export const MeasurementInputPage = () => {
   const inRange = (value: number, range: { min: number; max: number }) =>
     value >= range.min && value <= range.max;
 
+  // dev 환경에서는 신체 사이즈 입력을 선택 사항으로 둔다 — 값이 없으면(0) 통과,
+  // 값이 있으면 그 값은 여전히 범위를 만족해야 한다.
+  const isFieldValid = (value: number, range: { min: number; max: number }) =>
+    import.meta.env.DEV ? value === 0 || inRange(value, range) : inRange(value, range);
+
   const isFormValid =
-    inRange(formData.body.height, VALIDATION_RANGES.height) &&
-    inRange(formData.body.weight, VALIDATION_RANGES.weight) &&
-    inRange(formData.body.shoulder, VALIDATION_RANGES.shoulder) &&
-    inRange(formData.body.waist, VALIDATION_RANGES.waist);
+    isFieldValid(formData.body.height, VALIDATION_RANGES.height) &&
+    isFieldValid(formData.body.weight, VALIDATION_RANGES.weight) &&
+    isFieldValid(formData.body.shoulder, VALIDATION_RANGES.shoulder) &&
+    isFieldValid(formData.body.waist, VALIDATION_RANGES.waist);
 
   const FIELD_LABELS: Record<keyof typeof VALIDATION_RANGES, string> = {
     height: '키',
