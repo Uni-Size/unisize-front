@@ -43,7 +43,6 @@ export const StudentListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('통합검색');
   const [categoryFilter, setCategoryFilter] = useState('전체');
-  const [_purchaseFilter, setPurchaseFilter] = useState('전체');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [students, setStudents] = useState<StudentRow[]>([]);
@@ -105,7 +104,6 @@ export const StudentListPage = () => {
     setSearchTerm('');
     setSearchType('통합검색');
     setCategoryFilter('전체');
-    setPurchaseFilter('전체');
     setCurrentPage(1);
     fetchStudents(1);
   };

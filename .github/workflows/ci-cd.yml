@@ -33,8 +33,6 @@ jobs:
 
       - name: Run lint
         run: npm run lint
-        continue-on-error: true
 
-      # 타입 체크가 필요한 경우 주석 해제
-      # - name: Type check
-      #   run: npx tsc --noEmit
+      - name: Type check
+        run: npx tsc -b --noEmit

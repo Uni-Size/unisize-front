@@ -40,18 +40,19 @@ export const MeasurementInputPage = () => {
   const inRange = (value: number, range: { min: number; max: number }) =>
     value >= range.min && value <= range.max;
 
-  // 한글 단어 끝음절의 받침 유무에 따라 "은/는" 조사를 고른다.
+
   const eunNeun = (word: string) => {
     const lastChar = word.charCodeAt(word.length - 1);
     if (lastChar < 0xac00 || lastChar > 0xd7a3) return '은(는)';
     return (lastChar - 0xac00) % 28 === 0 ? '는' : '은';
   };
 
+
   const isFormValid =
-    inRange(formData.body.height, VALIDATION_RANGES.height) &&
-    inRange(formData.body.weight, VALIDATION_RANGES.weight) &&
-    inRange(formData.body.shoulder, VALIDATION_RANGES.shoulder) &&
-    inRange(formData.body.waist, VALIDATION_RANGES.waist);
+    isFieldValid(formData.body.height, VALIDATION_RANGES.height) &&
+    isFieldValid(formData.body.weight, VALIDATION_RANGES.weight) &&
+    isFieldValid(formData.body.shoulder, VALIDATION_RANGES.shoulder) &&
+    isFieldValid(formData.body.waist, VALIDATION_RANGES.waist);
 
   const FIELD_LABELS: Record<keyof typeof VALIDATION_RANGES, string> = {
     height: '키',

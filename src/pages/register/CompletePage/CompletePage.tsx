@@ -38,17 +38,46 @@ interface UniformData {
   size: string;
   count: number;
   selectableWith?: string[];
-  gender: 'male' | 'female' | 'unisex';
+  gender: string;
 }
 
-const toUniformData = (items: RecommendedSizeItem[] | undefined): UniformData[] =>
-  items?.map((item) => ({
+// selectable_with로 묶인 교체 가능 품목 그룹(예: 바지/치마) 중에서는
+// 학생 성별과 일치하는(또는 공용인) 품목 하나만 남긴다.
+const filterByGender = (items: RecommendedSizeItem[], studentGender: string): RecommendedSizeItem[] => {
+  const seen = new Set<string>();
+  const result: RecommendedSizeItem[] = [];
+
+  for (const item of items) {
+    if (!item.selectable_with || item.selectable_with.length === 0) {
+      result.push(item);
+      continue;
+    }
+
+    const groupKey = [item.product_name, ...item.selectable_with].sort().join('|');
+    if (seen.has(groupKey)) continue;
+    seen.add(groupKey);
+
+    const group = items.filter(
+      (i) => i.product_name === item.product_name || item.selectable_with?.includes(i.product_name),
+    );
+    const matched = group.find((i) => i.gender === studentGender) ?? group.find((i) => i.gender === 'U') ?? item;
+    result.push(matched);
+  }
+
+  return result;
+};
+
+const toUniformData = (
+  items: RecommendedSizeItem[] | undefined,
+  studentGender: string,
+): UniformData[] =>
+  filterByGender(items ?? [], studentGender).map((item) => ({
     item: item.product_name,
     size: item.recommended_size,
     count: item.supported_quantity,
     selectableWith: item.selectable_with,
     gender: item.gender,
-  })) ?? [];
+  }));
 
 const NO_DATA_REDIRECT_DELAY_MS = 3000;
 
@@ -102,9 +131,10 @@ export const CompletePage = () => {
     );
   }
 
+  const studentGender = studentData?.gender ?? checkinData?.gender ?? 'U';
   const data: Record<SeasonType, UniformData[]> = {
-    동복: toUniformData(recommendedUniforms?.winter),
-    하복: toUniformData(recommendedUniforms?.summer),
+    동복: toUniformData(recommendedUniforms?.winter, studentGender),
+    하복: toUniformData(recommendedUniforms?.summer, studentGender),
   };
 
   const TableView = ({

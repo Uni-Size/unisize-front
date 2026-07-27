@@ -50,7 +50,7 @@ export interface RecommendedSizeItem {
   supported_quantity: number;
   is_selectable?: boolean;
   selectable_with?: string[];
-  gender: "male" | "female" | "unisex";
+  gender: "M" | "F" | "U";
 }
 
 export interface AddStudentResponse {
