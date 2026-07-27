@@ -179,7 +179,6 @@ export const CompletePage = () => {
   return (
     <section className="max-w-[24rem] mx-auto p-4 min-h-screen">
       <div className="text-center my-6">
-        <p className="text-base font-semibold text-gray-700">잠시만 기다려주세요.</p>
         <h2 className="text-2xl font-bold my-2 text-bg-900">
           {schoolName} {name}
         </h2>

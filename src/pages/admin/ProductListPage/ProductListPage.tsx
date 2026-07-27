@@ -303,7 +303,8 @@ export const ProductListPage = () => {
         price: s.price,
         quantity: s.quantity,
         is_selectable: s.is_selectable ?? null,
-        selectable_with: (s.selectable_with ?? []).map((sw) => sw.product_id),
+        selectable_with: s.selectable_with ? s.selectable_with.map((sw) => sw.product_id) : null,
+
       })),
     });
     const updatedDetailData = apiProductToDetailData(updated, data.id);
