@@ -153,12 +153,18 @@ export const MeasurementInputPage = () => {
       <h2 className="text-2xl font-bold text-center mb-2 text-bg-900">
         학생의 신체 사이즈를 측정해주세요
       </h2>
-      <p className="text-lg font-medium text-center mb-14 text-slate-800 leading-relaxed">
+      <p className="text-lg font-medium text-center mb-4 text-slate-800 leading-relaxed">
         두꺼운 옷을 입으신 경우,
         <br />
         교복 반팔을 매장에서 구매 후 착용하시면 <br /> 더 편리하게 측정할 수
         있습니다.
       </p>
+
+      {isMeasurementOptional && (
+        <p className="text-sm text-center mb-10 text-slate-500">
+          (dev) 신체 정보는 비워두고 제출할 수 있습니다.
+        </p>
+      )}
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
