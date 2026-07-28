@@ -55,6 +55,7 @@ interface StudentApiRequest {
 
 export interface RecommendedSizeItem {
   product_name: string;
+  category?: string;
   recommended_size: string;
   supported_quantity: number;
   is_selectable?: boolean;

@@ -62,3 +62,23 @@ export const CATEGORY_GROUP_MAP: Record<string, string> = Object.fromEntries(
 
 export const getCategoryLabel = (value: string): string =>
   CATEGORY_LABEL_MAP[value] ?? value;
+
+// CATEGORY_GROUPS 순서(상의 → 하의 → 체육복)를 그룹 정렬 우선순위로 사용한다.
+const CATEGORY_GROUP_ORDER: Record<string, number> = Object.fromEntries(
+  CATEGORY_GROUPS.map((group, index) => [group.label, index]),
+);
+
+// category가 없거나 매핑되지 않은 값은 맨 뒤로 보낸다.
+const getCategoryGroupOrder = (category?: string): number => {
+  if (!category) return CATEGORY_GROUPS.length;
+  const group = CATEGORY_GROUP_MAP[category];
+  return group !== undefined ? CATEGORY_GROUP_ORDER[group] : CATEGORY_GROUPS.length;
+};
+
+// 교복 목록을 상의 → 하의 → 체육복 순서로 정렬한다 (같은 그룹 내 순서는 유지).
+export const sortUniformsByCategoryGroup = <T extends { category?: string }>(
+  items: T[],
+): T[] =>
+  [...items].sort(
+    (a, b) => getCategoryGroupOrder(a.category) - getCategoryGroupOrder(b.category),
+  );
