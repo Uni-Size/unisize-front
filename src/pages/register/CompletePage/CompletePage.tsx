@@ -157,7 +157,7 @@ export const CompletePage = () => {
         <div key={idx} className="grid grid-cols-3 py-2 text-center text-sm">
           <div>
             <div>{row.item}</div>
-            {row.selectableWith && row.selectableWith.length > 0 && (
+            {row.count > 0 && row.selectableWith && row.selectableWith.length > 0 && (
               <div className="text-xs text-primary-600 mt-1">
                 {row.selectableWith.join(', ')}로 변경 가능
               </div>
