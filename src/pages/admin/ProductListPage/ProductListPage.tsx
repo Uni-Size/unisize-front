@@ -48,7 +48,6 @@ interface ProductRow {
   rawGender: string;
   createdDate: string;
   modifiedDate: string;
-  // TODO: API 응답에 추가되면 실제 값으로 교체
   schoolCount: number;
   stockStatus: string;
 }
@@ -83,7 +82,7 @@ const toProductRow = (
   rawGender: item.gender,
   createdDate: item.created_at ?? "",
   modifiedDate: item.updated_at ?? "",
-  schoolCount: 0, // HARDCODED: API 응답에 추가되면 실제 값으로 교체
+  schoolCount: item.schools?.length ?? 0,
   stockStatus: item.inventory_status ?? "-",
 });
 
@@ -407,7 +406,7 @@ export const ProductListPage = () => {
       header: "사용학교",
       width: "80px",
       align: "center",
-      render: (product) => <span>{product.schoolCount}</span>, // HARDCODED
+      render: (product) => <span>{product.schoolCount}</span>,
     },
     {
       key: "stockStatus",
