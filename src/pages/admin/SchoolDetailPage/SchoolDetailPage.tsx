@@ -27,11 +27,7 @@ import { Toast } from "@components/atoms/Toast";
 import type { ToastVariant } from "@components/atoms/Toast";
 import { formatDate } from "@/utils/dateUtils";
 import { downloadCSV } from "@/utils/csvUtils";
-import { CATEGORY_GROUP_MAP, CATEGORY_GROUPS } from "@/constants/productCategories";
-
-const CATEGORY_LABEL_TO_GROUP: Record<string, string> = Object.fromEntries(
-  CATEGORY_GROUPS.flatMap(g => g.options.map(o => [o.label, g.label]))
-);
+import { sortUniformsByCategoryGroup } from "@/constants/productCategories";
 import { formatGender } from "@/utils/genderUtils";
 import { getOrderInventory, updateInventoryStock } from "@/api/order";
 import type { InventoryProduct } from "@/api/order";
@@ -375,13 +371,18 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         nameTagAttachPrice: nameTagService?.attach_price ?? undefined,
         itemStatus: item.delivery_status,
         seasonCode,
+        category: item.product?.category,
       };
       if (seasonCode === 'W') winterUniforms.push(uniform);
       else if (seasonCode === 'S') summerUniforms.push(uniform);
       else allUniforms.push(uniform);
     }
 
-    return { winterUniforms, summerUniforms, allUniforms };
+    return {
+      winterUniforms: sortUniformsByCategoryGroup(winterUniforms),
+      summerUniforms: sortUniformsByCategoryGroup(summerUniforms),
+      allUniforms: sortUniformsByCategoryGroup(allUniforms),
+    };
   };
 
   const handleRowClick = async (student: StudentRow) => {
@@ -458,14 +459,6 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         }
       }
 
-      const GROUP_ORDER: Record<string, number> = { '상의': 0, '하의': 1, '체육복': 3 };
-      const categoryOrder = (category: string | undefined): number => {
-        const c = category ?? '';
-        const g = CATEGORY_GROUP_MAP[c] ?? CATEGORY_LABEL_TO_GROUP[c]
-          ?? (c.includes('체육') || c.includes('생활복') ? '체육복' : undefined);
-        return GROUP_ORDER[g ?? ''] ?? 2;
-      };
-
       const toUniformItem = (r: import('@/api/student').RecommendedUniformItem, idx: number, seasonCode: 'W' | 'S' | 'A'): import('@components/organisms/StudentModal').UniformItem => {
         const avail = availableUniforms.find(u => u.productId === r.product_id);
         return {
@@ -485,12 +478,11 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
           attachCount: r.name_tag_attach ? 1 : 0,
           itemStatus: r.delivery_status,
           seasonCode,
-          category: avail?.category,
+          category: avail?.category ?? r.category,
         };
       };
 
-      const sortUniforms = (items: import('@components/organisms/StudentModal').UniformItem[]) =>
-        [...items].sort((a, b) => categoryOrder(a.category) - categoryOrder(b.category));
+      const sortUniforms = sortUniformsByCategoryGroup;
 
       const studentGender = detail.gender;
       const preferSkirt = (r: import('@/api/student').RecommendedUniformItem) => {

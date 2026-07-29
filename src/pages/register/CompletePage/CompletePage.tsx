@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStudentResponseStore } from '@/stores/useStudentResponseStore';
 import { useStudentFormStore } from '@/stores/useStudentFormStore';
 import { type RecommendedSizeItem } from '@/api/student';
+import { sortUniformsByCategoryGroup } from '@/constants/productCategories';
 
 const itemData = {
   동복: [
@@ -35,6 +36,7 @@ type SeasonType = '동복' | '하복';
 
 interface UniformData {
   item: string;
+  category?: string;
   size: string;
   count: number;
   selectableWith?: string[];
@@ -71,13 +73,16 @@ const toUniformData = (
   items: RecommendedSizeItem[] | undefined,
   studentGender: string,
 ): UniformData[] =>
-  filterByGender(items ?? [], studentGender).map((item) => ({
-    item: item.product_name,
-    size: item.recommended_size,
-    count: item.supported_quantity,
-    selectableWith: item.selectable_with,
-    gender: item.gender,
-  }));
+  sortUniformsByCategoryGroup(
+    filterByGender(items ?? [], studentGender).map((item) => ({
+      item: item.product_name,
+      category: item.category,
+      size: item.recommended_size,
+      count: item.supported_quantity,
+      selectableWith: item.selectable_with,
+      gender: item.gender,
+    })),
+  );
 
 const NO_DATA_REDIRECT_DELAY_MS = 3000;
 
