@@ -1,10 +1,12 @@
 import { useState, useCallback } from 'react';
 import type { StartMeasurementResponse, RecommendedUniformItem, SupplyItemResponse, UniformProduct } from '../../../../api/student';
+import { sortUniformsByCategoryGroup } from '@/constants/productCategories';
 
 export interface MeasurementUniformItem {
   rowId: string;
   productId: string;
   name: string;
+  category?: string;
   season: 'winter' | 'summer';
   recommendedSize: string;
   selectedSize: string;
@@ -47,6 +49,7 @@ const toUniformItem = (
   rowId: nextRowId(),
   productId: String(item.product_id),
   name: item.product_name,
+  category: item.category,
   season,
   recommendedSize: item.recommended_size,
   selectedSize: item.recommended_size,
@@ -97,8 +100,12 @@ export function useMeasurementForm() {
   const [nameTagName, setNameTagName] = useState('');
 
   const initFromResponse = useCallback((data: StartMeasurementResponse) => {
-    const winter = (data.recommended_uniforms?.winter ?? []).map((i) => toUniformItem(i, 'winter'));
-    const summer = (data.recommended_uniforms?.summer ?? []).map((i) => toUniformItem(i, 'summer'));
+    const winter = sortUniformsByCategoryGroup(
+      (data.recommended_uniforms?.winter ?? []).map((i) => toUniformItem(i, 'winter')),
+    );
+    const summer = sortUniformsByCategoryGroup(
+      (data.recommended_uniforms?.summer ?? []).map((i) => toUniformItem(i, 'summer')),
+    );
     const minUnit = data.name_tag_service?.min_unit ?? 8;
     setWinterUniforms(winter);
     setSummerUniforms(summer);
@@ -149,6 +156,7 @@ export function useMeasurementForm() {
         rowId: nextRowId(),
         productId: String(product.product_id),
         name: product.product_name,
+        category: product.category,
         season,
         recommendedSize: product.recommended_size ?? '',
         selectedSize: '',
@@ -165,9 +173,9 @@ export function useMeasurementForm() {
         isCustomizationRequired: false,
       };
       if (season === 'winter') {
-        setWinterUniforms((prev) => [...prev, newRow]);
+        setWinterUniforms((prev) => sortUniformsByCategoryGroup([...prev, newRow]));
       } else {
-        setSummerUniforms((prev) => [...prev, newRow]);
+        setSummerUniforms((prev) => sortUniformsByCategoryGroup([...prev, newRow]));
       }
     },
     [],

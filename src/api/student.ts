@@ -154,6 +154,7 @@ export interface RecommendedUniformItem {
   product_id: string;
   item_id: string;
   product_name: string;
+  category?: string;
   season: string;
   recommended_size: string;
   supported_quantity: number;

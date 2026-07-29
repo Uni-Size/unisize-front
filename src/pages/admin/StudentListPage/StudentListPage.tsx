@@ -19,12 +19,7 @@ import { getApiErrorMessage } from '@/utils/errorUtils';
 import { formatDate } from '@/utils/dateUtils';
 import { formatGender } from '@/utils/genderUtils';
 import { downloadCSV } from '@/utils/csvUtils';
-import { CATEGORY_GROUP_MAP, CATEGORY_GROUPS } from '@/constants/productCategories';
-
-// label → group 역방향 맵 (API가 한글 레이블로 category를 내려줄 때 대응)
-const CATEGORY_LABEL_TO_GROUP: Record<string, string> = Object.fromEntries(
-  CATEGORY_GROUPS.flatMap(g => g.options.map(o => [o.label, g.label]))
-);
+import { sortUniformsByCategoryGroup } from '@/constants/productCategories';
 
 interface StudentRow {
   id: number;
@@ -185,13 +180,18 @@ export const StudentListPage = () => {
         nameTagAttachPrice: nameTagService?.attach_price ?? undefined,
         itemStatus: item.delivery_status,
         seasonCode,
+        category: item.product?.category ?? matchedAvail?.category,
       };
       if (seasonCode === 'W') winterUniforms.push(uniform);
       else if (seasonCode === 'S') summerUniforms.push(uniform);
       else allUniforms.push(uniform);
     }
 
-    return { winterUniforms, summerUniforms, allUniforms };
+    return {
+      winterUniforms: sortUniformsByCategoryGroup(winterUniforms),
+      summerUniforms: sortUniformsByCategoryGroup(summerUniforms),
+      allUniforms: sortUniformsByCategoryGroup(allUniforms),
+    };
   };
 
   const fetchStudentDetail = async (studentId: string | number): Promise<StudentDetailData> => {
@@ -270,15 +270,6 @@ export const StudentListPage = () => {
     }
 
     // 주문 없을 때 recommended_uniforms를 초기 편집 항목으로 변환
-    const GROUP_ORDER: Record<string, number> = { '상의': 0, '하의': 1, '체육복': 3 };
-    const categoryOrder = (category: string | undefined): number => {
-      const c = category ?? '';
-      // value 기준 (e.g. 'gym_bottom') → 한글 레이블 기준 (e.g. '체육복 하의') 순서로 시도
-      const g = CATEGORY_GROUP_MAP[c] ?? CATEGORY_LABEL_TO_GROUP[c]
-        ?? (c.includes('체육') || c.includes('생활복') ? '체육복' : undefined);
-      return GROUP_ORDER[g ?? ''] ?? 2;
-    };
-
     const toUniformItem = (r: import('@/api/student').RecommendedUniformItem, idx: number, seasonCode: 'W' | 'S' | 'A'): import('@components/organisms/StudentModal').UniformItem => {
       const avail = availableUniforms.find(u => u.productId === r.product_id);
       return {
@@ -299,12 +290,11 @@ export const StudentListPage = () => {
         attachCount: r.name_tag_attach ? 1 : 0,
         itemStatus: r.delivery_status,
         seasonCode,
-        category: avail?.category,
+        category: avail?.category ?? r.category,
       };
     };
 
-    const sortUniforms = (items: import('@components/organisms/StudentModal').UniformItem[]) =>
-      [...items].sort((a, b) => categoryOrder(a.category) - categoryOrder(b.category));
+    const sortUniforms = sortUniformsByCategoryGroup;
 
     // 교체 가능 그룹에서 성별에 맞는 품목 하나만 선택
     // 여학생(F) → 치마(skirt/치마 포함) 우선, 남학생(M) → 바지(pants 포함) 우선
