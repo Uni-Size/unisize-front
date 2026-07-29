@@ -93,7 +93,7 @@ export const MainPage = () => {
 
   const buildOrderPayload = () => ({
     uniform_items: [...form.winterUniforms, ...form.summerUniforms].map((u) => ({
-      item_id: Number(u.productId),
+      item_id: u.productId,
       name: u.name,
       season: u.season === 'winter' ? '동복' : '하복' as '동복' | '하복',
       selected_size: u.selectedSize || '',
