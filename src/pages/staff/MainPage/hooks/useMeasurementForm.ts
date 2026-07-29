@@ -34,6 +34,10 @@ export interface MeasurementUniformItem {
   nameTagAttach: boolean;
   isRequired: boolean; // 지원수량 > 0이면 삭제 불가
   isCustomizationRequired: boolean;
+  // 스태프가 "+" 버튼으로 직접 추가한 행인지 여부. 추천 목록에 원래 있던
+  // 품목(지원수량이 0이어도)과 구분하기 위한 값 — 삭제(×) 버튼 노출 여부와
+  // 수량 최소값(min=1) 판단에 쓰인다.
+  isManuallyAdded: boolean;
   // 이 품목과 지원 한도를 공유하는 교체 가능한 대안들 (예: 바지 행이면 [치마]).
   // 비어있거나 없으면 교체 UI를 보여주지 않는다.
   selectableWith?: SelectableAlternative[];
@@ -80,6 +84,7 @@ const toUniformItem = (
   nameTagCount: item.name_tag_count ?? 0,
   nameTagAttach: item.name_tag_attach ?? false,
   isRequired: item.supported_quantity > 0,
+  isManuallyAdded: false,
   isCustomizationRequired: item.is_customization_required ?? false,
   selectableWith: selectableWith.length > 0 ? selectableWith : undefined,
 });
@@ -277,6 +282,7 @@ export function useMeasurementForm() {
         nameTagAttach: false,
         isRequired: false,
         isCustomizationRequired: false,
+        isManuallyAdded: true,
       };
       if (season === 'winter') {
         setWinterUniforms((prev) => sortUniformsByCategoryGroup([...prev, newRow]));
@@ -301,6 +307,7 @@ export function useMeasurementForm() {
         nameTagCount: 0,
         nameTagAttach: false,
         isRequired: false,
+        isManuallyAdded: true,
       };
       if (season === 'winter') {
         setWinterUniforms((prev) => {
