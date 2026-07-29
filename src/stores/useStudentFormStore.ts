@@ -24,6 +24,9 @@ interface FormData {
   body: BodyMeasurements;
   address: string;
   delivery: boolean;
+  // 전학생(studentType === 'transfer')만 해당 — 무상 교복 지원은 중학교 1회,
+  // 고등학교 1회만 가능하므로, 이전 학교에서 이미 지원받지 않은 경우에만 true로 등록한다.
+  isManuallySupported: boolean;
 }
 
 interface FormStore {
@@ -56,6 +59,7 @@ const initialFormData: FormData = {
   },
   address: '',
   delivery: false,
+  isManuallySupported: false,
 };
 
 export const useStudentFormStore = create<FormStore>()(
