@@ -27,6 +27,7 @@ interface MeasurementBottomSheetProps {
   nameTagName: string;
   onUpdateNameTagName: (name: string) => void;
   onUpdateUniform: (season: 'winter' | 'summer', rowId: string, patch: Partial<MeasurementUniformItem>) => void;
+  onSwitchUniformProduct: (season: 'winter' | 'summer', rowId: string, targetProductId: string) => void;
   onAddUniformFromProduct: (season: 'winter' | 'summer', product: UniformProduct) => void;
   onAddUniformRow: (season: 'winter' | 'summer', source: MeasurementUniformItem) => void;
   onRemoveUniformRow: (season: 'winter' | 'summer', rowId: string) => void;
@@ -239,6 +240,7 @@ export const MeasurementBottomSheet = ({
   nameTagName,
   onUpdateNameTagName,
   onUpdateUniform,
+  onSwitchUniformProduct,
   onAddUniformFromProduct,
   onAddUniformRow,
   onRemoveUniformRow,
@@ -380,7 +382,28 @@ export const MeasurementBottomSheet = ({
                 const isAdded = !item.isRequired && item.supportedQuantity === 0;
                 return (
                   <tr key={item.rowId} className="border-b border-gray-100 last:border-b-0">
-                    <td className="px-2 py-2 text-sm text-gray-700 align-middle">{item.name}</td>
+                    <td className="px-2 py-2 text-sm text-gray-700 align-middle">
+                      {item.selectableWith && item.selectableWith.length > 0 ? (
+                        <select
+                          className="w-full px-1 py-1 border border-gray-200 rounded text-sm text-gray-700 bg-white outline-none focus:border-primary-900"
+                          value={item.productId}
+                          onChange={(e) => {
+                            if (e.target.value === item.productId) return;
+                            onSwitchUniformProduct(season, item.rowId, e.target.value);
+                          }}
+                          title="지원 한도를 공유하는 교체 가능 품목 — 학생이 실제로 받을 품목 하나만 선택하세요"
+                        >
+                          <option value={item.productId}>{item.name}</option>
+                          {item.selectableWith.map((alt) => (
+                            <option key={alt.productId} value={alt.productId}>
+                              {alt.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        item.name
+                      )}
+                    </td>
                     <td className="px-2 py-2 text-right text-sm text-gray-500 align-middle tabular-nums whitespace-nowrap">
                       {item.unitPrice > 0 ? `${item.unitPrice.toLocaleString()}원` : '-'}
                     </td>
@@ -410,10 +433,12 @@ export const MeasurementBottomSheet = ({
                       {item.isCustomizationRequired ? (
                         <input
                           type="text"
-                          className="w-full px-1 py-1.5 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900"
+                          className={`w-full px-1 py-1.5 border rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 ${
+                            item.repair.trim() ? 'border-gray-200' : 'border-red-400'
+                          }`}
                           value={item.repair}
                           onChange={(e) => onUpdateUniform(season, item.rowId, { repair: e.target.value })}
-                          placeholder="수선 필수"
+                          placeholder="수선 필수 *"
                         />
                       ) : (
                         <span className="text-gray-300">-</span>

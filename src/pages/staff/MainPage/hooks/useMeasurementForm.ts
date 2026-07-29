@@ -2,6 +2,19 @@ import { useState, useCallback } from 'react';
 import type { StartMeasurementResponse, RecommendedUniformItem, SupplyItemResponse, UniformProduct } from '../../../../api/student';
 import { sortUniformsByCategoryGroup } from '@/constants/productCategories';
 
+// 지원 한도를 공유하는 교체 가능 품목(예: 치마 ↔ 바지) 중, 현재 선택되지 않은
+// 대안 하나를 나타낸다. 스태프가 드롭다운에서 이 대안을 고르면 현재 행이
+// 이 품목으로 교체된다.
+export interface SelectableAlternative {
+  productId: string;
+  name: string;
+  recommendedSize: string;
+  availableSizes: Array<{ size: string; inStock: boolean; stockCount: number }>;
+  supportedQuantity: number;
+  unitPrice: number;
+  isCustomizationRequired: boolean;
+}
+
 export interface MeasurementUniformItem {
   rowId: string;
   productId: string;
@@ -21,6 +34,9 @@ export interface MeasurementUniformItem {
   nameTagAttach: boolean;
   isRequired: boolean; // 지원수량 > 0이면 삭제 불가
   isCustomizationRequired: boolean;
+  // 이 품목과 지원 한도를 공유하는 교체 가능한 대안들 (예: 바지 행이면 [치마]).
+  // 비어있거나 없으면 교체 UI를 보여주지 않는다.
+  selectableWith?: SelectableAlternative[];
 }
 
 export interface MeasurementSupplyItem {
@@ -45,6 +61,7 @@ const nextRowId = () => `row_${++_rowCounter}`;
 const toUniformItem = (
   item: RecommendedUniformItem,
   season: 'winter' | 'summer',
+  selectableWith: SelectableAlternative[] = [],
 ): MeasurementUniformItem => ({
   rowId: nextRowId(),
   productId: String(item.product_id),
@@ -64,7 +81,47 @@ const toUniformItem = (
   nameTagAttach: item.name_tag_attach ?? false,
   isRequired: item.supported_quantity > 0,
   isCustomizationRequired: item.is_customization_required ?? false,
+  selectableWith: selectableWith.length > 0 ? selectableWith : undefined,
 });
+
+const toSelectableAlternative = (item: RecommendedUniformItem): SelectableAlternative => ({
+  productId: String(item.product_id),
+  name: item.product_name,
+  recommendedSize: item.recommended_size,
+  availableSizes: (item.available_sizes ?? []).map((s) => ({ size: s.size, inStock: s.in_stock, stockCount: s.stock_count })),
+  supportedQuantity: item.supported_quantity,
+  unitPrice: item.price,
+  isCustomizationRequired: item.is_customization_required ?? false,
+});
+
+// 지원 한도를 공유하는 교체 가능 품목(selectable_with)들을 하나의 행으로 묶는다.
+// 백엔드는 치마/바지처럼 서로 교체 가능한 품목을 recommended_uniforms에 각각
+// 별도 항목으로 내려주는데(둘 다 supported_quantity를 독립적으로 표시), 그대로
+// 두 행을 다 만들면 스태프가 실수로 둘 다 확정해서 지원 한도가 이중으로
+// 소진될 수 있다. selectable_with로 묶인 그룹에서는 한 행만 만들고, 나머지는
+// 그 행의 selectableWith 옵션으로 넣어 드롭다운으로 교체하게 한다.
+const buildSeasonUniforms = (
+  rawItems: RecommendedUniformItem[],
+  season: 'winter' | 'summer',
+): MeasurementUniformItem[] => {
+  const byName = new Map(rawItems.map((i) => [i.product_name, i]));
+  const used = new Set<string>();
+  const result: MeasurementUniformItem[] = [];
+
+  for (const raw of rawItems) {
+    if (used.has(raw.product_name)) continue;
+    used.add(raw.product_name);
+
+    const partners = (raw.selectable_with ?? [])
+      .map((name) => byName.get(name))
+      .filter((p): p is RecommendedUniformItem => !!p);
+    partners.forEach((p) => used.add(p.product_name));
+
+    result.push(toUniformItem(raw, season, partners.map(toSelectableAlternative)));
+  }
+
+  return result;
+};
 
 const toSupplyItem = (item: SupplyItemResponse): MeasurementSupplyItem => ({
   rowId: nextRowId(),
@@ -101,10 +158,10 @@ export function useMeasurementForm() {
 
   const initFromResponse = useCallback((data: StartMeasurementResponse) => {
     const winter = sortUniformsByCategoryGroup(
-      (data.recommended_uniforms?.winter ?? []).map((i) => toUniformItem(i, 'winter')),
+      buildSeasonUniforms(data.recommended_uniforms?.winter ?? [], 'winter'),
     );
     const summer = sortUniformsByCategoryGroup(
-      (data.recommended_uniforms?.summer ?? []).map((i) => toUniformItem(i, 'summer')),
+      buildSeasonUniforms(data.recommended_uniforms?.summer ?? [], 'summer'),
     );
     const minUnit = data.name_tag_service?.min_unit ?? 8;
     setWinterUniforms(winter);
@@ -148,6 +205,55 @@ export function useMeasurementForm() {
       }
     },
     [winterUniforms, summerUniforms, nameTagMinUnit],
+  );
+
+  // 교체 가능 품목 그룹(selectableWith)에서 스태프가 다른 품목으로 바꿀 때 사용.
+  // 현재 행을 targetProductId 품목으로 교체하고, 원래 있던 품목은 다시
+  // selectableWith 목록에 넣어 언제든 되돌릴 수 있게 한다.
+  const switchUniformProduct = useCallback(
+    (season: 'winter' | 'summer', rowId: string, targetProductId: string) => {
+      const applySwitch = (list: MeasurementUniformItem[]) =>
+        list.map((item) => {
+          if (item.rowId !== rowId || item.productId === targetProductId) return item;
+          const target = item.selectableWith?.find((a) => a.productId === targetProductId);
+          if (!target) return item;
+
+          const previousAsAlternative: SelectableAlternative = {
+            productId: item.productId,
+            name: item.name,
+            recommendedSize: item.recommendedSize,
+            availableSizes: item.availableSizes,
+            supportedQuantity: item.supportedQuantity,
+            unitPrice: item.unitPrice,
+            isCustomizationRequired: item.isCustomizationRequired,
+          };
+          const remainingAlternatives = (item.selectableWith ?? []).filter(
+            (a) => a.productId !== targetProductId,
+          );
+
+          return {
+            ...item,
+            productId: target.productId,
+            name: target.name,
+            recommendedSize: target.recommendedSize,
+            selectedSize: target.recommendedSize,
+            availableSizes: target.availableSizes,
+            supportedQuantity: target.supportedQuantity,
+            unitPrice: target.unitPrice,
+            isCustomizationRequired: target.isCustomizationRequired,
+            isRequired: target.supportedQuantity > 0,
+            repair: '',
+            selectableWith: [previousAsAlternative, ...remainingAlternatives],
+          };
+        });
+
+      if (season === 'winter') {
+        setWinterUniforms((prev) => applySwitch(prev));
+      } else {
+        setSummerUniforms((prev) => applySwitch(prev));
+      }
+    },
+    [],
   );
 
   const addUniformFromProduct = useCallback(
@@ -279,6 +385,7 @@ export function useMeasurementForm() {
     initFromResponse,
     reset,
     updateUniform,
+    switchUniformProduct,
     addUniformFromProduct,
     addUniformRow,
     removeUniformRow,
