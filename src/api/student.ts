@@ -81,6 +81,7 @@ export interface AddStudentResponse {
   school_name: string;
   grade: number;
   checked_in_at: string;
+  is_eligible_for_public_purchase?: boolean;
   recommended_uniforms?: {
     winter?: RecommendedSizeItem[];
     summer?: RecommendedSizeItem[];

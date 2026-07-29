@@ -113,6 +113,14 @@ export const CompletePage = () => {
   const name = studentData?.name ?? checkinData?.name ?? '';
   const schoolName = studentData?.school_name ?? checkinData?.school_name ?? '';
 
+  // 전학생이 이전 학교에서 이미 무상 지원을 받은 경우 등, 이번 학교에서는 아예
+  // 지원 대상이 아니라면(모든 품목이 0개) "지원개수" 열 자체를 보여줄 필요가 없다.
+  // 값이 없을 때는 기본적으로 열을 보여준다(정보 누락으로 잘못 숨기지 않도록).
+  const isEligibleForSupport =
+    studentData?.is_eligible_for_public_purchase ??
+    checkinData?.is_eligible_for_public_purchase ??
+    true;
+
   const recommendedUniforms = studentData?.recommended_uniforms ?? checkinData?.recommended_uniforms;
   const hasRecommendations =
     (recommendedUniforms?.winter?.length ?? 0) > 0 ||
@@ -152,14 +160,19 @@ export const CompletePage = () => {
     <div className="w-full bg-primary-050 p-4 rounded-lg font-semibold">
       <h3 className="text-sm mb-6 text-slate-800">{season}</h3>
 
-      <div className="grid grid-cols-3 pb-2 text-center text-slate-600 border-b border-gray-300 text-sm">
+      <div
+        className={`grid ${isEligibleForSupport ? 'grid-cols-3' : 'grid-cols-2'} pb-2 text-center text-slate-600 border-b border-gray-300 text-sm`}
+      >
         <div>품목</div>
         <div>추천사이즈</div>
-        <div>지원개수</div>
+        {isEligibleForSupport && <div>지원개수</div>}
       </div>
 
       {tableData.map((row, idx) => (
-        <div key={idx} className="grid grid-cols-3 py-2 text-center text-sm">
+        <div
+          key={idx}
+          className={`grid ${isEligibleForSupport ? 'grid-cols-3' : 'grid-cols-2'} py-2 text-center text-sm`}
+        >
           <div>
             <div>{row.item}</div>
             {row.count > 0 && row.selectableWith && row.selectableWith.length > 0 && (
@@ -169,13 +182,15 @@ export const CompletePage = () => {
             )}
           </div>
           <div>{row.size}</div>
-          <div>
-            {row.count === 0 ? (
-              <span className="text-xs text-primary-600">지원제외품목</span>
-            ) : (
-              row.count
-            )}
-          </div>
+          {isEligibleForSupport && (
+            <div>
+              {row.count === 0 ? (
+                <span className="text-xs text-primary-600">지원제외품목</span>
+              ) : (
+                row.count
+              )}
+            </div>
+          )}
         </div>
       ))}
     </div>
