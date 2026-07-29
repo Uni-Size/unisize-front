@@ -43,38 +43,12 @@ interface UniformData {
   gender: string;
 }
 
-// selectable_with로 묶인 교체 가능 품목 그룹(예: 바지/치마) 중에서는
-// 학생 성별과 일치하는(또는 공용인) 품목 하나만 남긴다.
-const filterByGender = (items: RecommendedSizeItem[], studentGender: string): RecommendedSizeItem[] => {
-  const seen = new Set<string>();
-  const result: RecommendedSizeItem[] = [];
-
-  for (const item of items) {
-    if (!item.selectable_with || item.selectable_with.length === 0) {
-      result.push(item);
-      continue;
-    }
-
-    const groupKey = [item.product_name, ...item.selectable_with].sort().join('|');
-    if (seen.has(groupKey)) continue;
-    seen.add(groupKey);
-
-    const group = items.filter(
-      (i) => i.product_name === item.product_name || item.selectable_with?.includes(i.product_name),
-    );
-    const matched = group.find((i) => i.gender === studentGender) ?? group.find((i) => i.gender === 'U') ?? item;
-    result.push(matched);
-  }
-
-  return result;
-};
-
-const toUniformData = (
-  items: RecommendedSizeItem[] | undefined,
-  studentGender: string,
-): UniformData[] =>
+// 교체 가능 그룹(예: 바지/치마)이어도 그룹 내 품목을 전부 보여준다 — 지원개수는
+// 이미 백엔드에서 학생 성별에 맞는 품목에 합산되고 나머지는 0으로 내려오므로,
+// 프론트에서 그룹을 하나로 줄이지 않아도 지원개수 중복 표시 문제는 없다.
+const toUniformData = (items: RecommendedSizeItem[] | undefined): UniformData[] =>
   sortUniformsByCategoryGroup(
-    filterByGender(items ?? [], studentGender).map((item) => ({
+    (items ?? []).map((item) => ({
       item: item.product_name,
       category: item.category,
       size: item.recommended_size,
@@ -144,10 +118,9 @@ export const CompletePage = () => {
     );
   }
 
-  const studentGender = studentData?.gender ?? checkinData?.gender ?? 'U';
   const data: Record<SeasonType, UniformData[]> = {
-    동복: toUniformData(recommendedUniforms?.winter, studentGender),
-    하복: toUniformData(recommendedUniforms?.summer, studentGender),
+    동복: toUniformData(recommendedUniforms?.winter),
+    하복: toUniformData(recommendedUniforms?.summer),
   };
 
   const TableView = ({
