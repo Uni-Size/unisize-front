@@ -133,6 +133,30 @@ export const MyPage = () => {
     }
   };
 
+  const needsSizeSelection = (availableSizes: { size: string }[]) =>
+    availableSizes.length > 1 || (availableSizes.length === 1 && availableSizes[0].size !== 'FREE');
+
+  const getMissingSizeItemNames = () => {
+    const missingUniforms = [...form.winterUniforms, ...form.summerUniforms]
+      .filter((u) => u.supportedQuantity + u.additionalQuantity > 0 && !u.selectedSize)
+      .map((u) => u.name);
+    const missingSupplies = form.supplies
+      .filter((s) => s.quantity > 0 && !s.selectedSize && needsSizeSelection(s.availableSizes))
+      .map((s) => s.name);
+    return [...missingUniforms, ...missingSupplies];
+  };
+
+  const getMissingCustomizationItemNames = () => {
+    return [...form.winterUniforms, ...form.summerUniforms]
+      .filter(
+        (u) =>
+          u.supportedQuantity + u.additionalQuantity > 0 &&
+          u.isCustomizationRequired &&
+          !u.repair.trim(),
+      )
+      .map((u) => u.name);
+  };
+
   const buildOrderPayload = () => ({
     uniform_items: [...form.winterUniforms, ...form.summerUniforms].map((u) => ({
       item_id: u.productId,
@@ -175,6 +199,16 @@ export const MyPage = () => {
 
   const handleConfirm = async (signature: string) => {
     if (!selectedStudent) return;
+    const missingSizeItems = getMissingSizeItemNames();
+    if (missingSizeItems.length > 0) {
+      showToast(`사이즈를 선택해주세요: ${missingSizeItems.join(', ')}`);
+      return;
+    }
+    const missingCustomizationItems = getMissingCustomizationItemNames();
+    if (missingCustomizationItems.length > 0) {
+      showToast(`수선 정보를 입력해주세요: ${missingCustomizationItems.join(', ')}`);
+      return;
+    }
     await completeMeasurement(selectedStudent.id, { signature });
     setIsMeasurementOpen(false);
     setMeasurementData(null);
