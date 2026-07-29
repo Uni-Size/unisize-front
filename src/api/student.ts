@@ -26,6 +26,7 @@ export interface StudentFormData {
   body: BodyMeasurements;
   address: string;
   delivery: boolean;
+  isManuallySupported?: boolean;
 }
 
 // dev 사이트 등록에서 신체 정보를 생략할 수 있어, 등록 요청의 body는 각 항목이 선택적이다
@@ -51,6 +52,7 @@ interface StudentApiRequest {
   body: StudentApiRequestBody;
   address: string;
   delivery: boolean;
+  is_manually_supported?: boolean;
 }
 
 export interface RecommendedSizeItem {
@@ -322,6 +324,7 @@ export async function addStudent(
     body,
     address: formData.address,
     delivery: formData.delivery,
+    is_manually_supported: formData.isManuallySupported,
   };
 
   const response = await apiClient.post<ApiResponse<AddStudentResponse>>(
@@ -763,7 +766,7 @@ export async function updateStudent(
  * PATCH /api/v1/admin/students/:id/support
  */
 export async function updateStudentSupport(
-  studentId: number,
+  studentId: string | number,
   supported: boolean,
 ): Promise<void> {
   await apiClient.patch(`/api/v1/admin/students/${studentId}/support`, {

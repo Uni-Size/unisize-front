@@ -197,6 +197,28 @@ export const StudentInfoPage = () => {
           />
         </div>
 
+        {formData.studentType === 'transfer' && (
+          <div className="p-4 bg-bg-050 rounded-lg">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isManuallySupported}
+                onChange={(e) => setFormData('isManuallySupported', e.target.checked)}
+                className="w-4 h-4 mt-1 accent-primary-600 shrink-0"
+              />
+              <div className="text-sm">
+                <span className="font-medium text-bg-900">
+                  무상 교복 지원 대상입니다
+                </span>
+                <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+                  무상 지원은 중학교·고등학교 재학 중 각 1회만 가능합니다. 이전 학교에서 이미
+                  지원받은 경우 체크하지 마세요.
+                </p>
+              </div>
+            </label>
+          </div>
+        )}
+
         <div className="mt-6 p-4 bg-bg-050 rounded-lg">
           <label className="flex items-start gap-3 cursor-pointer">
             <input
