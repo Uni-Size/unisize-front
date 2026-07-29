@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { AdminSidebar } from './AdminSidebar';
 
 const meta: Meta<typeof AdminSidebar> = {

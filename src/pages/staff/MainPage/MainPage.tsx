@@ -10,7 +10,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { logout } from '../../../api/auth';
 import { StudentTable, ConfirmModal, MeasurementBottomSheet } from './components';
 import { useStudents, useInfiniteScroll, useMeasurementForm } from './hooks';
-import Toast from '../../../components/ui/Toast';
+import { Toast } from '@components/atoms/Toast';
 import { useToast } from '../../../hooks/useToast';
 import { AxiosError } from 'axios';
 

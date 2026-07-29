@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStudentFormStore } from '@/stores/useStudentFormStore';
 import { Button } from '@/components/atoms/Button';
@@ -16,7 +16,6 @@ const PRIVACY_POLICY = {
 export const StudentInfoPage = () => {
   const navigate = useNavigate();
   const { formData, setFormData } = useStudentFormStore();
-  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!formData.admissionSchool) {
@@ -24,15 +23,29 @@ export const StudentInfoPage = () => {
     }
   }, [formData.admissionSchool, navigate]);
 
-  const isValidPhone = (value: string) => value.replace(/[^0-9]/g, '').length >= 10;
+  // 010 번호는 항상 11자리(3+4+4)이므로 정확히 11자리만 유효한 번호로 인정한다.
+  const isValidPhone = (value: string) => value.replace(/[^0-9]/g, '').length === 11;
 
-  const isFormValid =
-    formData.name.trim() !== '' &&
-    isValidPhone(formData.studentPhone) &&
-    isValidPhone(formData.guardianPhone) &&
-    formData.birthDate !== '' &&
-    (formData.gender === 'M' || formData.gender === 'F') &&
-    formData.privacyConsent === true;
+  const missingFields = [
+    formData.birthDate === '' && '학생 생년월일',
+    formData.name.trim() === '' && '학생이름',
+    !(formData.gender === 'M' || formData.gender === 'F') && '성별',
+    !isValidPhone(formData.studentPhone) && '학생 연락처',
+    !isValidPhone(formData.guardianPhone) && '보호자 연락처',
+    !formData.privacyConsent && '개인정보 수집·이용 동의',
+  ].filter((v): v is string => Boolean(v));
+
+  const isFormValid = missingFields.length === 0;
+
+  // 완전히 빈 초기 화면에서부터 "입력해주세요" 문구를 띄우면 불필요하게 거슬리므로,
+  // 사용자가 뭔가 하나라도 입력/선택하기 시작한 뒤부터만 누락 항목을 안내한다.
+  const hasStartedFilling =
+    formData.birthDate !== '' ||
+    formData.name.trim() !== '' ||
+    formData.gender !== '' ||
+    formData.studentPhone !== '' ||
+    formData.guardianPhone !== '' ||
+    formData.privacyConsent;
 
   const formatPhoneNumber = (value: string) => {
     const numbers = value.replace(/[^0-9]/g, '');
@@ -56,11 +69,7 @@ export const StudentInfoPage = () => {
   };
 
   const handleNext = () => {
-    if (!isFormValid) {
-      setError('모든 항목을 입력해주세요.');
-      return;
-    }
-    setError('');
+    if (!isFormValid) return;
     navigate('/register/measurement-guide');
   };
 
@@ -97,7 +106,7 @@ export const StudentInfoPage = () => {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <label htmlFor="birthDate" className="text-sm font-medium text-gray-700">
-            학생 생년월일
+            학생 생년월일 <span className="text-red-500">*</span>
           </label>
           <input
             id="birthDate"
@@ -110,7 +119,7 @@ export const StudentInfoPage = () => {
 
         <div className="flex flex-col gap-1">
           <label htmlFor="name" className="text-sm font-medium text-gray-700">
-            학생이름
+            학생이름 <span className="text-red-500">*</span>
           </label>
           <Input
             id="name"
@@ -123,7 +132,9 @@ export const StudentInfoPage = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">성별</label>
+          <label className="text-sm font-medium text-gray-700">
+            성별 <span className="text-red-500">*</span>
+          </label>
           <div className="flex gap-4">
             <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
               <input
@@ -152,7 +163,7 @@ export const StudentInfoPage = () => {
 
         <div className="flex flex-col gap-1">
           <label htmlFor="studentPhone" className="text-sm font-medium text-gray-700">
-            학생 연락처
+            학생 연락처 <span className="text-red-500">*</span>
           </label>
           <Input
             id="studentPhone"
@@ -170,7 +181,7 @@ export const StudentInfoPage = () => {
 
         <div className="flex flex-col gap-1">
           <label htmlFor="guardianPhone" className="text-sm font-medium text-gray-700">
-            보호자 연락처
+            보호자 연락처 <span className="text-red-500">*</span>
           </label>
           <Input
             id="guardianPhone"
@@ -185,6 +196,28 @@ export const StudentInfoPage = () => {
             fullWidth
           />
         </div>
+
+        {formData.studentType === 'transfer' && (
+          <div className="p-4 bg-bg-050 rounded-lg">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isManuallySupported}
+                onChange={(e) => setFormData('isManuallySupported', e.target.checked)}
+                className="w-4 h-4 mt-1 accent-primary-600 shrink-0"
+              />
+              <div className="text-sm">
+                <span className="font-medium text-bg-900">
+                  무상 교복 지원 대상입니다
+                </span>
+                <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+                  무상 지원은 중학교·고등학교 재학 중 각 1회만 가능합니다. 이전 학교에서 이미
+                  지원받은 경우 체크하지 마세요.
+                </p>
+              </div>
+            </label>
+          </div>
+        )}
 
         <div className="mt-6 p-4 bg-bg-050 rounded-lg">
           <label className="flex items-start gap-3 cursor-pointer">
@@ -207,7 +240,11 @@ export const StudentInfoPage = () => {
           </label>
         </div>
 
-        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+        {hasStartedFilling && missingFields.length > 0 && (
+          <p className="text-red-500 text-sm text-center">
+            다음 항목을 확인해주세요: {missingFields.join(', ')}
+          </p>
+        )}
 
         <div className="flex gap-4 mt-6">
           <Button

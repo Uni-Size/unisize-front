@@ -3,7 +3,7 @@ import { Modal, Select } from "@components/atoms";
 import { Toast } from "@components/atoms/Toast";
 import type { ToastVariant } from "@components/atoms/Toast";
 import { GENDER_OPTIONS_MF } from "@/constants/gender";
-import { updateStudent, getStudentAuditLogs, getOrderHistory } from "@/api/student";
+import { updateStudent, updateStudentSupport, getStudentAuditLogs, getOrderHistory } from "@/api/student";
 import type { AuditLog, AuditAction, OrderHistory } from "@/api/student";
 import { getSchoolList } from "@/api/school";
 import {
@@ -331,6 +331,8 @@ export const StudentModal = ({
   const [weight, setWeight] = useState<number | "">("");
   const [shoulder, setShoulder] = useState<number | "">("");
   const [waist, setWaist] = useState<number | "">("");
+  // 무상 지원 대상 여부 (수동 지정, 전학생 등) — 중/고 재학 중 각 1회만 지원 가능
+  const [isManuallySupported, setIsManuallySupported] = useState(false);
 
   // 구입일자 state (edit 모드용, 기본값 오늘)
   const [orderDate, setOrderDate] = useState(() =>
@@ -455,6 +457,7 @@ export const StudentModal = ({
     weight: number | "";
     shoulder: number | "";
     waist: number | "";
+    isManuallySupported: boolean;
   } | null>(null);
   const originalOrderRef = React.useRef<{
     winterUniforms: UniformItem[];
@@ -537,6 +540,7 @@ export const StudentModal = ({
       const w: number | "" = student.weight ?? "";
       const sh: number | "" = student.shoulder ?? "";
       const ws: number | "" = student.waist ?? "";
+      const ms = student.isManuallySupported ?? false;
 
       setAdmissionSchool(aSchool);
       setPreviousSchool(pSchool);
@@ -552,6 +556,7 @@ export const StudentModal = ({
       setWeight(w);
       setShoulder(sh);
       setWaist(ws);
+      setIsManuallySupported(ms);
       setSupplies(student.supplies);
       setNameTag(student.nameTag);
       setIsEditing(false);
@@ -647,6 +652,7 @@ export const StudentModal = ({
         weight: w,
         shoulder: sh,
         waist: ws,
+        isManuallySupported: ms,
       };
     }
   }, [mode, student]);
@@ -666,6 +672,7 @@ export const StudentModal = ({
     setWeight("");
     setShoulder("");
     setWaist("");
+    setIsManuallySupported(false);
     setWinterUniforms([]);
     setSummerUniforms([]);
     setAllUniforms([]);
@@ -861,6 +868,8 @@ export const StudentModal = ({
           orig.weight !== weight ||
           orig.shoulder !== shoulder ||
           orig.waist !== waist;
+        const supportChanged =
+          !orig || orig.isManuallySupported !== isManuallySupported;
 
         const origOrder = originalOrderRef.current;
         const orderChanged =
@@ -871,7 +880,7 @@ export const StudentModal = ({
             JSON.stringify(summerUniforms) ||
           JSON.stringify(origOrder.supplies) !== JSON.stringify(supplies);
 
-        if (!studentChanged && !orderChanged) {
+        if (!studentChanged && !supportChanged && !orderChanged) {
           setToast({ message: "수정된 내용이 없습니다.", variant: "info" });
           return;
         }
@@ -894,6 +903,10 @@ export const StudentModal = ({
             shoulder: shoulder !== "" ? shoulder : undefined,
             waist: waist !== "" ? waist : undefined,
           });
+          onStudentUpdated?.();
+        }
+        if (studentId && supportChanged) {
+          await updateStudentSupport(studentId, isManuallySupported);
           onStudentUpdated?.();
         }
         const targetOrderId = activeOrderId ?? student?.orderId;
@@ -1928,6 +1941,26 @@ export const StudentModal = ({
                         )
                       }
                     />
+                  </EditField>
+                )}
+              </div>
+              <div className="flex items-center">
+                {isView || isOrderCreateMode || isOrderEditMode ? (
+                  <ViewField
+                    label="무상 지원"
+                    value={isManuallySupported ? "대상" : "비대상"}
+                  />
+                ) : (
+                  <EditField label="무상 지원">
+                    <label className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isManuallySupported}
+                        onChange={(e) => setIsManuallySupported(e.target.checked)}
+                        className="w-4 h-4 accent-primary-600"
+                      />
+                      <span>무상 지원 대상 (전학생 등 수동 지정)</span>
+                    </label>
                   </EditField>
                 )}
               </div>

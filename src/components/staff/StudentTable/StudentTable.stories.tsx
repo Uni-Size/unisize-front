@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { StudentTable } from './StudentTable';
 import type { RegisterStudent } from '../../../api/student';
 

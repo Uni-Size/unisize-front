@@ -259,10 +259,20 @@ const ProductDetailModalContent = ({
     const s = editSchools[schoolIdx];
     setSelectableSaving(true);
     try {
+      const siblingIds = (s.selectable_with ?? []).map((sw) => sw.product_id);
       await updateProductSelectable(product.id, s.school_name, {
         is_selectable: s.is_selectable ?? false,
-        selectable_with: (s.selectable_with ?? []).map((sw) => sw.product_id),
+        selectable_with: siblingIds,
       });
+      // 관계는 양쪽 상품 레코드에 각각 저장되므로, sibling 쪽도 나를 가리키도록 함께 갱신한다
+      await Promise.all(
+        siblingIds.map((sibId) =>
+          updateProductSelectable(sibId, s.school_name, {
+            is_selectable: true,
+            selectable_with: [product.id],
+          }),
+        ),
+      );
       setToast({ message: "교체 가능 설정이 저장되었습니다.", variant: "success" });
     } catch (err) {
       setToast({ message: getApiErrorString(err, "교체 가능 설정 저장에 실패했습니다."), variant: "error" });

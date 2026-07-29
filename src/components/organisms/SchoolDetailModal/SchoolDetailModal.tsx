@@ -7,10 +7,10 @@ import { getSchoolDetailById } from "@/api/school";
 import { getApiErrorString } from "@/utils/errorUtils";
 import {
   SchoolFormContent,
-  useSchoolFormState,
   type EditableProduct,
   type EditableYear,
 } from "../SchoolAddModal/SchoolFormContent";
+import { useSchoolFormState } from "../SchoolAddModal/useSchoolFormState";
 
 export interface SchoolDetailModalProps {
   isOpen: boolean;

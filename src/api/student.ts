@@ -26,6 +26,16 @@ export interface StudentFormData {
   body: BodyMeasurements;
   address: string;
   delivery: boolean;
+  isManuallySupported?: boolean;
+}
+
+// dev 사이트 등록에서 신체 정보를 생략할 수 있어, 등록 요청의 body는 각 항목이 선택적이다
+// (0은 "입력 안 함"을 의미하며 백엔드에 아예 보내지 않아야 optional 처리된다)
+interface StudentApiRequestBody {
+  height?: number;
+  weight?: number;
+  shoulder?: number;
+  waist?: number;
 }
 
 interface StudentApiRequest {
@@ -39,18 +49,20 @@ interface StudentApiRequest {
   birth_date: string;
   gender: string;
   privacy_consent: boolean;
-  body: BodyMeasurements;
+  body: StudentApiRequestBody;
   address: string;
   delivery: boolean;
+  is_manually_supported?: boolean;
 }
 
 export interface RecommendedSizeItem {
   product_name: string;
+  category?: string;
   recommended_size: string;
   supported_quantity: number;
   is_selectable?: boolean;
   selectable_with?: string[];
-  gender: "male" | "female" | "unisex";
+  gender: "M" | "F" | "U";
 }
 
 export interface AddStudentResponse {
@@ -69,6 +81,7 @@ export interface AddStudentResponse {
   school_name: string;
   grade: number;
   checked_in_at: string;
+  is_eligible_for_public_purchase?: boolean;
   recommended_uniforms?: {
     winter?: RecommendedSizeItem[];
     summer?: RecommendedSizeItem[];
@@ -144,6 +157,7 @@ export interface RecommendedUniformItem {
   product_id: string;
   item_id: string;
   product_name: string;
+  category?: string;
   season: string;
   recommended_size: string;
   supported_quantity: number;
@@ -288,6 +302,15 @@ export interface MeasurementOrderRequest {
 export async function addStudent(
   formData: StudentFormData,
 ): Promise<AddStudentResponse> {
+  // 0은 "입력 안 함"이므로 요청에서 아예 제외한다 (dev 사이트에서 생략된 항목)
+  const { height, weight, shoulder, waist } = formData.body;
+  const body: StudentApiRequestBody = {
+    height: height > 0 ? height : undefined,
+    weight: weight > 0 ? weight : undefined,
+    shoulder: shoulder > 0 ? shoulder : undefined,
+    waist: waist > 0 ? waist : undefined,
+  };
+
   const requestData: StudentApiRequest = {
     previous_school: formData.previousSchool,
     admission_year: formData.admissionYear,
@@ -299,9 +322,10 @@ export async function addStudent(
     birth_date: formData.birthDate,
     gender: formData.gender,
     privacy_consent: formData.privacyConsent,
-    body: formData.body,
+    body,
     address: formData.address,
     delivery: formData.delivery,
+    is_manually_supported: formData.isManuallySupported,
   };
 
   const response = await apiClient.post<ApiResponse<AddStudentResponse>>(
@@ -743,7 +767,7 @@ export async function updateStudent(
  * PATCH /api/v1/admin/students/:id/support
  */
 export async function updateStudentSupport(
-  studentId: number,
+  studentId: string | number,
   supported: boolean,
 ): Promise<void> {
   await apiClient.patch(`/api/v1/admin/students/${studentId}/support`, {
