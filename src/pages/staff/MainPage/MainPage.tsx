@@ -91,6 +91,17 @@ export const MainPage = () => {
     return [...missingUniforms, ...missingSupplies];
   };
 
+  const getMissingCustomizationItemNames = () => {
+    return [...form.winterUniforms, ...form.summerUniforms]
+      .filter(
+        (u) =>
+          u.supportedQuantity + u.additionalQuantity > 0 &&
+          u.isCustomizationRequired &&
+          !u.repair.trim(),
+      )
+      .map((u) => u.name);
+  };
+
   const buildOrderPayload = () => ({
     uniform_items: [...form.winterUniforms, ...form.summerUniforms].map((u) => ({
       item_id: u.productId,
@@ -137,6 +148,11 @@ export const MainPage = () => {
     const missingSizeItems = getMissingSizeItemNames();
     if (missingSizeItems.length > 0) {
       showToast(`사이즈를 선택해주세요: ${missingSizeItems.join(', ')}`);
+      return;
+    }
+    const missingCustomizationItems = getMissingCustomizationItemNames();
+    if (missingCustomizationItems.length > 0) {
+      showToast(`수선 정보를 입력해주세요: ${missingCustomizationItems.join(', ')}`);
       return;
     }
     const payload = buildOrderPayload();

@@ -410,10 +410,12 @@ export const MeasurementBottomSheet = ({
                       {item.isCustomizationRequired ? (
                         <input
                           type="text"
-                          className="w-full px-1 py-1.5 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900"
+                          className={`w-full px-1 py-1.5 border rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 ${
+                            item.repair.trim() ? 'border-gray-200' : 'border-red-400'
+                          }`}
                           value={item.repair}
                           onChange={(e) => onUpdateUniform(season, item.rowId, { repair: e.target.value })}
-                          placeholder="수선 필수"
+                          placeholder="수선 필수 *"
                         />
                       ) : (
                         <span className="text-gray-300">-</span>
