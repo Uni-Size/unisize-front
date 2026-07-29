@@ -379,7 +379,7 @@ export const MeasurementBottomSheet = ({
                   if (!isNaN(na) && !isNaN(nb)) return na - nb;
                   return a.size.localeCompare(b.size);
                 });
-                const isAdded = !item.isRequired && item.supportedQuantity === 0;
+                const isAdded = item.isManuallyAdded;
                 return (
                   <tr key={item.rowId} className="border-b border-gray-100 last:border-b-0">
                     <td className="px-2 py-2 text-sm text-gray-700 align-middle">
