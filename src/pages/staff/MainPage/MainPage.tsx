@@ -74,6 +74,8 @@ export const MainPage = () => {
         setIsConfirmOpen(false);
         showToast('다른 직원이 이미 측정을 시작했습니다.');
         refresh();
+      } else {
+        showToast('측정 시작에 실패했습니다. 잠시 후 다시 시도해주세요.');
       }
     }
   };
