@@ -27,7 +27,7 @@ interface MeasurementBottomSheetProps {
   nameTagName: string;
   onUpdateNameTagName: (name: string) => void;
   onUpdateUniform: (season: 'winter' | 'summer', rowId: string, patch: Partial<MeasurementUniformItem>) => void;
-  onSwitchUniformProduct: (season: 'winter' | 'summer', rowId: string, targetProductId: string) => void;
+  onToggleGroupSupport: (season: 'winter' | 'summer', rowId: string) => void;
   onAddUniformRow: (season: 'winter' | 'summer', source: MeasurementUniformItem) => void;
   onRemoveUniformRow: (season: 'winter' | 'summer', rowId: string) => void;
   onUpdateSupply: (rowId: string, patch: Partial<MeasurementSupplyItem>) => void;
@@ -239,7 +239,7 @@ export const MeasurementBottomSheet = ({
   nameTagName,
   onUpdateNameTagName,
   onUpdateUniform,
-  onSwitchUniformProduct,
+  onToggleGroupSupport,
   onAddUniformRow,
   onRemoveUniformRow,
   onUpdateSupply,
@@ -383,26 +383,7 @@ export const MeasurementBottomSheet = ({
                 return (
                   <tr key={item.rowId} className="border-b border-gray-100 last:border-b-0">
                     <td className="px-2 py-2 text-sm text-gray-700 align-middle">
-                      {item.selectableWith && item.selectableWith.length > 0 ? (
-                        <select
-                          className="w-full px-1 py-1 border border-gray-200 rounded text-sm text-gray-700 bg-white outline-none focus:border-primary-900"
-                          value={item.productId}
-                          onChange={(e) => {
-                            if (e.target.value === item.productId) return;
-                            onSwitchUniformProduct(season, item.rowId, e.target.value);
-                          }}
-                          title="지원 한도를 공유하는 교체 가능 품목 — 학생이 실제로 받을 품목 하나만 선택하세요"
-                        >
-                          <option value={item.productId}>{item.name}</option>
-                          {item.selectableWith.map((alt) => (
-                            <option key={alt.productId} value={alt.productId}>
-                              {alt.name}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        item.name
-                      )}
+                      {item.name}
                     </td>
                     <td className="px-2 py-2 text-right text-sm text-gray-500 align-middle tabular-nums whitespace-nowrap">
                       {item.unitPrice > 0 ? `${item.unitPrice.toLocaleString()}원` : '-'}
@@ -421,7 +402,25 @@ export const MeasurementBottomSheet = ({
                         ))}
                       </select>
                     </td>
-                    <td className="px-2 py-2 text-sm text-center text-gray-700 align-middle border-l border-gray-100">{item.supportedQuantity}</td>
+                    <td className="px-2 py-2 text-sm text-center text-gray-700 align-middle border-l border-gray-100">
+                      {item.groupId ? (
+                        <label
+                          className="inline-flex items-center justify-center gap-1 cursor-pointer"
+                          title="지원 한도를 공유하는 교체 가능 품목 — 이 품목이 무상지원을 받도록 하려면 체크하세요"
+                        >
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 cursor-pointer accent-primary-900"
+                            checked={!!item.isSupportChecked}
+                            onChange={() => onToggleGroupSupport(season, item.rowId)}
+                            aria-label={`${item.name} 무상지원 적용`}
+                          />
+                          <span className="tabular-nums">{item.supportedQuantity}</span>
+                        </label>
+                      ) : (
+                        item.supportedQuantity
+                      )}
+                    </td>
                     <td className="p-1 text-center align-middle border-l border-gray-100">
                       <Stepper
                         value={item.additionalQuantity}

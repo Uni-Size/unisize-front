@@ -211,7 +211,7 @@ export const MainPage = () => {
         nameTagName={form.nameTagName}
         onUpdateNameTagName={form.setNameTagName}
         onUpdateUniform={form.updateUniform}
-        onSwitchUniformProduct={form.switchUniformProduct}
+        onToggleGroupSupport={form.toggleGroupSupport}
         onAddUniformRow={form.addUniformRow}
         onRemoveUniformRow={form.removeUniformRow}
         onUpdateSupply={form.updateSupply}
