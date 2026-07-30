@@ -335,10 +335,10 @@ export const MeasurementBottomSheet = ({
   // ============================================================================
 
   const renderUniformSection = (_title: string, items: MeasurementUniformItem[], season: 'winter' | 'summer') => {
-    const sortedItems: MeasurementUniformItem[] = [
-      ...items.filter((i) => i.supportedQuantity > 0),
-      ...items.filter((i) => i.supportedQuantity === 0),
-    ];
+    // 지원개수 기준으로 재정렬하지 않는다 — 체크박스로 지원 품목을 바꾸면
+    // supportedQuantity가 0<->groupQuantity로 바뀌는데, 여기서 정렬하면 그때마다
+    // 행 순서가 바뀌어 스태프가 보던 위치에서 품목이 이동한 것처럼 보인다.
+    const sortedItems = items;
     const showNameTag = true;
     return (
       <div className="rounded-2xl border border-gray-200">
