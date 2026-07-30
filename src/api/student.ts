@@ -191,6 +191,41 @@ export interface SupplyItemResponse {
   available_sizes?: { size: string; in_stock: boolean; stock_count: number }[];
 }
 
+// 측정 화면(바텀시트)용 통합 품목 카탈로그 항목. 학교의 해당 시즌 전체 품목을
+// 성별 무관하게 담고 있으며, supported_quantity는 이 학생 기준 무상지원 가능
+// 개수다. selectable_with로 묶인 그룹(예: 치마/바지)의 모든 멤버는 항상 동일한
+// supported_quantity 값을 가지도록 백엔드가 보장한다(CreateMeasurementOrder와
+// 동일한 계산 규칙 재사용) — 프론트에서 그룹 지원개수를 별도로 계산/가정할
+// 필요가 없다. 백엔드 합의: recommended_uniforms/uniform_products를 완전히
+// 대체하는 단일 진실 소스.
+export interface CatalogUniformItem {
+  product_id: string;
+  item_id: string;
+  product_name: string;
+  category?: string;
+  season: string; // "W" | "S"
+  gender: string; // 상품 자체의 등록 성별("M"|"F"|"U") — 학생 성별과 다를 수 있음
+  price: number;
+  recommended_size: string;
+  available_sizes: Array<{
+    size: string;
+    in_stock: boolean;
+    stock_count: number;
+  }>;
+  supported_quantity: number;
+  purchase_quantity: number;
+  selectable_with?: string[];
+  is_customization_required?: boolean;
+  customization?: string;
+  is_reserved?: boolean;
+  name_tag_count?: number;
+  name_tag_attach?: boolean;
+  // 임시저장/확정 주문에 이 품목이 실제로 저장돼 있으면 true. selectable_with
+  // 그룹은 항상 한 멤버만 실제로 저장되므로, 대표 행을 고를 때 성별 추정보다
+  // 이 값을 우선해야 저장된 교체 선택(예: 치마→바지)이 재조회 시 유지된다.
+  is_selected?: boolean;
+}
+
 export interface StartMeasurementResponse {
   student_id: number;
   student_name: string;
@@ -211,12 +246,10 @@ export interface StartMeasurementResponse {
     shoulder: number;
     waist: number;
   };
-  uniform_products: UniformProduct[];
   accessory_products: UniformProduct[] | null;
-  recommended_uniforms?: {
-    winter: RecommendedUniformItem[];
-    summer: RecommendedUniformItem[];
-    all?: RecommendedUniformItem[];
+  catalog_uniforms: {
+    winter: CatalogUniformItem[];
+    summer: CatalogUniformItem[];
   };
   supply_items?: SupplyItemResponse[];
   registered_at: string | null;

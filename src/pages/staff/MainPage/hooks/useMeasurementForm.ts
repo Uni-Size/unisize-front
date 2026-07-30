@@ -1,6 +1,30 @@
 import { useState, useCallback } from 'react';
-import type { StartMeasurementResponse, RecommendedUniformItem, SupplyItemResponse, UniformProduct } from '../../../../api/student';
+import type { StartMeasurementResponse, CatalogUniformItem, SupplyItemResponse } from '../../../../api/student';
 import { sortUniformsByCategoryGroup } from '@/constants/productCategories';
+
+// 학생 gender 값(다양한 표기: "M"/"F"/"male"/"남" 등)을 카탈로그 품목의
+// gender 코드("M"|"F"|"U")로 정규화한다. 매칭 안 되면 undefined.
+const normalizeGenderCode = (gender?: string | null): 'M' | 'F' | 'U' | undefined => {
+  if (!gender) return undefined;
+  switch (gender.toLowerCase()) {
+    case 'm':
+    case 'male':
+    case '남':
+    case '남자':
+      return 'M';
+    case 'f':
+    case 'female':
+    case '여':
+    case '여자':
+      return 'F';
+    case 'u':
+    case 'unisex':
+    case '공용':
+      return 'U';
+    default:
+      return undefined;
+  }
+};
 
 // 지원 한도를 공유하는 교체 가능 품목(예: 치마 ↔ 바지) 중, 현재 선택되지 않은
 // 대안 하나를 나타낸다. 스태프가 드롭다운에서 이 대안을 고르면 현재 행이
@@ -34,7 +58,7 @@ export interface MeasurementUniformItem {
   nameTagAttach: boolean;
   isRequired: boolean; // 지원수량 > 0이면 삭제 불가
   isCustomizationRequired: boolean;
-  // 스태프가 "+" 버튼으로 직접 추가한 행인지 여부. 추천 목록에 원래 있던
+  // 스태프가 "+" 버튼으로 직접 추가한 행인지 여부. 학교 카탈로그에 원래 있던
   // 품목(지원수량이 0이어도)과 구분하기 위한 값 — 삭제(×) 버튼 노출 여부와
   // 수량 최소값(min=1) 판단에 쓰인다.
   isManuallyAdded: boolean;
@@ -63,7 +87,7 @@ let _rowCounter = 0;
 const nextRowId = () => `row_${++_rowCounter}`;
 
 const toUniformItem = (
-  item: RecommendedUniformItem,
+  item: CatalogUniformItem,
   season: 'winter' | 'summer',
   selectableWith: SelectableAlternative[] = [],
 ): MeasurementUniformItem => ({
@@ -89,7 +113,7 @@ const toUniformItem = (
   selectableWith: selectableWith.length > 0 ? selectableWith : undefined,
 });
 
-const toSelectableAlternative = (item: RecommendedUniformItem): SelectableAlternative => ({
+const toSelectableAlternative = (item: CatalogUniformItem): SelectableAlternative => ({
   productId: String(item.product_id),
   name: item.product_name,
   recommendedSize: item.recommended_size,
@@ -99,15 +123,24 @@ const toSelectableAlternative = (item: RecommendedUniformItem): SelectableAltern
   isCustomizationRequired: item.is_customization_required ?? false,
 });
 
-// 지원 한도를 공유하는 교체 가능 품목(selectable_with)들을 하나의 행으로 묶는다.
-// 백엔드는 치마/바지처럼 서로 교체 가능한 품목을 recommended_uniforms에 각각
-// 별도 항목으로 내려주는데(둘 다 supported_quantity를 독립적으로 표시), 그대로
+// 학교의 시즌 전체 품목(catalog_uniforms, 성별 무관)을 화면에 그릴 행 목록으로
+// 변환한다. selectable_with로 묶여 지원 한도를 공유하는 그룹(예: 치마/바지)은
 // 두 행을 다 만들면 스태프가 실수로 둘 다 확정해서 지원 한도가 이중으로
-// 소진될 수 있다. selectable_with로 묶인 그룹에서는 한 행만 만들고, 나머지는
-// 그 행의 selectableWith 옵션으로 넣어 드롭다운으로 교체하게 한다.
+// 소진될 수 있으므로, 한 행으로 묶고 나머지는 그 행의 selectableWith 옵션으로
+// 드롭다운 교체할 수 있게 한다. 백엔드가 그룹 멤버 전원에게 동일한
+// supported_quantity를 내려주므로(CreateMeasurementOrder와 동일 계산 규칙)
+// 어느 멤버를 기본으로 고르든 화면에 보이는 지원 개수는 항상 정확하다.
+// 대표(canonical) 행 선택 우선순위:
+//   1. is_selected: true인 멤버 — 스태프가 이미 저장해둔 실제 교체 선택. 이걸
+//      무시하고 성별로만 고르면, 예를 들어 여학생이 치마→바지로 교체 저장한
+//      뒤 화면을 새로고침했을 때 바지 선택이 사라지고 치마가 기본값(지원수량
+//      그대로)으로 보이는 버그가 생긴다.
+//   2. 학생 성별과 일치하는 품목 — 저장된 주문이 없는 최초 진입 시의 기본값.
+//   3. 그룹의 첫 번째 품목 — 성별 정보가 없거나 일치하는 멤버가 없을 때.
 const buildSeasonUniforms = (
-  rawItems: RecommendedUniformItem[],
+  rawItems: CatalogUniformItem[],
   season: 'winter' | 'summer',
+  studentGenderCode?: 'M' | 'F' | 'U',
 ): MeasurementUniformItem[] => {
   const byName = new Map(rawItems.map((i) => [i.product_name, i]));
   const used = new Set<string>();
@@ -115,14 +148,20 @@ const buildSeasonUniforms = (
 
   for (const raw of rawItems) {
     if (used.has(raw.product_name)) continue;
-    used.add(raw.product_name);
 
     const partners = (raw.selectable_with ?? [])
       .map((name) => byName.get(name))
-      .filter((p): p is RecommendedUniformItem => !!p);
-    partners.forEach((p) => used.add(p.product_name));
+      .filter((p): p is CatalogUniformItem => !!p);
+    const group = [raw, ...partners];
+    group.forEach((p) => used.add(p.product_name));
 
-    result.push(toUniformItem(raw, season, partners.map(toSelectableAlternative)));
+    const canonical =
+      group.find((g) => g.is_selected) ||
+      (studentGenderCode && group.find((g) => g.gender === studentGenderCode)) ||
+      raw;
+    const others = group.filter((g) => g !== canonical);
+
+    result.push(toUniformItem(canonical, season, others.map(toSelectableAlternative)));
   }
 
   return result;
@@ -161,12 +200,13 @@ export function useMeasurementForm() {
   const [nameTagMinUnit, setNameTagMinUnit] = useState(8);
   const [nameTagName, setNameTagName] = useState('');
 
-  const initFromResponse = useCallback((data: StartMeasurementResponse) => {
+  const initFromResponse = useCallback((data: StartMeasurementResponse, studentGender?: string | null) => {
+    const genderCode = normalizeGenderCode(studentGender);
     const winter = sortUniformsByCategoryGroup(
-      buildSeasonUniforms(data.recommended_uniforms?.winter ?? [], 'winter'),
+      buildSeasonUniforms(data.catalog_uniforms?.winter ?? [], 'winter', genderCode),
     );
     const summer = sortUniformsByCategoryGroup(
-      buildSeasonUniforms(data.recommended_uniforms?.summer ?? [], 'summer'),
+      buildSeasonUniforms(data.catalog_uniforms?.summer ?? [], 'summer', genderCode),
     );
     const minUnit = data.name_tag_service?.min_unit ?? 8;
     setWinterUniforms(winter);
@@ -214,7 +254,9 @@ export function useMeasurementForm() {
 
   // 교체 가능 품목 그룹(selectableWith)에서 스태프가 다른 품목으로 바꿀 때 사용.
   // 현재 행을 targetProductId 품목으로 교체하고, 원래 있던 품목은 다시
-  // selectableWith 목록에 넣어 언제든 되돌릴 수 있게 한다.
+  // selectableWith 목록에 넣어 언제든 되돌릴 수 있게 한다. 그룹 멤버는 항상
+  // 동일한 supported_quantity를 가지므로(백엔드 보장) 교체해도 지원 개수는
+  // 그대로 유지된다.
   const switchUniformProduct = useCallback(
     (season: 'winter' | 'summer', rowId: string, targetProductId: string) => {
       const applySwitch = (list: MeasurementUniformItem[]) =>
@@ -256,38 +298,6 @@ export function useMeasurementForm() {
         setWinterUniforms((prev) => applySwitch(prev));
       } else {
         setSummerUniforms((prev) => applySwitch(prev));
-      }
-    },
-    [],
-  );
-
-  const addUniformFromProduct = useCallback(
-    (season: 'winter' | 'summer', product: UniformProduct) => {
-      const newRow: MeasurementUniformItem = {
-        rowId: nextRowId(),
-        productId: String(product.product_id),
-        name: product.product_name,
-        category: product.category,
-        season,
-        recommendedSize: product.recommended_size ?? '',
-        selectedSize: '',
-        availableSizes: (product.available_sizes ?? []).map((s) => ({ size: s, inStock: true, stockCount: 0 })),
-        supportedQuantity: 0,
-        additionalQuantity: 1,
-        unitPrice: product.price,
-        repair: '',
-        reservation: false,
-        received: true,
-        nameTagCount: 0,
-        nameTagAttach: false,
-        isRequired: false,
-        isCustomizationRequired: false,
-        isManuallyAdded: true,
-      };
-      if (season === 'winter') {
-        setWinterUniforms((prev) => sortUniformsByCategoryGroup([...prev, newRow]));
-      } else {
-        setSummerUniforms((prev) => sortUniformsByCategoryGroup([...prev, newRow]));
       }
     },
     [],
@@ -393,7 +403,6 @@ export function useMeasurementForm() {
     reset,
     updateUniform,
     switchUniformProduct,
-    addUniformFromProduct,
     addUniformRow,
     removeUniformRow,
     updateSupply,

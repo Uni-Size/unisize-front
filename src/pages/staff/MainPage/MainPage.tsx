@@ -64,7 +64,7 @@ export const MainPage = () => {
     try {
       const data = await startMeasurement(selectedStudent.id);
       setMeasurementData(data);
-      form.initFromResponse(data);
+      form.initFromResponse(data, selectedStudent.gender);
       setIsConfirmOpen(false);
       setIsMeasurementOpen(true);
       refresh();
@@ -212,7 +212,6 @@ export const MainPage = () => {
         onUpdateNameTagName={form.setNameTagName}
         onUpdateUniform={form.updateUniform}
         onSwitchUniformProduct={form.switchUniformProduct}
-        onAddUniformFromProduct={form.addUniformFromProduct}
         onAddUniformRow={form.addUniformRow}
         onRemoveUniformRow={form.removeUniformRow}
         onUpdateSupply={form.updateSupply}
