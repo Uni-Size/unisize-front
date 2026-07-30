@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { AxiosError } from 'axios';
-import type { RegisterStudent, StartMeasurementResponse, UniformProduct } from '../../../../api/student';
+import type { RegisterStudent, StartMeasurementResponse } from '../../../../api/student';
 import { formatGender } from '../../../../utils/genderUtils';
 import type {
   MeasurementUniformItem,
@@ -28,7 +28,6 @@ interface MeasurementBottomSheetProps {
   onUpdateNameTagName: (name: string) => void;
   onUpdateUniform: (season: 'winter' | 'summer', rowId: string, patch: Partial<MeasurementUniformItem>) => void;
   onSwitchUniformProduct: (season: 'winter' | 'summer', rowId: string, targetProductId: string) => void;
-  onAddUniformFromProduct: (season: 'winter' | 'summer', product: UniformProduct) => void;
   onAddUniformRow: (season: 'winter' | 'summer', source: MeasurementUniformItem) => void;
   onRemoveUniformRow: (season: 'winter' | 'summer', rowId: string) => void;
   onUpdateSupply: (rowId: string, patch: Partial<MeasurementSupplyItem>) => void;
@@ -241,7 +240,6 @@ export const MeasurementBottomSheet = ({
   onUpdateNameTagName,
   onUpdateUniform,
   onSwitchUniformProduct,
-  onAddUniformFromProduct,
   onAddUniformRow,
   onRemoveUniformRow,
   onUpdateSupply,
@@ -974,31 +972,6 @@ export const MeasurementBottomSheet = ({
               {activeSeasonTab === 'winter'
                 ? renderUniformSection('동복', winterUniforms, 'winter')
                 : renderUniformSection('하복', summerUniforms, 'summer')}
-              {(() => {
-                const currentItems = activeSeasonTab === 'winter' ? winterUniforms : summerUniforms;
-                const usedIds = new Set(currentItems.map((i) => i.productId));
-                const addableProducts = (measurementData.uniform_products ?? []).filter(
-                  (p) => !usedIds.has(String(p.product_id)),
-                );
-                if (addableProducts.length === 0) return null;
-                return (
-                  <select
-                    className="w-full px-3 py-2 border border-dashed border-blue-300 rounded-xl text-sm text-blue-600 bg-blue-50 outline-none cursor-pointer"
-                    value=""
-                    onChange={(e) => {
-                      const product = addableProducts.find((p) => String(p.product_id) === e.target.value);
-                      if (product) onAddUniformFromProduct(activeSeasonTab, product);
-                    }}
-                  >
-                    <option value="">+ 품목 추가</option>
-                    {addableProducts.map((p) => (
-                      <option key={p.product_id} value={String(p.product_id)}>
-                        {p.product_name}
-                      </option>
-                    ))}
-                  </select>
-                );
-              })()}
               <div className="flex gap-4 items-start">
                 {renderSupplySection()}
                 {renderNameTagSection()}

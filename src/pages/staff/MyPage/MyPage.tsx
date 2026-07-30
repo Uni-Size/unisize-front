@@ -90,7 +90,7 @@ export const MyPage = () => {
       const data = await getMeasurementPage(student.id);
       setSelectedStudent(student);
       setMeasurementData(data);
-      form.initFromResponse(data);
+      form.initFromResponse(data, student.gender);
       setIsMeasurementOpen(true);
     } catch (err) {
       console.error('측정 데이터 조회 실패:', err);
@@ -125,7 +125,7 @@ export const MyPage = () => {
       };
       setSelectedStudent(fakeStudent);
       setMeasurementData(data);
-      form.initFromResponse(data);
+      form.initFromResponse(data, fakeStudent.gender);
       setIsMeasurementOpen(true);
     } catch (err) {
       console.error('측정 데이터 조회 실패:', err);
@@ -411,7 +411,6 @@ export const MyPage = () => {
         nameTag={form.nameTag}
         onUpdateUniform={form.updateUniform}
         onSwitchUniformProduct={form.switchUniformProduct}
-        onAddUniformFromProduct={form.addUniformFromProduct}
         onAddUniformRow={form.addUniformRow}
         onRemoveUniformRow={form.removeUniformRow}
         onUpdateSupply={form.updateSupply}
