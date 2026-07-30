@@ -316,6 +316,12 @@ export const MeasurementBottomSheet = ({
 
   if (!isOpen || !student || !measurementData) return null;
 
+  // 학교가 명찰 서비스를 신청하지 않았으면(measurementData.name_tag_service.available
+  // = false) 명찰 관련 입력/표시를 아예 숨긴다. 안 보이면 스태프가 애초에 값을
+  // 채울 수 없으니, 저장 시점에 백엔드의 "명찰 서비스를 지원하지 않습니다" 거부를
+  // 만날 일도 없다.
+  const hasNameTagService = !!measurementData.name_tag_service?.available;
+
   // 가격 계산
   const calcUniform = (items: MeasurementUniformItem[]) => {
     let total = 0;
@@ -339,7 +345,7 @@ export const MeasurementBottomSheet = ({
     // supportedQuantity가 0<->groupQuantity로 바뀌는데, 여기서 정렬하면 그때마다
     // 행 순서가 바뀌어 스태프가 보던 위치에서 품목이 이동한 것처럼 보인다.
     const sortedItems = items;
-    const showNameTag = true;
+    const showNameTag = hasNameTagService;
     return (
       <div className="rounded-2xl border border-gray-200">
         <table className="w-full border-collapse text-sm">
@@ -580,6 +586,8 @@ export const MeasurementBottomSheet = ({
   };
 
   const renderNameTagSection = () => {
+    if (!hasNameTagService) return null;
+
     const nameTagTotal = [...winterUniforms, ...summerUniforms].reduce((sum, i) => sum + i.nameTagCount, 0);
     const minCeiled = nameTagTotal === 0 ? 0 : Math.ceil(nameTagTotal / nameTagMinUnit) * nameTagMinUnit;
     return (
@@ -740,7 +748,6 @@ export const MeasurementBottomSheet = ({
 
   const renderConfirmTable = () => {
     const hasSupply = supplies.some((s) => s.quantity > 0);
-    const hasNameTagService = !!(measurementData.name_tag_service?.available);
     const hasNameTag = nameTag.orderQuantity > 0 || nameTag.attachQuantity > 0 || hasNameTagService;
     return (
       <div className="flex flex-col gap-5">
