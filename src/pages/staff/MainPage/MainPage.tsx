@@ -10,7 +10,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { logout } from '../../../api/auth';
 import { StudentTable, ConfirmModal, MeasurementBottomSheet } from './components';
 import { useStudents, useInfiniteScroll, useMeasurementForm } from './hooks';
-import Toast from '../../../components/ui/Toast';
+import { Toast } from '@components/atoms/Toast';
 import { useToast } from '../../../hooks/useToast';
 import { AxiosError } from 'axios';
 
@@ -64,7 +64,7 @@ export const MainPage = () => {
     try {
       const data = await startMeasurement(selectedStudent.id);
       setMeasurementData(data);
-      form.initFromResponse(data);
+      form.initFromResponse(data, selectedStudent.gender);
       setIsConfirmOpen(false);
       setIsMeasurementOpen(true);
       refresh();
@@ -74,6 +74,8 @@ export const MainPage = () => {
         setIsConfirmOpen(false);
         showToast('다른 직원이 이미 측정을 시작했습니다.');
         refresh();
+      } else {
+        showToast('측정 시작에 실패했습니다. 잠시 후 다시 시도해주세요.');
       }
     }
   };
@@ -91,9 +93,20 @@ export const MainPage = () => {
     return [...missingUniforms, ...missingSupplies];
   };
 
+  const getMissingCustomizationItemNames = () => {
+    return [...form.winterUniforms, ...form.summerUniforms]
+      .filter(
+        (u) =>
+          u.supportedQuantity + u.additionalQuantity > 0 &&
+          u.isCustomizationRequired &&
+          !u.repair.trim(),
+      )
+      .map((u) => u.name);
+  };
+
   const buildOrderPayload = () => ({
     uniform_items: [...form.winterUniforms, ...form.summerUniforms].map((u) => ({
-      item_id: Number(u.productId),
+      item_id: u.productId,
       name: u.name,
       season: u.season === 'winter' ? '동복' : '하복' as '동복' | '하복',
       selected_size: u.selectedSize || '',
@@ -137,6 +150,11 @@ export const MainPage = () => {
     const missingSizeItems = getMissingSizeItemNames();
     if (missingSizeItems.length > 0) {
       showToast(`사이즈를 선택해주세요: ${missingSizeItems.join(', ')}`);
+      return;
+    }
+    const missingCustomizationItems = getMissingCustomizationItemNames();
+    if (missingCustomizationItems.length > 0) {
+      showToast(`수선 정보를 입력해주세요: ${missingCustomizationItems.join(', ')}`);
       return;
     }
     const payload = buildOrderPayload();
@@ -193,7 +211,7 @@ export const MainPage = () => {
         nameTagName={form.nameTagName}
         onUpdateNameTagName={form.setNameTagName}
         onUpdateUniform={form.updateUniform}
-        onAddUniformFromProduct={form.addUniformFromProduct}
+        onSwitchUniformProduct={form.switchUniformProduct}
         onAddUniformRow={form.addUniformRow}
         onRemoveUniformRow={form.removeUniformRow}
         onUpdateSupply={form.updateSupply}

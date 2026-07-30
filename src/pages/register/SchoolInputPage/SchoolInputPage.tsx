@@ -20,6 +20,8 @@ export const SchoolInputPage = () => {
   const [isLoadingSchools, setIsLoadingSchools] = useState(false);
   const [error, setError] = useState('');
   const currentYear = new Date().getFullYear();
+  // 전학생은 "출신학교"가 아니라 "이전 학교"로 표기한다 — 전학 오기 직전에 다니던 학교를 의미.
+  const previousSchoolLabel = formData.studentType === 'transfer' ? '이전 학교' : '출신학교';
 
   useEffect(() => {
     if (!formData.studentType) {
@@ -47,22 +49,22 @@ export const SchoolInputPage = () => {
   const generateYearOptions = () =>
     Array.from({ length: 4 }, (_, index) => currentYear - 1 + index);
 
-  const isFormValid =
-    formData.previousSchool.trim() !== '' &&
-    formData.admissionYear !== 0 &&
-    formData.admissionGrade !== 0 &&
-    formData.admissionSchool !== '';
+  const missingFields = [
+    formData.previousSchool.trim() === '' && '출신학교',
+    formData.admissionSchool === '' && '입학학교',
+  ].filter((v): v is string => Boolean(v));
+
+  const isFormValid = missingFields.length === 0;
+
+  const hasStartedFilling =
+    formData.previousSchool.trim() !== '' || formData.admissionSchool !== '';
 
   const handleBack = () => {
     navigate('/register/school');
   };
 
   const handleNext = () => {
-    if (!isFormValid) {
-      setError('모든 항목을 입력해주세요.');
-      return;
-    }
-    setError('');
+    if (!isFormValid) return;
     navigate('/register/student-info');
   };
 
@@ -91,20 +93,20 @@ export const SchoolInputPage = () => {
       </div>
 
       <h2 className="text-2xl font-bold text-center mb-14 text-bg-900">
-        출신학교와 입학학교를 알려주세요
+        {previousSchoolLabel}와 입학학교를 알려주세요
       </h2>
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <label htmlFor="previousSchool" className="text-sm font-medium text-gray-700">
-            출신학교
+            {previousSchoolLabel} <span className="text-red-500">*</span>
           </label>
           <Input
             id="previousSchool"
             type="text"
             value={formData.previousSchool}
             onChange={(e) => setFormData('previousSchool', e.target.value)}
-            placeholder="출신학교를 입력해주세요"
+            placeholder={`${previousSchoolLabel}를 입력해주세요`}
             fullWidth
           />
         </div>
@@ -147,7 +149,7 @@ export const SchoolInputPage = () => {
 
         <div className="flex flex-col gap-1">
           <label htmlFor="admissionSchool" className="text-sm font-medium text-gray-700">
-            입학학교
+            입학학교 <span className="text-red-500">*</span>
           </label>
           <select
             id="admissionSchool"
@@ -189,6 +191,11 @@ export const SchoolInputPage = () => {
         </div>
 
         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+        {hasStartedFilling && missingFields.length > 0 && (
+          <p className="text-red-500 text-sm text-center">
+            다음 항목을 확인해주세요: {missingFields.join(', ')}
+          </p>
+        )}
 
         <Button
           type="button"

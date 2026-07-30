@@ -27,11 +27,7 @@ import { Toast } from "@components/atoms/Toast";
 import type { ToastVariant } from "@components/atoms/Toast";
 import { formatDate } from "@/utils/dateUtils";
 import { downloadCSV } from "@/utils/csvUtils";
-import { CATEGORY_GROUP_MAP, CATEGORY_GROUPS } from "@/constants/productCategories";
-
-const CATEGORY_LABEL_TO_GROUP: Record<string, string> = Object.fromEntries(
-  CATEGORY_GROUPS.flatMap(g => g.options.map(o => [o.label, g.label]))
-);
+import { sortUniformsByCategoryGroup } from "@/constants/productCategories";
 import { formatGender } from "@/utils/genderUtils";
 import { getOrderInventory, updateInventoryStock } from "@/api/order";
 import type { InventoryProduct } from "@/api/order";
@@ -375,13 +371,18 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         nameTagAttachPrice: nameTagService?.attach_price ?? undefined,
         itemStatus: item.delivery_status,
         seasonCode,
+        category: item.product?.category,
       };
       if (seasonCode === 'W') winterUniforms.push(uniform);
       else if (seasonCode === 'S') summerUniforms.push(uniform);
       else allUniforms.push(uniform);
     }
 
-    return { winterUniforms, summerUniforms, allUniforms };
+    return {
+      winterUniforms: sortUniformsByCategoryGroup(winterUniforms),
+      summerUniforms: sortUniformsByCategoryGroup(summerUniforms),
+      allUniforms: sortUniformsByCategoryGroup(allUniforms),
+    };
   };
 
   const handleRowClick = async (student: StudentRow) => {
@@ -458,14 +459,6 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         }
       }
 
-      const GROUP_ORDER: Record<string, number> = { '상의': 0, '하의': 1, '체육복': 3 };
-      const categoryOrder = (category: string | undefined): number => {
-        const c = category ?? '';
-        const g = CATEGORY_GROUP_MAP[c] ?? CATEGORY_LABEL_TO_GROUP[c]
-          ?? (c.includes('체육') || c.includes('생활복') ? '체육복' : undefined);
-        return GROUP_ORDER[g ?? ''] ?? 2;
-      };
-
       const toUniformItem = (r: import('@/api/student').RecommendedUniformItem, idx: number, seasonCode: 'W' | 'S' | 'A'): import('@components/organisms/StudentModal').UniformItem => {
         const avail = availableUniforms.find(u => u.productId === r.product_id);
         return {
@@ -485,12 +478,11 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
           attachCount: r.name_tag_attach ? 1 : 0,
           itemStatus: r.delivery_status,
           seasonCode,
-          category: avail?.category,
+          category: avail?.category ?? r.category,
         };
       };
 
-      const sortUniforms = (items: import('@components/organisms/StudentModal').UniformItem[]) =>
-        [...items].sort((a, b) => categoryOrder(a.category) - categoryOrder(b.category));
+      const sortUniforms = sortUniformsByCategoryGroup;
 
       const studentGender = detail.gender;
       const preferSkirt = (r: import('@/api/student').RecommendedUniformItem) => {
@@ -1109,23 +1101,32 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
 export const SchoolDetailPage = () => {
   const { schoolId } = useParams<{ schoolId: string }>();
   const location = useLocation();
-  const [schoolName, setSchoolName] = useState("");
+  // 숫자 ID(school_id)로 조회한 학교명은 비동기 API 응답이 필요하므로 상태로 관리한다.
+  const [fetchedSchoolName, setFetchedSchoolName] = useState("");
 
   const isOrdersPage = location.pathname.endsWith("/orders");
 
+  const numericId = schoolId !== undefined ? Number(schoolId) : NaN;
+  const isNumericSchoolId = schoolId !== undefined && !isNaN(numericId);
+
   useEffect(() => {
-    if (!schoolId) return;
-    const numericId = Number(schoolId);
-    if (!isNaN(numericId)) {
-      const targetYear = getTargetYear();
-      getSupportedSchoolsByYear(targetYear).then((schools) => {
-        const found = schools.find((s) => s.id === numericId);
-        if (found) setSchoolName(found.name);
-      });
-    } else {
-      setSchoolName(decodeURIComponent(schoolId));
-    }
-  }, [schoolId]);
+    if (!isNumericSchoolId) return;
+    const targetYear = getTargetYear();
+    let cancelled = false;
+    getSupportedSchoolsByYear(targetYear).then((schools) => {
+      if (cancelled) return;
+      const found = schools.find((s) => s.id === numericId);
+      if (found) setFetchedSchoolName(found.name);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isNumericSchoolId, numericId]);
+
+  // schoolId가 숫자가 아니면 URL 파라미터 자체가 (인코딩된) 학교명이므로,
+  // 별도 상태/effect 없이 렌더 중 순수하게 디코딩해서 사용한다.
+  const schoolName =
+    schoolId && !isNumericSchoolId ? decodeURIComponent(schoolId) : fetchedSchoolName;
 
   return (
     <AdminLayout>

@@ -19,11 +19,14 @@ interface FormData {
   studentPhone: string;
   guardianPhone: string;
   birthDate: string;
-  gender: 'F' | 'M';
+  gender: 'F' | 'M' | '';
   privacyConsent: boolean;
   body: BodyMeasurements;
   address: string;
   delivery: boolean;
+  // 전학생(studentType === 'transfer')만 해당 — 무상 교복 지원은 중학교 1회,
+  // 고등학교 1회만 가능하므로, 이전 학교에서 이미 지원받지 않은 경우에만 true로 등록한다.
+  isManuallySupported: boolean;
 }
 
 interface FormStore {
@@ -46,7 +49,7 @@ const initialFormData: FormData = {
   studentPhone: '',
   guardianPhone: '',
   birthDate: '',
-  gender: 'F',
+  gender: '',
   privacyConsent: false,
   body: {
     height: 0,
@@ -56,6 +59,7 @@ const initialFormData: FormData = {
   },
   address: '',
   delivery: false,
+  isManuallySupported: false,
 };
 
 export const useStudentFormStore = create<FormStore>()(
@@ -80,6 +84,20 @@ export const useStudentFormStore = create<FormStore>()(
     }),
     {
       name: 'student-form-storage',
+      // v1: gender 초기값이 'F'로 하드코딩되어 있던 버그(성별 미선택이 '여자'로 통과됨) 수정.
+      // 이전 버전에서 저장된 gender: 'F'는 사용자가 실제로 선택한 값인지 버그로 인한
+      // 기본값인지 구분할 수 없으므로, 안전하게 미선택 상태로 되돌려 재선택을 강제한다.
+      version: 1,
+      migrate: (persistedState, version) => {
+        const state = persistedState as { formData?: FormData };
+        if (version < 1 && state?.formData?.gender === 'F') {
+          return {
+            ...state,
+            formData: { ...state.formData, gender: '' },
+          };
+        }
+        return state as FormStore;
+      },
     }
   )
 );

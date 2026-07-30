@@ -40,11 +40,27 @@ export const MeasurementInputPage = () => {
   const inRange = (value: number, range: { min: number; max: number }) =>
     value >= range.min && value <= range.max;
 
+  // dev 환경(로컬 `npm run dev`, 또는 VITE_OPTIONAL_MEASUREMENT=true로 빌드된
+  // dev 사이트)에서는 신체 사이즈 입력을 선택 사항으로 둔다 — 값이 없으면(0) 통과,
+  // 값이 있으면 그 값은 여전히 범위를 만족해야 한다.
+  const isMeasurementOptional =
+    import.meta.env.DEV || import.meta.env.VITE_OPTIONAL_MEASUREMENT === 'true';
+
+  const isFieldValid = (value: number, range: { min: number; max: number }) =>
+    isMeasurementOptional ? value === 0 || inRange(value, range) : inRange(value, range);
+
+  // 한글 단어 끝음절의 받침 유무에 따라 "은/는" 조사를 고른다.
+  const eunNeun = (word: string) => {
+    const lastChar = word.charCodeAt(word.length - 1);
+    if (lastChar < 0xac00 || lastChar > 0xd7a3) return '은(는)';
+    return (lastChar - 0xac00) % 28 === 0 ? '는' : '은';
+  };
+
   const isFormValid =
-    inRange(formData.body.height, VALIDATION_RANGES.height) &&
-    inRange(formData.body.weight, VALIDATION_RANGES.weight) &&
-    inRange(formData.body.shoulder, VALIDATION_RANGES.shoulder) &&
-    inRange(formData.body.waist, VALIDATION_RANGES.waist);
+    isFieldValid(formData.body.height, VALIDATION_RANGES.height) &&
+    isFieldValid(formData.body.weight, VALIDATION_RANGES.weight) &&
+    isFieldValid(formData.body.shoulder, VALIDATION_RANGES.shoulder) &&
+    isFieldValid(formData.body.waist, VALIDATION_RANGES.waist);
 
   const FIELD_LABELS: Record<keyof typeof VALIDATION_RANGES, string> = {
     height: '키',
@@ -62,7 +78,8 @@ export const MeasurementInputPage = () => {
     })
     .map((field) => {
       const { min, max } = VALIDATION_RANGES[field];
-      return `${FIELD_LABELS[field]}은(는) ${min}~${max} 사이여야 합니다.`;
+      const label = FIELD_LABELS[field];
+      return `${label}${eunNeun(label)} ${min}~${max} 사이여야 합니다.`;
     })
     .join(' ');
 
@@ -136,12 +153,18 @@ export const MeasurementInputPage = () => {
       <h2 className="text-2xl font-bold text-center mb-2 text-bg-900">
         학생의 신체 사이즈를 측정해주세요
       </h2>
-      <p className="text-lg font-medium text-center mb-14 text-slate-800 leading-relaxed">
+      <p className="text-lg font-medium text-center mb-4 text-slate-800 leading-relaxed">
         두꺼운 옷을 입으신 경우,
         <br />
         교복 반팔을 매장에서 구매 후 착용하시면 <br /> 더 편리하게 측정할 수
         있습니다.
       </p>
+
+      {isMeasurementOptional && (
+        <p className="text-sm text-center mb-10 text-slate-500">
+          (dev) 신체 정보는 비워두고 제출할 수 있습니다.
+        </p>
+      )}
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
