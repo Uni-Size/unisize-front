@@ -527,10 +527,10 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
       };
 
       const recWinter = !firstSnapshot
-        ? sortUniforms(filterSelectableGroup((detail.recommended_uniforms?.winter ?? []).filter(r => r.season === 'W' && r.supported_quantity > 0)).map((r, i) => toUniformItem(r, i, 'W')))
+        ? sortUniforms(filterSelectableGroup((detail.recommended_uniforms?.winter ?? []).filter(r => r.season === 'W')).map((r, i) => toUniformItem(r, i, 'W')))
         : [];
       const recSummer = !firstSnapshot
-        ? sortUniforms(filterSelectableGroup((detail.recommended_uniforms?.summer ?? []).filter(r => r.season === 'S' && r.supported_quantity > 0)).map((r, i) => toUniformItem(r, i, 'S')))
+        ? sortUniforms(filterSelectableGroup((detail.recommended_uniforms?.summer ?? []).filter(r => r.season === 'S')).map((r, i) => toUniformItem(r, i, 'S')))
         : [];
       const recAll = !firstSnapshot
         ? [
