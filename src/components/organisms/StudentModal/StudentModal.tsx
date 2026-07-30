@@ -195,6 +195,7 @@ export interface StudentDetailData {
     remaining: number;
     selectable_with?: { product_id: string; display_name: string }[];
   }[]; // 품목별 무상지원 잔여
+  hasNameTag?: boolean; // 학교의 명찰 서비스 제공 여부 (supported_schools.HasNameTag) — false면 명찰 관련 UI 전체 숨김
   nameTagMinUnit?: number;
   nameTagPrice?: number | null;
   nameTagAttachPrice?: number | null;
@@ -304,6 +305,8 @@ export const StudentModal = ({
   const isTableEditable =
     isOrderCreateMode || isOrderEditMode || mode === "add";
   const isTableView = !isTableEditable;
+  // 학교의 명찰 서비스 제공 여부 — false면 명찰 관련 입력/표시 UI를 전부 숨긴다
+  const hasNameTagService = !!student?.hasNameTag;
   const [toast, setToast] = useState<{
     message: string;
     variant: ToastVariant;
@@ -1074,11 +1077,12 @@ export const StudentModal = ({
     season: "winter" | "summer" | "all",
   ) => {
     const showPrice = hasPrice;
+    const showNameTag = hasNameTagService;
     const sectionTotal = items.reduce((sum, i) => {
       if (i.isDeleted || i.unitPrice == null) return sum;
       return sum + i.unitPrice * (i.supportedQuantity + i.additionalQuantity);
     }, 0);
-    const colSpan = showPrice ? 7 : 6;
+    const colSpan = 5 + (showNameTag ? 1 : 0) + (showPrice ? 1 : 0);
 
     return (
       <div>
@@ -1094,9 +1098,11 @@ export const StudentModal = ({
               <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-36">
                 지원+추가=총개수
               </th>
-              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
-                부착/명찰
-              </th>
+              {showNameTag && (
+                <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
+                  부착/명찰
+                </th>
+              )}
               <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-36">
                 수선
               </th>
@@ -1308,49 +1314,51 @@ export const StudentModal = ({
                         </div>
                       </td>
                       {/* 부착/명찰 */}
-                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                        {isTableView ? (
-                          <span className="text-xs">
-                            {item.attachCount > 0 || (item.nameTag ?? 0) > 0
-                              ? `${item.attachCount} / ${item.nameTag ?? 0}`
-                              : "-"}
-                          </span>
-                        ) : (
-                          <div className="flex items-center justify-center gap-1 text-xs">
-                            <input
-                              type="number"
-                              className="w-8 px-1 py-0.5 border border-gray-200 rounded text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              value={item.attachCount}
-                              min={0}
-                              max={totalQty}
-                              onChange={(e) =>
-                                handleUniformChange(
-                                  season,
-                                  item.id,
-                                  "attachCount",
-                                  Number(e.target.value),
-                                )
-                              }
-                            />
-                            <span className="text-gray-400">/</span>
-                            <input
-                              type="number"
-                              className="w-8 px-1 py-0.5 border border-gray-200 rounded text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              value={item.nameTag ?? 0}
-                              min={0}
-                              max={totalQty}
-                              onChange={(e) =>
-                                handleUniformChange(
-                                  season,
-                                  item.id,
-                                  "nameTag",
-                                  Number(e.target.value),
-                                )
-                              }
-                            />
-                          </div>
-                        )}
-                      </td>
+                      {showNameTag && (
+                        <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
+                          {isTableView ? (
+                            <span className="text-xs">
+                              {item.attachCount > 0 || (item.nameTag ?? 0) > 0
+                                ? `${item.attachCount} / ${item.nameTag ?? 0}`
+                                : "-"}
+                            </span>
+                          ) : (
+                            <div className="flex items-center justify-center gap-1 text-xs">
+                              <input
+                                type="number"
+                                className="w-8 px-1 py-0.5 border border-gray-200 rounded text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                value={item.attachCount}
+                                min={0}
+                                max={totalQty}
+                                onChange={(e) =>
+                                  handleUniformChange(
+                                    season,
+                                    item.id,
+                                    "attachCount",
+                                    Number(e.target.value),
+                                  )
+                                }
+                              />
+                              <span className="text-gray-400">/</span>
+                              <input
+                                type="number"
+                                className="w-8 px-1 py-0.5 border border-gray-200 rounded text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                value={item.nameTag ?? 0}
+                                min={0}
+                                max={totalQty}
+                                onChange={(e) =>
+                                  handleUniformChange(
+                                    season,
+                                    item.id,
+                                    "nameTag",
+                                    Number(e.target.value),
+                                  )
+                                }
+                              />
+                            </div>
+                          )}
+                        </td>
+                      )}
                       {/* 수선 */}
                       <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                         {isTableView ? (
@@ -1514,7 +1522,7 @@ export const StudentModal = ({
                 {showPrice && (
                   <tr className="bg-bg-050 font-medium">
                     <td
-                      colSpan={5}
+                      colSpan={colSpan - 2}
                       className="px-3 py-2 border border-gray-200 text-right text-bg-700"
                     >
                       소계
@@ -1538,6 +1546,7 @@ export const StudentModal = ({
   // ============================================================================
 
   const renderNameTagTable = () => {
+    if (!hasNameTagService) return null;
     const minUnit = student?.nameTagMinUnit ?? 1;
     const nameTagPrice =
       nameTag.unitPrice != null && nameTag.unitPrice > 0
@@ -1966,18 +1975,19 @@ export const StudentModal = ({
                 )}
               </div>
               <div className="flex items-center">
-                {isView || isOrderCreateMode || isOrderEditMode ? (
-                  <ViewField label="명찰" value={nameTagName || "-"} />
-                ) : (
-                  <EditField label="명찰">
-                    <input
-                      className="flex-1 px-4 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none placeholder:text-bg-400"
-                      placeholder={name || "이름 입력"}
-                      value={nameTagName}
-                      onChange={(e) => setNameTagName(e.target.value)}
-                    />
-                  </EditField>
-                )}
+                {hasNameTagService &&
+                  (isView || isOrderCreateMode || isOrderEditMode ? (
+                    <ViewField label="명찰" value={nameTagName || "-"} />
+                  ) : (
+                    <EditField label="명찰">
+                      <input
+                        className="flex-1 px-4 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none placeholder:text-bg-400"
+                        placeholder={name || "이름 입력"}
+                        value={nameTagName}
+                        onChange={(e) => setNameTagName(e.target.value)}
+                      />
+                    </EditField>
+                  ))}
               </div>
               <div className="flex items-center">
                 {isView || isOrderCreateMode || isOrderEditMode ? (
@@ -2334,6 +2344,7 @@ export const StudentModal = ({
 
           {/* 명찰 */}
           {!isEditing &&
+            hasNameTagService &&
             (isOrderCreateMode
               ? (student?.nameTagMinUnit ?? 0) > 0
               : (student?.orderSnapshots?.[activeDateIndex]?.totalNameTagCount ?? 0) > 0) && (
@@ -2416,7 +2427,7 @@ export const StudentModal = ({
                   </table>
                 </div>
                 {/* 명찰+부착 — 현금 */}
-                {(isOrderCreateMode ? (student?.nameTagMinUnit ?? 0) > 0 : (student?.orderSnapshots?.[activeDateIndex]?.totalNameTagCount ?? 0) > 0) && (nameTagOrderTotal != null || nameTagAttachTotal != null) && (
+                {hasNameTagService && (isOrderCreateMode ? (student?.nameTagMinUnit ?? 0) > 0 : (student?.orderSnapshots?.[activeDateIndex]?.totalNameTagCount ?? 0) > 0) && (nameTagOrderTotal != null || nameTagAttachTotal != null) && (
                   <div className="w-2/5 border border-gray-200 rounded-lg overflow-hidden text-sm">
                     <table className="w-full border-collapse">
                       <thead>

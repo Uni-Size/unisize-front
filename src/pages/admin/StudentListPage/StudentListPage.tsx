@@ -205,9 +205,11 @@ export const StudentListPage = () => {
     let nameTagMinUnit: number | undefined;
     let nameTagPrice: number | null | undefined;
     let nameTagAttachPrice: number | null | undefined;
+    let hasNameTag = false;
     if (schoolName) {
       const schoolDetail = await getSchoolDetail(schoolName).catch(() => null);
       if (schoolDetail) {
+        hasNameTag = schoolDetail.has_name_tag;
         nameTagMinUnit = schoolDetail.name_tag_min_unit ?? undefined;
         nameTagPrice = schoolDetail.name_tag_price;
         nameTagAttachPrice = schoolDetail.name_tag_attach_price;
@@ -371,6 +373,7 @@ export const StudentListPage = () => {
       availableUniforms,
       recommendedUniforms: availableUniforms,
       supportAllowances: detail.support_allowances?.map((a) => ({ product_id: a.product_id, display_name: a.display_name, remaining: a.remaining, selectable_with: a.selectable_with })),
+      hasNameTag: detail.name_tag_service?.available ?? hasNameTag,
       nameTagMinUnit: detail.name_tag_service?.min_unit ?? nameTagMinUnit,
       nameTagPrice: detail.name_tag_service?.unit_price ?? nameTagPrice,
       nameTagAttachPrice: detail.name_tag_service?.attach_price ?? nameTagAttachPrice,
