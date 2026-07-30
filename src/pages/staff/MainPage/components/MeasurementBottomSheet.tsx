@@ -378,6 +378,8 @@ export const MeasurementBottomSheet = ({
                   return a.size.localeCompare(b.size);
                 });
                 const isAdded = item.isManuallyAdded;
+                const isBuying = item.supportedQuantity + item.additionalQuantity > 0;
+                const isRepairRequired = item.isCustomizationRequired && isBuying;
                 return (
                   <tr key={item.rowId} className="border-b border-gray-100 last:border-b-0">
                     <td className="px-2 py-2 text-sm text-gray-700 align-middle">
@@ -432,11 +434,11 @@ export const MeasurementBottomSheet = ({
                         <input
                           type="text"
                           className={`w-full px-1 py-1.5 border rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 ${
-                            item.repair.trim() ? 'border-gray-200' : 'border-red-400'
+                            !isRepairRequired || item.repair.trim() ? 'border-gray-200' : 'border-red-400'
                           }`}
                           value={item.repair}
                           onChange={(e) => onUpdateUniform(season, item.rowId, { repair: e.target.value })}
-                          placeholder="수선 필수 *"
+                          placeholder={isRepairRequired ? '수선 필수 *' : '수선'}
                         />
                       ) : (
                         <span className="text-gray-300">-</span>
