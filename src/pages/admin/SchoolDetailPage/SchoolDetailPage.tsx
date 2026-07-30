@@ -21,6 +21,7 @@ import type { AdminStudent, AdminStudentOrder, AdminOrderItem } from "@/api/stud
 import { getSchoolDetail } from "@/api/school";
 import { getSupportedSchoolsByYear } from "@/api/school";
 import { getTargetYear } from "@/utils/schoolUtils";
+import { resolveNamedSelectableGroups } from "@/utils/selectableGroups";
 import { sortSizes } from "@/constants/product";
 import { getApiErrorMessage, getApiErrorString } from "@/utils/errorUtils";
 import { Toast } from "@components/atoms/Toast";
@@ -485,38 +486,13 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
       const sortUniforms = sortUniformsByCategoryGroup;
 
       const studentGender = detail.gender;
-      const preferSkirt = (r: import('@/api/student').RecommendedUniformItem) => {
-        const c = (availableUniforms.find(u => u.productId === r.product_id)?.category ?? '').toLowerCase();
-        return c.includes('skirt') || c.includes('치마');
-      };
-      const preferPants = (r: import('@/api/student').RecommendedUniformItem) => {
-        const c = (availableUniforms.find(u => u.productId === r.product_id)?.category ?? '').toLowerCase();
-        return c.includes('pants') || c.includes('바지');
-      };
 
-      const filterSelectableGroup = (items: import('@/api/student').RecommendedUniformItem[]) => {
-        const seenGroupIds = new Set<string>();
-        const result: import('@/api/student').RecommendedUniformItem[] = [];
-        for (const r of items) {
-          if (!r.selectable_with || r.selectable_with.length === 0) {
-            result.push(r);
-            continue;
-          }
-          const groupKey = [r.item_id, ...r.selectable_with].sort().join('|');
-          if (seenGroupIds.has(groupKey)) continue;
-          seenGroupIds.add(groupKey);
-          const groupItems = items.filter(i =>
-            i.item_id === r.item_id || r.selectable_with.includes(i.item_id)
-          );
-          const preferred = studentGender === 'F'
-            ? groupItems.find(preferSkirt) ?? r
-            : studentGender === 'M'
-              ? groupItems.find(preferPants) ?? r
-              : r;
-          result.push(preferred);
-        }
-        return result;
-      };
+      // 교체 가능(selectable_with) 그룹은 지원 한도를 공유하므로 화면엔 그룹당
+      // 한 행(대표)만 노출한다. 그룹핑/대표 선택 알고리즘은 공용 유틸로 통합됨
+      // (src/utils/selectableGroups.ts) — 대표 선택 우선순위: 학생 성별과 일치
+      // > 그룹의 첫 품목.
+      const filterSelectableGroup = (items: import('@/api/student').RecommendedUniformItem[]) =>
+        resolveNamedSelectableGroups(items, studentGender).map((g) => g.canonical);
 
       const recWinter = !firstSnapshot
         ? sortUniforms(filterSelectableGroup((detail.recommended_uniforms?.winter ?? []).filter(r => r.season === 'W')).map((r, i) => toUniformItem(r, i, 'W')))

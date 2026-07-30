@@ -12,6 +12,7 @@ import {
   toDateInputValue,
 } from "@/utils/dateUtils";
 import { formatGender } from "@/utils/genderUtils";
+import { resolveSelectableGroups } from "@/utils/selectableGroups";
 
 const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "student.create": "학생 등록",
@@ -694,114 +695,99 @@ export const StudentModal = ({
       const studentGender = student?.gender;
 
       const pendingAllowances = allowances.filter((a) => a.remaining >= 1);
-      const seenGroupIds = new Set<string>(); // 교체 가능 그룹 중복 처리용
       const newWinter: UniformItem[] = [];
       const newSummer: UniformItem[] = [];
       const newAll: UniformItem[] = [];
 
-      for (const allowance of pendingAllowances) {
-        const rec = recUniforms.find(
-          (u) => u.productId === allowance.product_id,
-        );
-
-        if (allowance.selectable_with && allowance.selectable_with.length > 0) {
-          // 교체 가능 그룹: product_id들을 정렬해서 그룹 키 생성
-          const groupKey = [
-            allowance.product_id,
-            ...allowance.selectable_with.map((s) => s.product_id),
-          ]
-            .sort()
-            .join("|");
-          if (seenGroupIds.has(groupKey)) continue;
-          seenGroupIds.add(groupKey);
-
-          // 그룹 내 후보: 현재 품목 + selectable_with 전체 (remaining 무관)
-          const allCandidates = [
-            {
-              product_id: allowance.product_id,
-              display_name: allowance.display_name,
-            },
-            ...allowance.selectable_with.map((s) => ({
-              product_id: s.product_id,
-              display_name: s.display_name,
-            })),
-          ];
-
-          // 성별에 맞는 품목 선택: 이름에 치마/바지 포함 여부로 판별
-          const isSkirtName = (name: string) =>
-            name.includes("치마") || name.toLowerCase().includes("skirt");
-          const isPantsName = (name: string) =>
-            name.includes("바지") || name.toLowerCase().includes("pants");
-
-          let chosen = allCandidates[0];
-          if (studentGender === "F") {
-            chosen =
-              allCandidates.find((a) => isSkirtName(a.display_name)) ??
-              allCandidates[0];
-          } else if (studentGender === "M") {
-            chosen =
-              allCandidates.find((a) => isPantsName(a.display_name)) ??
-              allCandidates[0];
+      // 성별에 맞는 품목 선택: 이름에 치마/바지 포함 여부로 판별.
+      // support_allowances는 (RecommendedUniformItem/CatalogUniformItem과 달리)
+      // 품목별 gender 필드가 없어 성별 코드로 바로 비교할 수 없으므로, 이
+      // 화면만의 이름 패턴 판별을 공용 그룹핑 유틸(resolveSelectableGroups)의
+      // matchesPreferred 콜백으로 전달한다. 그룹핑(BFS)/대표 선택 우선순위
+      // 자체는 다른 화면들과 동일한 공용 유틸을 사용한다.
+      //
+      // 그룹 후보는 remaining과 무관하게 selectable_with에 임베드된 이름/ID로
+      // 구성한다(예: 치마 remaining>=1, 바지 remaining=0이어도 바지를 대안으로
+      // 보여줘야 스태프가 다시 바지로 되돌릴 수 있다). pendingAllowances에 없는
+      // 후보(=remaining 정보가 없는 파트너)는 remaining을 비워두고, 대표 품목의
+      // 실제 지원 개수는 그룹 내에서 remaining이 알려진 멤버 값을 그대로 쓴다
+      // (백엔드가 그룹 멤버 전원에게 동일한 값을 보장하므로 안전하다).
+      type AllowanceCandidate = {
+        product_id: string;
+        display_name: string;
+        remaining?: number;
+        selectable_with?: { product_id: string; display_name: string }[];
+      };
+      const candidateMap = new Map<string, AllowanceCandidate>();
+      for (const a of pendingAllowances) candidateMap.set(a.product_id, a);
+      for (const a of pendingAllowances) {
+        for (const partner of a.selectable_with ?? []) {
+          if (!candidateMap.has(partner.product_id)) {
+            candidateMap.set(partner.product_id, {
+              product_id: partner.product_id,
+              display_name: partner.display_name,
+            });
           }
-
-          const chosenRec = recUniforms.find(
-            (u) => u.productId === chosen.product_id,
-          );
-          const season = chosenRec?.season ?? rec?.season ?? "winter";
-          // 본인을 제외한 나머지 후보들을 selectableWith로
-          const selectableWith = allCandidates
-            .filter((c) => c.product_id !== chosen.product_id)
-            .map((c) => ({ productId: c.product_id, name: c.display_name }));
-          const chosenRemaining =
-            pendingAllowances.find((a) => a.product_id === chosen.product_id)
-              ?.remaining ?? allowance.remaining;
-          const item: UniformItem = {
-            id: `allowance-${chosen.product_id}`,
-            productId: chosen.product_id,
-            itemId: chosen.product_id,
-            name: chosen.display_name,
-            size: "",
-            availableSizes: chosenRec?.availableSizes ?? [],
-            supportedQuantity: chosenRemaining,
-            additionalQuantity: 0,
-            unitPrice: chosenRec?.price,
-            repair: "",
-            reservation: false,
-            received: false,
-            nameTag: 0,
-            attachCount: 0,
-            seasonCode:
-              season === "summer" ? "S" : season === "all" ? "A" : "W",
-            selectableWith,
-          };
-          if (season === "summer") newSummer.push(item);
-          else if (season === "all") newAll.push(item);
-          else newWinter.push(item);
-        } else {
-          // 교체 불가 품목
-          const season = rec?.season ?? "winter";
-          const item: UniformItem = {
-            id: `allowance-${allowance.product_id}`,
-            productId: allowance.product_id,
-            itemId: allowance.product_id,
-            name: allowance.display_name,
-            size: "",
-            availableSizes: rec?.availableSizes ?? [],
-            supportedQuantity: allowance.remaining,
-            additionalQuantity: 0,
-            unitPrice: rec?.price,
-            repair: "",
-            reservation: false,
-            received: false,
-            nameTag: 0,
-            attachCount: 0,
-            seasonCode:
-              season === "summer" ? "S" : season === "all" ? "A" : "W",
-          };
-          if (season === "summer") newSummer.push(item);
-          else if (season === "all") newAll.push(item);
-          else newWinter.push(item);
         }
+      }
+      const candidates = Array.from(candidateMap.values());
+
+      const isSkirtName = (name: string) =>
+        name.includes("치마") || name.toLowerCase().includes("skirt");
+      const isPantsName = (name: string) =>
+        name.includes("바지") || name.toLowerCase().includes("pants");
+
+      const groups = resolveSelectableGroups(candidates, {
+        getKey: (a) => a.product_id,
+        getLinkedKeys: (a) => a.selectable_with?.map((s) => s.product_id),
+        matchesPreferred:
+          studentGender === "F"
+            ? (a) => isSkirtName(a.display_name)
+            : studentGender === "M"
+              ? (a) => isPantsName(a.display_name)
+              : undefined,
+      });
+
+      for (const { canonical: chosen, alternatives } of groups) {
+        const remaining =
+          chosen.remaining ??
+          [chosen, ...alternatives].find((c) => c.remaining !== undefined)
+            ?.remaining ??
+          0;
+        const chosenRec = recUniforms.find(
+          (u) => u.productId === chosen.product_id,
+        );
+        const rec =
+          chosenRec ??
+          alternatives
+            .map((a) => recUniforms.find((u) => u.productId === a.product_id))
+            .find((r) => r !== undefined);
+        const season = rec?.season ?? "winter";
+        const selectableWith = alternatives.map((a) => ({
+          productId: a.product_id,
+          name: a.display_name,
+        }));
+        const item: UniformItem = {
+          id: `allowance-${chosen.product_id}`,
+          productId: chosen.product_id,
+          itemId: chosen.product_id,
+          name: chosen.display_name,
+          size: "",
+          availableSizes: chosenRec?.availableSizes ?? [],
+          supportedQuantity: remaining,
+          additionalQuantity: 0,
+          unitPrice: chosenRec?.price,
+          repair: "",
+          reservation: false,
+          received: false,
+          nameTag: 0,
+          attachCount: 0,
+          seasonCode: season === "summer" ? "S" : season === "all" ? "A" : "W",
+          selectableWith: selectableWith.length > 0 ? selectableWith : undefined,
+        };
+        if (season === "summer") newSummer.push(item);
+        else if (season === "all") newAll.push(item);
+        else newWinter.push(item);
       }
 
       setWinterUniforms(newWinter);

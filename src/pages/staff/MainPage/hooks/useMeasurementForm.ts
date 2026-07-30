@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { StartMeasurementResponse, CatalogUniformItem, SupplyItemResponse } from '../../../../api/student';
 import { sortUniformsByCategoryGroup } from '@/constants/productCategories';
+import { resolveNamedSelectableGroups } from '@/utils/selectableGroups';
 
 // 학생 gender 값(다양한 표기: "M"/"F"/"male"/"남" 등)을 카탈로그 품목의
 // gender 코드("M"|"F"|"U")로 정규화한다. 매칭 안 되면 undefined.
@@ -130,7 +131,9 @@ const toSelectableAlternative = (item: CatalogUniformItem): SelectableAlternativ
 // 드롭다운 교체할 수 있게 한다. 백엔드가 그룹 멤버 전원에게 동일한
 // supported_quantity를 내려주므로(CreateMeasurementOrder와 동일 계산 규칙)
 // 어느 멤버를 기본으로 고르든 화면에 보이는 지원 개수는 항상 정확하다.
-// 대표(canonical) 행 선택 우선순위:
+//
+// 그룹핑/대표(canonical) 선택 알고리즘은 공용 유틸로 통합됨
+// (src/utils/selectableGroups.ts). 대표 행 선택 우선순위:
 //   1. is_selected: true인 멤버 — 스태프가 이미 저장해둔 실제 교체 선택. 이걸
 //      무시하고 성별로만 고르면, 예를 들어 여학생이 치마→바지로 교체 저장한
 //      뒤 화면을 새로고침했을 때 바지 선택이 사라지고 치마가 기본값(지원수량
@@ -141,31 +144,10 @@ const buildSeasonUniforms = (
   rawItems: CatalogUniformItem[],
   season: 'winter' | 'summer',
   studentGenderCode?: 'M' | 'F' | 'U',
-): MeasurementUniformItem[] => {
-  const byName = new Map(rawItems.map((i) => [i.product_name, i]));
-  const used = new Set<string>();
-  const result: MeasurementUniformItem[] = [];
-
-  for (const raw of rawItems) {
-    if (used.has(raw.product_name)) continue;
-
-    const partners = (raw.selectable_with ?? [])
-      .map((name) => byName.get(name))
-      .filter((p): p is CatalogUniformItem => !!p);
-    const group = [raw, ...partners];
-    group.forEach((p) => used.add(p.product_name));
-
-    const canonical =
-      group.find((g) => g.is_selected) ||
-      (studentGenderCode && group.find((g) => g.gender === studentGenderCode)) ||
-      raw;
-    const others = group.filter((g) => g !== canonical);
-
-    result.push(toUniformItem(canonical, season, others.map(toSelectableAlternative)));
-  }
-
-  return result;
-};
+): MeasurementUniformItem[] =>
+  resolveNamedSelectableGroups(rawItems, studentGenderCode).map(({ canonical, alternatives }) =>
+    toUniformItem(canonical, season, alternatives.map(toSelectableAlternative)),
+  );
 
 const toSupplyItem = (item: SupplyItemResponse): MeasurementSupplyItem => ({
   rowId: nextRowId(),
