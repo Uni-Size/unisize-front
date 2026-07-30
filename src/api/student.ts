@@ -144,6 +144,7 @@ export interface UniformProduct {
   product_id: number;
   product_name: string;
   category: string;
+  season?: string; // "W"(동복) | "S"(하복)
   gender: "male" | "female" | "unisex";
   price: number;
   recommended_size: string;

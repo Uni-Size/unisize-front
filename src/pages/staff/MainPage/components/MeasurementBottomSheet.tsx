@@ -977,8 +977,9 @@ export const MeasurementBottomSheet = ({
               {(() => {
                 const currentItems = activeSeasonTab === 'winter' ? winterUniforms : summerUniforms;
                 const usedIds = new Set(currentItems.map((i) => i.productId));
+                const currentSeasonCode = activeSeasonTab === 'winter' ? 'W' : 'S';
                 const addableProducts = (measurementData.uniform_products ?? []).filter(
-                  (p) => !usedIds.has(String(p.product_id)),
+                  (p) => !usedIds.has(String(p.product_id)) && (!p.season || p.season === currentSeasonCode),
                 );
                 if (addableProducts.length === 0) return null;
                 return (
