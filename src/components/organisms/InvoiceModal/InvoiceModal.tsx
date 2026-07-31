@@ -284,6 +284,14 @@ export const InvoiceModal = ({
                 {items.map((item) => {
                   const totalQty = item.supportedQuantity + item.additionalQuantity;
                   const rowTotal = item.unitPrice != null ? item.unitPrice * totalQty : null;
+                  const baseSizeOptions = item.availableSizes && item.availableSizes.length > 0
+                    ? item.availableSizes.map((s) => ({ value: s, label: s }))
+                    : sizeOptions;
+                  // 확정된 사이즈가 옵션 목록에 없으면(예: 체육복 등 표준 사이즈 밖의 값) 드롭다운에서
+                  // 값이 비어 보이므로, 현재 사이즈를 항상 옵션에 포함시켜 기본값이 유지되도록 한다.
+                  const rowSizeOptions = item.size && !baseSizeOptions.some((o) => o.value === item.size)
+                    ? [{ value: item.size, label: item.size }, ...baseSizeOptions]
+                    : baseSizeOptions;
                   return (
                     <tr key={item.id} className={item.isDeleted ? "bg-red-050 [&_td]:text-red-700" : ""}>
                       <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
@@ -297,7 +305,7 @@ export const InvoiceModal = ({
                           <span>{item.size || "-"}</span>
                         ) : (
                           <Select
-                            options={sizeOptions}
+                            options={rowSizeOptions}
                             value={item.size}
                             onChange={(value) => handleUniformChange(orderId, season, item.id, "size", value)}
                             fullWidth
@@ -372,21 +380,12 @@ export const InvoiceModal = ({
                         {readOnly ? (
                           <span>{item.attachCount > 0 ? item.attachCount : "-"}</span>
                         ) : (
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              type="button"
-                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
-                              onClick={() => handleUniformChange(orderId, season, item.id, "attachCount", Math.max(0, (item.attachCount ?? 0) - 1))}
-                              disabled={(item.attachCount ?? 0) <= 0}
-                            >−</button>
-                            <span className="w-5 text-center text-sm text-gray-800 tabular-nums">{item.attachCount ?? 0}</span>
-                            <button
-                              type="button"
-                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
-                              onClick={() => handleUniformChange(orderId, season, item.id, "attachCount", (item.attachCount ?? 0) + 1)}
-                              disabled={(item.attachCount ?? 0) >= totalQty}
-                            >+</button>
-                          </div>
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 accent-primary-900 cursor-pointer"
+                            checked={(item.attachCount ?? 0) > 0}
+                            onChange={(e) => handleUniformChange(orderId, season, item.id, "attachCount", e.target.checked ? totalQty : 0)}
+                          />
                         )}
                       </td>
                     </tr>
@@ -512,7 +511,8 @@ export const InvoiceModal = ({
 
     const unitPrice = student?.nameTagPrice ?? nameTag.unitPrice;
     const attachPrice = student?.nameTagAttachPrice ?? nameTag.attachPrice;
-    const nameTagTotal = unitPrice != null ? unitPrice * nameTag.orderQuantity : null;
+    const minUnit = student?.nameTagMinUnit && student.nameTagMinUnit > 0 ? student.nameTagMinUnit : 1;
+    const nameTagTotal = unitPrice != null ? Math.ceil(nameTag.orderQuantity / minUnit) * unitPrice : null;
     const attachTotal = attachPrice != null ? attachPrice * nameTag.attachQuantity : null;
     const grandCash = (nameTagTotal ?? 0) + (attachTotal ?? 0);
     const showPrice = unitPrice != null || attachPrice != null;
@@ -775,7 +775,8 @@ export const InvoiceModal = ({
                     const nameTag = student?.nameTag;
                     const unitPrice = student?.nameTagPrice ?? nameTag?.unitPrice;
                     const attachPrice = student?.nameTagAttachPrice ?? nameTag?.attachPrice;
-                    const nameTagTotal = unitPrice != null && nameTag ? unitPrice * nameTag.orderQuantity : 0;
+                    const minUnit = student?.nameTagMinUnit && student.nameTagMinUnit > 0 ? student.nameTagMinUnit : 1;
+                    const nameTagTotal = unitPrice != null && nameTag ? Math.ceil(nameTag.orderQuantity / minUnit) * unitPrice : 0;
                     const attachTotal = attachPrice != null && nameTag ? attachPrice * nameTag.attachQuantity : 0;
                     const cashTotal = nameTagTotal + attachTotal;
                     if (cashTotal === 0) return null;
