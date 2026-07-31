@@ -512,6 +512,7 @@ export const InvoiceModal = ({
     const unitPrice = student?.nameTagPrice ?? nameTag.unitPrice;
     const attachPrice = student?.nameTagAttachPrice ?? nameTag.attachPrice;
     const minUnit = student?.nameTagMinUnit && student.nameTagMinUnit > 0 ? student.nameTagMinUnit : 1;
+    const ceiledOrderQuantity = Math.ceil(nameTag.orderQuantity / minUnit) * minUnit;
     const nameTagTotal = unitPrice != null ? Math.ceil(nameTag.orderQuantity / minUnit) * unitPrice : null;
     const attachTotal = attachPrice != null ? attachPrice * nameTag.attachQuantity : null;
     const grandCash = (nameTagTotal ?? 0) + (attachTotal ?? 0);
@@ -549,7 +550,9 @@ export const InvoiceModal = ({
           <tbody>
             <tr>
               <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">명찰 주문</td>
-              <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle tabular-nums">{nameTag.orderQuantity}</td>
+              <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle tabular-nums">
+                {ceiledOrderQuantity !== nameTag.orderQuantity ? `${ceiledOrderQuantity}/${nameTag.orderQuantity}` : nameTag.orderQuantity}
+              </td>
               {showPrice && (
                 <>
                   <td className="p-2 border border-gray-200 text-right text-gray-500 align-middle tabular-nums pr-3">
