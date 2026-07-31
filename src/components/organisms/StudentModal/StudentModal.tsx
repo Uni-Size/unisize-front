@@ -3,7 +3,7 @@ import { Modal, Select } from "@components/atoms";
 import { Toast } from "@components/atoms/Toast";
 import type { ToastVariant } from "@components/atoms/Toast";
 import { GENDER_OPTIONS_MF } from "@/constants/gender";
-import { updateStudent, getStudentAuditLogs, getOrderHistory } from "@/api/student";
+import { updateStudent, updateStudentSupport, getStudentAuditLogs, getOrderHistory } from "@/api/student";
 import type { AuditLog, AuditAction, OrderHistory } from "@/api/student";
 import { getSchoolList } from "@/api/school";
 import {
@@ -12,6 +12,7 @@ import {
   toDateInputValue,
 } from "@/utils/dateUtils";
 import { formatGender } from "@/utils/genderUtils";
+import { resolveSelectableGroups } from "@/utils/selectableGroups";
 
 const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "student.create": "학생 등록",
@@ -194,6 +195,7 @@ export interface StudentDetailData {
     remaining: number;
     selectable_with?: { product_id: string; display_name: string }[];
   }[]; // 품목별 무상지원 잔여
+  hasNameTag?: boolean; // 학교의 명찰 서비스 제공 여부 (supported_schools.HasNameTag) — false면 명찰 관련 UI 전체 숨김
   nameTagMinUnit?: number;
   nameTagPrice?: number | null;
   nameTagAttachPrice?: number | null;
@@ -303,6 +305,8 @@ export const StudentModal = ({
   const isTableEditable =
     isOrderCreateMode || isOrderEditMode || mode === "add";
   const isTableView = !isTableEditable;
+  // 학교의 명찰 서비스 제공 여부 — false면 명찰 관련 입력/표시 UI를 전부 숨긴다
+  const hasNameTagService = !!student?.hasNameTag;
   const [toast, setToast] = useState<{
     message: string;
     variant: ToastVariant;
@@ -331,6 +335,8 @@ export const StudentModal = ({
   const [weight, setWeight] = useState<number | "">("");
   const [shoulder, setShoulder] = useState<number | "">("");
   const [waist, setWaist] = useState<number | "">("");
+  // 무상 지원 대상 여부 (수동 지정, 전학생 등) — 중/고 재학 중 각 1회만 지원 가능
+  const [isManuallySupported, setIsManuallySupported] = useState(false);
 
   // 구입일자 state (edit 모드용, 기본값 오늘)
   const [orderDate, setOrderDate] = useState(() =>
@@ -455,6 +461,7 @@ export const StudentModal = ({
     weight: number | "";
     shoulder: number | "";
     waist: number | "";
+    isManuallySupported: boolean;
   } | null>(null);
   const originalOrderRef = React.useRef<{
     winterUniforms: UniformItem[];
@@ -537,6 +544,7 @@ export const StudentModal = ({
       const w: number | "" = student.weight ?? "";
       const sh: number | "" = student.shoulder ?? "";
       const ws: number | "" = student.waist ?? "";
+      const ms = student.isManuallySupported ?? false;
 
       setAdmissionSchool(aSchool);
       setPreviousSchool(pSchool);
@@ -552,6 +560,7 @@ export const StudentModal = ({
       setWeight(w);
       setShoulder(sh);
       setWaist(ws);
+      setIsManuallySupported(ms);
       setSupplies(student.supplies);
       setNameTag(student.nameTag);
       setIsEditing(false);
@@ -647,6 +656,7 @@ export const StudentModal = ({
         weight: w,
         shoulder: sh,
         waist: ws,
+        isManuallySupported: ms,
       };
     }
   }, [mode, student]);
@@ -666,6 +676,7 @@ export const StudentModal = ({
     setWeight("");
     setShoulder("");
     setWaist("");
+    setIsManuallySupported(false);
     setWinterUniforms([]);
     setSummerUniforms([]);
     setAllUniforms([]);
@@ -687,114 +698,99 @@ export const StudentModal = ({
       const studentGender = student?.gender;
 
       const pendingAllowances = allowances.filter((a) => a.remaining >= 1);
-      const seenGroupIds = new Set<string>(); // 교체 가능 그룹 중복 처리용
       const newWinter: UniformItem[] = [];
       const newSummer: UniformItem[] = [];
       const newAll: UniformItem[] = [];
 
-      for (const allowance of pendingAllowances) {
-        const rec = recUniforms.find(
-          (u) => u.productId === allowance.product_id,
-        );
-
-        if (allowance.selectable_with && allowance.selectable_with.length > 0) {
-          // 교체 가능 그룹: product_id들을 정렬해서 그룹 키 생성
-          const groupKey = [
-            allowance.product_id,
-            ...allowance.selectable_with.map((s) => s.product_id),
-          ]
-            .sort()
-            .join("|");
-          if (seenGroupIds.has(groupKey)) continue;
-          seenGroupIds.add(groupKey);
-
-          // 그룹 내 후보: 현재 품목 + selectable_with 전체 (remaining 무관)
-          const allCandidates = [
-            {
-              product_id: allowance.product_id,
-              display_name: allowance.display_name,
-            },
-            ...allowance.selectable_with.map((s) => ({
-              product_id: s.product_id,
-              display_name: s.display_name,
-            })),
-          ];
-
-          // 성별에 맞는 품목 선택: 이름에 치마/바지 포함 여부로 판별
-          const isSkirtName = (name: string) =>
-            name.includes("치마") || name.toLowerCase().includes("skirt");
-          const isPantsName = (name: string) =>
-            name.includes("바지") || name.toLowerCase().includes("pants");
-
-          let chosen = allCandidates[0];
-          if (studentGender === "F") {
-            chosen =
-              allCandidates.find((a) => isSkirtName(a.display_name)) ??
-              allCandidates[0];
-          } else if (studentGender === "M") {
-            chosen =
-              allCandidates.find((a) => isPantsName(a.display_name)) ??
-              allCandidates[0];
+      // 성별에 맞는 품목 선택: 이름에 치마/바지 포함 여부로 판별.
+      // support_allowances는 (RecommendedUniformItem/CatalogUniformItem과 달리)
+      // 품목별 gender 필드가 없어 성별 코드로 바로 비교할 수 없으므로, 이
+      // 화면만의 이름 패턴 판별을 공용 그룹핑 유틸(resolveSelectableGroups)의
+      // matchesPreferred 콜백으로 전달한다. 그룹핑(BFS)/대표 선택 우선순위
+      // 자체는 다른 화면들과 동일한 공용 유틸을 사용한다.
+      //
+      // 그룹 후보는 remaining과 무관하게 selectable_with에 임베드된 이름/ID로
+      // 구성한다(예: 치마 remaining>=1, 바지 remaining=0이어도 바지를 대안으로
+      // 보여줘야 스태프가 다시 바지로 되돌릴 수 있다). pendingAllowances에 없는
+      // 후보(=remaining 정보가 없는 파트너)는 remaining을 비워두고, 대표 품목의
+      // 실제 지원 개수는 그룹 내에서 remaining이 알려진 멤버 값을 그대로 쓴다
+      // (백엔드가 그룹 멤버 전원에게 동일한 값을 보장하므로 안전하다).
+      type AllowanceCandidate = {
+        product_id: string;
+        display_name: string;
+        remaining?: number;
+        selectable_with?: { product_id: string; display_name: string }[];
+      };
+      const candidateMap = new Map<string, AllowanceCandidate>();
+      for (const a of pendingAllowances) candidateMap.set(a.product_id, a);
+      for (const a of pendingAllowances) {
+        for (const partner of a.selectable_with ?? []) {
+          if (!candidateMap.has(partner.product_id)) {
+            candidateMap.set(partner.product_id, {
+              product_id: partner.product_id,
+              display_name: partner.display_name,
+            });
           }
-
-          const chosenRec = recUniforms.find(
-            (u) => u.productId === chosen.product_id,
-          );
-          const season = chosenRec?.season ?? rec?.season ?? "winter";
-          // 본인을 제외한 나머지 후보들을 selectableWith로
-          const selectableWith = allCandidates
-            .filter((c) => c.product_id !== chosen.product_id)
-            .map((c) => ({ productId: c.product_id, name: c.display_name }));
-          const chosenRemaining =
-            pendingAllowances.find((a) => a.product_id === chosen.product_id)
-              ?.remaining ?? allowance.remaining;
-          const item: UniformItem = {
-            id: `allowance-${chosen.product_id}`,
-            productId: chosen.product_id,
-            itemId: chosen.product_id,
-            name: chosen.display_name,
-            size: "",
-            availableSizes: chosenRec?.availableSizes ?? [],
-            supportedQuantity: chosenRemaining,
-            additionalQuantity: 0,
-            unitPrice: chosenRec?.price,
-            repair: "",
-            reservation: false,
-            received: false,
-            nameTag: 0,
-            attachCount: 0,
-            seasonCode:
-              season === "summer" ? "S" : season === "all" ? "A" : "W",
-            selectableWith,
-          };
-          if (season === "summer") newSummer.push(item);
-          else if (season === "all") newAll.push(item);
-          else newWinter.push(item);
-        } else {
-          // 교체 불가 품목
-          const season = rec?.season ?? "winter";
-          const item: UniformItem = {
-            id: `allowance-${allowance.product_id}`,
-            productId: allowance.product_id,
-            itemId: allowance.product_id,
-            name: allowance.display_name,
-            size: "",
-            availableSizes: rec?.availableSizes ?? [],
-            supportedQuantity: allowance.remaining,
-            additionalQuantity: 0,
-            unitPrice: rec?.price,
-            repair: "",
-            reservation: false,
-            received: false,
-            nameTag: 0,
-            attachCount: 0,
-            seasonCode:
-              season === "summer" ? "S" : season === "all" ? "A" : "W",
-          };
-          if (season === "summer") newSummer.push(item);
-          else if (season === "all") newAll.push(item);
-          else newWinter.push(item);
         }
+      }
+      const candidates = Array.from(candidateMap.values());
+
+      const isSkirtName = (name: string) =>
+        name.includes("치마") || name.toLowerCase().includes("skirt");
+      const isPantsName = (name: string) =>
+        name.includes("바지") || name.toLowerCase().includes("pants");
+
+      const groups = resolveSelectableGroups(candidates, {
+        getKey: (a) => a.product_id,
+        getLinkedKeys: (a) => a.selectable_with?.map((s) => s.product_id),
+        matchesPreferred:
+          studentGender === "F"
+            ? (a) => isSkirtName(a.display_name)
+            : studentGender === "M"
+              ? (a) => isPantsName(a.display_name)
+              : undefined,
+      });
+
+      for (const { canonical: chosen, alternatives } of groups) {
+        const remaining =
+          chosen.remaining ??
+          [chosen, ...alternatives].find((c) => c.remaining !== undefined)
+            ?.remaining ??
+          0;
+        const chosenRec = recUniforms.find(
+          (u) => u.productId === chosen.product_id,
+        );
+        const rec =
+          chosenRec ??
+          alternatives
+            .map((a) => recUniforms.find((u) => u.productId === a.product_id))
+            .find((r) => r !== undefined);
+        const season = rec?.season ?? "winter";
+        const selectableWith = alternatives.map((a) => ({
+          productId: a.product_id,
+          name: a.display_name,
+        }));
+        const item: UniformItem = {
+          id: `allowance-${chosen.product_id}`,
+          productId: chosen.product_id,
+          itemId: chosen.product_id,
+          name: chosen.display_name,
+          size: "",
+          availableSizes: chosenRec?.availableSizes ?? [],
+          supportedQuantity: remaining,
+          additionalQuantity: 0,
+          unitPrice: chosenRec?.price,
+          repair: "",
+          reservation: false,
+          received: false,
+          nameTag: 0,
+          attachCount: 0,
+          seasonCode: season === "summer" ? "S" : season === "all" ? "A" : "W",
+          selectableWith: selectableWith.length > 0 ? selectableWith : undefined,
+        };
+        if (season === "summer") newSummer.push(item);
+        else if (season === "all") newAll.push(item);
+        else newWinter.push(item);
       }
 
       setWinterUniforms(newWinter);
@@ -861,6 +857,8 @@ export const StudentModal = ({
           orig.weight !== weight ||
           orig.shoulder !== shoulder ||
           orig.waist !== waist;
+        const supportChanged =
+          !orig || orig.isManuallySupported !== isManuallySupported;
 
         const origOrder = originalOrderRef.current;
         const orderChanged =
@@ -871,7 +869,7 @@ export const StudentModal = ({
             JSON.stringify(summerUniforms) ||
           JSON.stringify(origOrder.supplies) !== JSON.stringify(supplies);
 
-        if (!studentChanged && !orderChanged) {
+        if (!studentChanged && !supportChanged && !orderChanged) {
           setToast({ message: "수정된 내용이 없습니다.", variant: "info" });
           return;
         }
@@ -894,6 +892,10 @@ export const StudentModal = ({
             shoulder: shoulder !== "" ? shoulder : undefined,
             waist: waist !== "" ? waist : undefined,
           });
+          onStudentUpdated?.();
+        }
+        if (studentId && supportChanged) {
+          await updateStudentSupport(studentId, isManuallySupported);
           onStudentUpdated?.();
         }
         const targetOrderId = activeOrderId ?? student?.orderId;
@@ -977,7 +979,7 @@ export const StudentModal = ({
           (sum, item) => sum + (item.nameTag ?? 0),
           0,
         );
-        const unit = student?.nameTagMinUnit ?? 1;
+        const unit = student?.nameTagMinUnit && student.nameTagMinUnit > 0 ? student.nameTagMinUnit : 1;
         const ceiled = total === 0 ? 0 : Math.ceil(total / unit) * unit;
         setNameTag((prev) => ({
           ...prev,
@@ -1042,7 +1044,7 @@ export const StudentModal = ({
     winterCalc.supported + summerCalc.supported + allCalc.supported;
   const grandPayable = grandTotal - grandSupported;
 
-  const nameTagMinUnit = student?.nameTagMinUnit ?? 1;
+  const nameTagMinUnit = student?.nameTagMinUnit && student.nameTagMinUnit > 0 ? student.nameTagMinUnit : 1;
   const nameTagUnitPrice =
     nameTag.unitPrice != null && nameTag.unitPrice > 0
       ? nameTag.unitPrice
@@ -1075,11 +1077,12 @@ export const StudentModal = ({
     season: "winter" | "summer" | "all",
   ) => {
     const showPrice = hasPrice;
+    const showNameTag = hasNameTagService;
     const sectionTotal = items.reduce((sum, i) => {
       if (i.isDeleted || i.unitPrice == null) return sum;
       return sum + i.unitPrice * (i.supportedQuantity + i.additionalQuantity);
     }, 0);
-    const colSpan = showPrice ? 7 : 6;
+    const colSpan = 5 + (showNameTag ? 1 : 0) + (showPrice ? 1 : 0);
 
     return (
       <div>
@@ -1095,9 +1098,11 @@ export const StudentModal = ({
               <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-36">
                 지원+추가=총개수
               </th>
-              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
-                부착/명찰
-              </th>
+              {showNameTag && (
+                <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">
+                  부착/명찰
+                </th>
+              )}
               <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-36">
                 수선
               </th>
@@ -1309,49 +1314,51 @@ export const StudentModal = ({
                         </div>
                       </td>
                       {/* 부착/명찰 */}
-                      <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
-                        {isTableView ? (
-                          <span className="text-xs">
-                            {item.attachCount > 0 || (item.nameTag ?? 0) > 0
-                              ? `${item.attachCount} / ${item.nameTag ?? 0}`
-                              : "-"}
-                          </span>
-                        ) : (
-                          <div className="flex items-center justify-center gap-1 text-xs">
-                            <input
-                              type="number"
-                              className="w-8 px-1 py-0.5 border border-gray-200 rounded text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              value={item.attachCount}
-                              min={0}
-                              max={totalQty}
-                              onChange={(e) =>
-                                handleUniformChange(
-                                  season,
-                                  item.id,
-                                  "attachCount",
-                                  Number(e.target.value),
-                                )
-                              }
-                            />
-                            <span className="text-gray-400">/</span>
-                            <input
-                              type="number"
-                              className="w-8 px-1 py-0.5 border border-gray-200 rounded text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              value={item.nameTag ?? 0}
-                              min={0}
-                              max={totalQty}
-                              onChange={(e) =>
-                                handleUniformChange(
-                                  season,
-                                  item.id,
-                                  "nameTag",
-                                  Number(e.target.value),
-                                )
-                              }
-                            />
-                          </div>
-                        )}
-                      </td>
+                      {showNameTag && (
+                        <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
+                          {isTableView ? (
+                            <span className="text-xs">
+                              {item.attachCount > 0 || (item.nameTag ?? 0) > 0
+                                ? `${item.attachCount} / ${item.nameTag ?? 0}`
+                                : "-"}
+                            </span>
+                          ) : (
+                            <div className="flex items-center justify-center gap-1 text-xs">
+                              <input
+                                type="number"
+                                className="w-8 px-1 py-0.5 border border-gray-200 rounded text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                value={item.attachCount}
+                                min={0}
+                                max={totalQty}
+                                onChange={(e) =>
+                                  handleUniformChange(
+                                    season,
+                                    item.id,
+                                    "attachCount",
+                                    Number(e.target.value),
+                                  )
+                                }
+                              />
+                              <span className="text-gray-400">/</span>
+                              <input
+                                type="number"
+                                className="w-8 px-1 py-0.5 border border-gray-200 rounded text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                value={item.nameTag ?? 0}
+                                min={0}
+                                max={totalQty}
+                                onChange={(e) =>
+                                  handleUniformChange(
+                                    season,
+                                    item.id,
+                                    "nameTag",
+                                    Number(e.target.value),
+                                  )
+                                }
+                              />
+                            </div>
+                          )}
+                        </td>
+                      )}
                       {/* 수선 */}
                       <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                         {isTableView ? (
@@ -1515,7 +1522,7 @@ export const StudentModal = ({
                 {showPrice && (
                   <tr className="bg-bg-050 font-medium">
                     <td
-                      colSpan={5}
+                      colSpan={colSpan - 2}
                       className="px-3 py-2 border border-gray-200 text-right text-bg-700"
                     >
                       소계
@@ -1539,7 +1546,8 @@ export const StudentModal = ({
   // ============================================================================
 
   const renderNameTagTable = () => {
-    const minUnit = student?.nameTagMinUnit ?? 1;
+    if (!hasNameTagService) return null;
+    const minUnit = student?.nameTagMinUnit && student.nameTagMinUnit > 0 ? student.nameTagMinUnit : 1;
     const nameTagPrice =
       nameTag.unitPrice != null && nameTag.unitPrice > 0
         ? nameTag.unitPrice
@@ -1931,6 +1939,26 @@ export const StudentModal = ({
                   </EditField>
                 )}
               </div>
+              <div className="flex items-center">
+                {isView || isOrderCreateMode || isOrderEditMode ? (
+                  <ViewField
+                    label="무상 지원"
+                    value={isManuallySupported ? "대상" : "비대상"}
+                  />
+                ) : (
+                  <EditField label="무상 지원">
+                    <label className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isManuallySupported}
+                        onChange={(e) => setIsManuallySupported(e.target.checked)}
+                        className="w-4 h-4 accent-primary-600"
+                      />
+                      <span>무상 지원 대상 (전학생 등 수동 지정)</span>
+                    </label>
+                  </EditField>
+                )}
+              </div>
               {/* 2행: 이름 / 명찰 / 성별 */}
               <div className="flex items-center">
                 {isView || isOrderCreateMode || isOrderEditMode ? (
@@ -1947,18 +1975,19 @@ export const StudentModal = ({
                 )}
               </div>
               <div className="flex items-center">
-                {isView || isOrderCreateMode || isOrderEditMode ? (
-                  <ViewField label="명찰" value={nameTagName || "-"} />
-                ) : (
-                  <EditField label="명찰">
-                    <input
-                      className="flex-1 px-4 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none placeholder:text-bg-400"
-                      placeholder={name || "이름 입력"}
-                      value={nameTagName}
-                      onChange={(e) => setNameTagName(e.target.value)}
-                    />
-                  </EditField>
-                )}
+                {hasNameTagService &&
+                  (isView || isOrderCreateMode || isOrderEditMode ? (
+                    <ViewField label="명찰" value={nameTagName || "-"} />
+                  ) : (
+                    <EditField label="명찰">
+                      <input
+                        className="flex-1 px-4 py-3 text-sm text-gray-700 h-12 bg-transparent outline-none placeholder:text-bg-400"
+                        placeholder={name || "이름 입력"}
+                        value={nameTagName}
+                        onChange={(e) => setNameTagName(e.target.value)}
+                      />
+                    </EditField>
+                  ))}
               </div>
               <div className="flex items-center">
                 {isView || isOrderCreateMode || isOrderEditMode ? (
@@ -2315,6 +2344,7 @@ export const StudentModal = ({
 
           {/* 명찰 */}
           {!isEditing &&
+            hasNameTagService &&
             (isOrderCreateMode
               ? (student?.nameTagMinUnit ?? 0) > 0
               : (student?.orderSnapshots?.[activeDateIndex]?.totalNameTagCount ?? 0) > 0) && (
@@ -2397,7 +2427,7 @@ export const StudentModal = ({
                   </table>
                 </div>
                 {/* 명찰+부착 — 현금 */}
-                {(isOrderCreateMode ? (student?.nameTagMinUnit ?? 0) > 0 : (student?.orderSnapshots?.[activeDateIndex]?.totalNameTagCount ?? 0) > 0) && (nameTagOrderTotal != null || nameTagAttachTotal != null) && (
+                {hasNameTagService && (isOrderCreateMode ? (student?.nameTagMinUnit ?? 0) > 0 : (student?.orderSnapshots?.[activeDateIndex]?.totalNameTagCount ?? 0) > 0) && (nameTagOrderTotal != null || nameTagAttachTotal != null) && (
                   <div className="w-2/5 border border-gray-200 rounded-lg overflow-hidden text-sm">
                     <table className="w-full border-collapse">
                       <thead>

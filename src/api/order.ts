@@ -194,7 +194,6 @@ export interface OrderUniformItem {
   customization: string;
   reservation: boolean;
   name_tag: number | null;
-  has_name_tag?: boolean;
   name_tag_price?: number | null;
   name_tag_attach_price?: number | null;
 }

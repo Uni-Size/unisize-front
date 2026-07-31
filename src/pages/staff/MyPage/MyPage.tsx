@@ -90,7 +90,7 @@ export const MyPage = () => {
       const data = await getMeasurementPage(student.id);
       setSelectedStudent(student);
       setMeasurementData(data);
-      form.initFromResponse(data);
+      form.initFromResponse(data, student.gender);
       setIsMeasurementOpen(true);
     } catch (err) {
       console.error('측정 데이터 조회 실패:', err);
@@ -125,7 +125,7 @@ export const MyPage = () => {
       };
       setSelectedStudent(fakeStudent);
       setMeasurementData(data);
-      form.initFromResponse(data);
+      form.initFromResponse(data, fakeStudent.gender);
       setIsMeasurementOpen(true);
     } catch (err) {
       console.error('측정 데이터 조회 실패:', err);
@@ -133,12 +133,36 @@ export const MyPage = () => {
     }
   };
 
+  const needsSizeSelection = (availableSizes: { size: string }[]) =>
+    availableSizes.length > 1 || (availableSizes.length === 1 && availableSizes[0].size !== 'FREE');
+
+  const getMissingSizeItemNames = () => {
+    const missingUniforms = [...form.winterUniforms, ...form.summerUniforms]
+      .filter((u) => u.supportedQuantity + u.additionalQuantity > 0 && !u.selectedSize)
+      .map((u) => u.name);
+    const missingSupplies = form.supplies
+      .filter((s) => s.quantity > 0 && !s.selectedSize && needsSizeSelection(s.availableSizes))
+      .map((s) => s.name);
+    return [...missingUniforms, ...missingSupplies];
+  };
+
+  const getMissingCustomizationItemNames = () => {
+    return [...form.winterUniforms, ...form.summerUniforms]
+      .filter(
+        (u) =>
+          u.supportedQuantity + u.additionalQuantity > 0 &&
+          u.isCustomizationRequired &&
+          !u.repair.trim(),
+      )
+      .map((u) => u.name);
+  };
+
   const buildOrderPayload = () => ({
     uniform_items: [...form.winterUniforms, ...form.summerUniforms].map((u) => ({
-      item_id: Number(u.productId),
+      item_id: u.productId,
       name: u.name,
       season: u.season === 'winter' ? '동복' : '하복' as '동복' | '하복',
-      selected_size: u.selectedSize || 0,
+      selected_size: u.selectedSize || '',
       purchase_count: u.supportedQuantity + u.additionalQuantity,
       is_reserved: u.reservation,
       customization: u.repair || undefined,
@@ -175,6 +199,16 @@ export const MyPage = () => {
 
   const handleConfirm = async (signature: string) => {
     if (!selectedStudent) return;
+    const missingSizeItems = getMissingSizeItemNames();
+    if (missingSizeItems.length > 0) {
+      showToast(`사이즈를 선택해주세요: ${missingSizeItems.join(', ')}`);
+      return;
+    }
+    const missingCustomizationItems = getMissingCustomizationItemNames();
+    if (missingCustomizationItems.length > 0) {
+      showToast(`수선 정보를 입력해주세요: ${missingCustomizationItems.join(', ')}`);
+      return;
+    }
     await completeMeasurement(selectedStudent.id, { signature });
     setIsMeasurementOpen(false);
     setMeasurementData(null);
@@ -376,7 +410,7 @@ export const MyPage = () => {
         supplies={form.supplies}
         nameTag={form.nameTag}
         onUpdateUniform={form.updateUniform}
-        onAddUniformFromProduct={form.addUniformFromProduct}
+        onToggleGroupSupport={form.toggleGroupSupport}
         onAddUniformRow={form.addUniformRow}
         onRemoveUniformRow={form.removeUniformRow}
         onUpdateSupply={form.updateSupply}

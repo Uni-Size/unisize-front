@@ -19,6 +19,7 @@ import { completePayment } from "@/api/staff";
 import { getApiErrorMessage, getApiErrorString } from "@/utils/errorUtils";
 import { formatDate, formatDateTime } from "@/utils/dateUtils";
 import { formatGender } from "@/utils/genderUtils";
+import { sortUniformsByCategoryGroup } from "@/constants/productCategories";
 
 interface PendingRow {
   id: number;
@@ -113,17 +114,22 @@ export const MainPage = () => {
         received: item.delivery_status === "receipt",
         nameTag: item.name_tag_count || null,
         nameTagName: item.name_tag_name || undefined,
-        attachCount: item.name_tag_attach ? 1 : 0,
+        attachCount: item.name_tag_attach ? item.purchase_quantity : 0,
         nameTagUnitPrice: nameTagService?.unit_price ?? undefined,
         nameTagAttachPrice: nameTagService?.attach_price ?? undefined,
         itemStatus: item.delivery_status,
         seasonCode,
+        category: item.product?.category,
       };
       if (seasonCode === "W") winterUniforms.push(uniform);
       else if (seasonCode === "S") summerUniforms.push(uniform);
       else allUniforms.push(uniform);
     }
-    return { winterUniforms, summerUniforms, allUniforms };
+    return {
+      winterUniforms: sortUniformsByCategoryGroup(winterUniforms),
+      summerUniforms: sortUniformsByCategoryGroup(summerUniforms),
+      allUniforms: sortUniformsByCategoryGroup(allUniforms),
+    };
   };
 
   const handleDetailClick = async (e: React.MouseEvent, row: PendingRow) => {

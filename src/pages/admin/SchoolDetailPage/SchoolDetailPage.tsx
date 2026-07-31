@@ -21,17 +21,14 @@ import type { AdminStudent, AdminStudentOrder, AdminOrderItem } from "@/api/stud
 import { getSchoolDetail } from "@/api/school";
 import { getSupportedSchoolsByYear } from "@/api/school";
 import { getTargetYear } from "@/utils/schoolUtils";
+import { resolveNamedSelectableGroups } from "@/utils/selectableGroups";
 import { sortSizes } from "@/constants/product";
 import { getApiErrorMessage, getApiErrorString } from "@/utils/errorUtils";
 import { Toast } from "@components/atoms/Toast";
 import type { ToastVariant } from "@components/atoms/Toast";
 import { formatDate } from "@/utils/dateUtils";
 import { downloadCSV } from "@/utils/csvUtils";
-import { CATEGORY_GROUP_MAP, CATEGORY_GROUPS } from "@/constants/productCategories";
-
-const CATEGORY_LABEL_TO_GROUP: Record<string, string> = Object.fromEntries(
-  CATEGORY_GROUPS.flatMap(g => g.options.map(o => [o.label, g.label]))
-);
+import { sortUniformsByCategoryGroup } from "@/constants/productCategories";
 import { formatGender } from "@/utils/genderUtils";
 import { getOrderInventory, updateInventoryStock } from "@/api/order";
 import type { InventoryProduct } from "@/api/order";
@@ -370,18 +367,23 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         reservation: item.delivery_status === 'reserved',
         received: item.delivery_status === 'receipt',
         nameTag: item.name_tag_count || null,
-        attachCount: item.name_tag_attach ? 1 : 0,
+        attachCount: item.name_tag_attach ? item.purchase_quantity : 0,
         nameTagUnitPrice: nameTagService?.unit_price ?? undefined,
         nameTagAttachPrice: nameTagService?.attach_price ?? undefined,
         itemStatus: item.delivery_status,
         seasonCode,
+        category: item.product?.category,
       };
       if (seasonCode === 'W') winterUniforms.push(uniform);
       else if (seasonCode === 'S') summerUniforms.push(uniform);
       else allUniforms.push(uniform);
     }
 
-    return { winterUniforms, summerUniforms, allUniforms };
+    return {
+      winterUniforms: sortUniformsByCategoryGroup(winterUniforms),
+      summerUniforms: sortUniformsByCategoryGroup(summerUniforms),
+      allUniforms: sortUniformsByCategoryGroup(allUniforms),
+    };
   };
 
   const handleRowClick = async (student: StudentRow) => {
@@ -432,9 +434,11 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
       let nameTagMinUnit: number | undefined;
       let nameTagPrice: number | null | undefined;
       let nameTagAttachPrice: number | null | undefined;
+      let hasNameTag = false;
       if (resolvedSchoolName) {
         const schoolDetail = await getSchoolDetail(resolvedSchoolName).catch(() => null);
         if (schoolDetail) {
+          hasNameTag = schoolDetail.has_name_tag;
           nameTagMinUnit = schoolDetail.name_tag_min_unit ?? undefined;
           nameTagPrice = schoolDetail.name_tag_price;
           nameTagAttachPrice = schoolDetail.name_tag_attach_price;
@@ -458,14 +462,6 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         }
       }
 
-      const GROUP_ORDER: Record<string, number> = { '상의': 0, '하의': 1, '체육복': 3 };
-      const categoryOrder = (category: string | undefined): number => {
-        const c = category ?? '';
-        const g = CATEGORY_GROUP_MAP[c] ?? CATEGORY_LABEL_TO_GROUP[c]
-          ?? (c.includes('체육') || c.includes('생활복') ? '체육복' : undefined);
-        return GROUP_ORDER[g ?? ''] ?? 2;
-      };
-
       const toUniformItem = (r: import('@/api/student').RecommendedUniformItem, idx: number, seasonCode: 'W' | 'S' | 'A'): import('@components/organisms/StudentModal').UniformItem => {
         const avail = availableUniforms.find(u => u.productId === r.product_id);
         return {
@@ -482,55 +478,29 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
           received: r.delivery_status === 'receipt',
           nameTag: r.name_tag_count ?? null,
           nameTagName: r.name_tag_name,
-          attachCount: r.name_tag_attach ? 1 : 0,
+          attachCount: r.name_tag_attach ? r.purchase_quantity : 0,
           itemStatus: r.delivery_status,
           seasonCode,
-          category: avail?.category,
+          category: avail?.category ?? r.category,
         };
       };
 
-      const sortUniforms = (items: import('@components/organisms/StudentModal').UniformItem[]) =>
-        [...items].sort((a, b) => categoryOrder(a.category) - categoryOrder(b.category));
+      const sortUniforms = sortUniformsByCategoryGroup;
 
       const studentGender = detail.gender;
-      const preferSkirt = (r: import('@/api/student').RecommendedUniformItem) => {
-        const c = (availableUniforms.find(u => u.productId === r.product_id)?.category ?? '').toLowerCase();
-        return c.includes('skirt') || c.includes('치마');
-      };
-      const preferPants = (r: import('@/api/student').RecommendedUniformItem) => {
-        const c = (availableUniforms.find(u => u.productId === r.product_id)?.category ?? '').toLowerCase();
-        return c.includes('pants') || c.includes('바지');
-      };
 
-      const filterSelectableGroup = (items: import('@/api/student').RecommendedUniformItem[]) => {
-        const seenGroupIds = new Set<string>();
-        const result: import('@/api/student').RecommendedUniformItem[] = [];
-        for (const r of items) {
-          if (!r.selectable_with || r.selectable_with.length === 0) {
-            result.push(r);
-            continue;
-          }
-          const groupKey = [r.item_id, ...r.selectable_with].sort().join('|');
-          if (seenGroupIds.has(groupKey)) continue;
-          seenGroupIds.add(groupKey);
-          const groupItems = items.filter(i =>
-            i.item_id === r.item_id || r.selectable_with.includes(i.item_id)
-          );
-          const preferred = studentGender === 'F'
-            ? groupItems.find(preferSkirt) ?? r
-            : studentGender === 'M'
-              ? groupItems.find(preferPants) ?? r
-              : r;
-          result.push(preferred);
-        }
-        return result;
-      };
+      // 교체 가능(selectable_with) 그룹은 지원 한도를 공유하므로 화면엔 그룹당
+      // 한 행(대표)만 노출한다. 그룹핑/대표 선택 알고리즘은 공용 유틸로 통합됨
+      // (src/utils/selectableGroups.ts) — 대표 선택 우선순위: 학생 성별과 일치
+      // > 그룹의 첫 품목.
+      const filterSelectableGroup = (items: import('@/api/student').RecommendedUniformItem[]) =>
+        resolveNamedSelectableGroups(items, studentGender).map((g) => g.canonical);
 
       const recWinter = !firstSnapshot
-        ? sortUniforms(filterSelectableGroup((detail.recommended_uniforms?.winter ?? []).filter(r => r.season === 'W' && r.supported_quantity > 0)).map((r, i) => toUniformItem(r, i, 'W')))
+        ? sortUniforms(filterSelectableGroup((detail.recommended_uniforms?.winter ?? []).filter(r => r.season === 'W')).map((r, i) => toUniformItem(r, i, 'W')))
         : [];
       const recSummer = !firstSnapshot
-        ? sortUniforms(filterSelectableGroup((detail.recommended_uniforms?.summer ?? []).filter(r => r.season === 'S' && r.supported_quantity > 0)).map((r, i) => toUniformItem(r, i, 'S')))
+        ? sortUniforms(filterSelectableGroup((detail.recommended_uniforms?.summer ?? []).filter(r => r.season === 'S')).map((r, i) => toUniformItem(r, i, 'S')))
         : [];
       const recAll = !firstSnapshot
         ? [
@@ -590,6 +560,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         orderSnapshots,
         availableUniforms,
         supportAllowances: detail.support_allowances?.map((a) => ({ product_id: a.product_id, display_name: a.display_name, remaining: a.remaining, selectable_with: a.selectable_with })),
+        hasNameTag: detail.name_tag_service?.available ?? hasNameTag,
         nameTagMinUnit: detail.name_tag_service?.min_unit ?? nameTagMinUnit,
         nameTagPrice: detail.name_tag_service?.unit_price ?? nameTagPrice,
         nameTagAttachPrice: detail.name_tag_service?.attach_price ?? nameTagAttachPrice,

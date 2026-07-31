@@ -23,6 +23,7 @@ import {
   getProduct,
   createProduct,
   updateProduct,
+  updateProductSelectable,
   deleteProduct,
 
   type Product as ApiProduct,
@@ -47,7 +48,6 @@ interface ProductRow {
   rawGender: string;
   createdDate: string;
   modifiedDate: string;
-  // TODO: API 응답에 추가되면 실제 값으로 교체
   schoolCount: number;
   stockStatus: string;
 }
@@ -82,7 +82,7 @@ const toProductRow = (
   rawGender: item.gender,
   createdDate: item.created_at ?? "",
   modifiedDate: item.updated_at ?? "",
-  schoolCount: 0, // HARDCODED: API 응답에 추가되면 실제 값으로 교체
+  schoolCount: item.schools?.length ?? 0,
   stockStatus: item.inventory_status ?? "-",
 });
 
@@ -303,9 +303,25 @@ export const ProductListPage = () => {
         price: s.price,
         quantity: s.quantity,
         is_selectable: s.is_selectable ?? null,
-        selectable_with: s.selectable_with ? s.selectable_with.map((sw) => Number(sw.product_id)) : null,
+        selectable_with: s.selectable_with ? s.selectable_with.map((sw) => sw.product_id) : null,
+
       })),
     });
+
+    // 교체 가능 관계는 양쪽 상품 레코드에 각각 저장되므로, sibling 쪽도 나를 가리키도록 함께 갱신한다
+    await Promise.all(
+      (data.rawSchools ?? [])
+        .filter((s) => s.is_selectable && (s.selectable_with ?? []).length > 0)
+        .flatMap((s) =>
+          (s.selectable_with ?? []).map((sw) =>
+            updateProductSelectable(sw.product_id, s.school_name, {
+              is_selectable: true,
+              selectable_with: [data.id],
+            }),
+          ),
+        ),
+    );
+
     const updatedDetailData = apiProductToDetailData(updated, data.id);
     setSelectedProduct(updatedDetailData);
     setSelectedSchools(updatedDetailData.schools);
@@ -390,7 +406,7 @@ export const ProductListPage = () => {
       header: "사용학교",
       width: "80px",
       align: "center",
-      render: (product) => <span>{product.schoolCount}</span>, // HARDCODED
+      render: (product) => <span>{product.schoolCount}</span>,
     },
     {
       key: "stockStatus",

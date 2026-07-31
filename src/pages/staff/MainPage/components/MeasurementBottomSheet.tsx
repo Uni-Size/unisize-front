@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { AxiosError } from 'axios';
-import type { RegisterStudent, StartMeasurementResponse, UniformProduct } from '../../../../api/student';
+import type { RegisterStudent, StartMeasurementResponse } from '../../../../api/student';
 import { formatGender } from '../../../../utils/genderUtils';
 import type {
   MeasurementUniformItem,
@@ -27,7 +27,7 @@ interface MeasurementBottomSheetProps {
   nameTagName: string;
   onUpdateNameTagName: (name: string) => void;
   onUpdateUniform: (season: 'winter' | 'summer', rowId: string, patch: Partial<MeasurementUniformItem>) => void;
-  onAddUniformFromProduct: (season: 'winter' | 'summer', product: UniformProduct) => void;
+  onToggleGroupSupport: (season: 'winter' | 'summer', rowId: string) => void;
   onAddUniformRow: (season: 'winter' | 'summer', source: MeasurementUniformItem) => void;
   onRemoveUniformRow: (season: 'winter' | 'summer', rowId: string) => void;
   onUpdateSupply: (rowId: string, patch: Partial<MeasurementSupplyItem>) => void;
@@ -239,7 +239,7 @@ export const MeasurementBottomSheet = ({
   nameTagName,
   onUpdateNameTagName,
   onUpdateUniform,
-  onAddUniformFromProduct,
+  onToggleGroupSupport,
   onAddUniformRow,
   onRemoveUniformRow,
   onUpdateSupply,
@@ -258,6 +258,7 @@ export const MeasurementBottomSheet = ({
 
   useEffect(() => {
     if (isOpen) {
+      setStep(1);
       setActiveSeasonTab('winter');
       setSignature(measurementData?.signature || '');
     }
@@ -316,6 +317,12 @@ export const MeasurementBottomSheet = ({
 
   if (!isOpen || !student || !measurementData) return null;
 
+  // 학교가 명찰 서비스를 신청하지 않았으면(measurementData.name_tag_service.available
+  // = false) 명찰 관련 입력/표시를 아예 숨긴다. 안 보이면 스태프가 애초에 값을
+  // 채울 수 없으니, 저장 시점에 백엔드의 "명찰 서비스를 지원하지 않습니다" 거부를
+  // 만날 일도 없다.
+  const hasNameTagService = !!measurementData.name_tag_service?.available;
+
   // 가격 계산
   const calcUniform = (items: MeasurementUniformItem[]) => {
     let total = 0;
@@ -335,11 +342,11 @@ export const MeasurementBottomSheet = ({
   // ============================================================================
 
   const renderUniformSection = (_title: string, items: MeasurementUniformItem[], season: 'winter' | 'summer') => {
-    const sortedItems: MeasurementUniformItem[] = [
-      ...items.filter((i) => i.supportedQuantity > 0),
-      ...items.filter((i) => i.supportedQuantity === 0),
-    ];
-    const showNameTag = true;
+    // 지원개수 기준으로 재정렬하지 않는다 — 체크박스로 지원 품목을 바꾸면
+    // supportedQuantity가 0<->groupQuantity로 바뀌는데, 여기서 정렬하면 그때마다
+    // 행 순서가 바뀌어 스태프가 보던 위치에서 품목이 이동한 것처럼 보인다.
+    const sortedItems = items;
+    const showNameTag = hasNameTagService;
     return (
       <div className="rounded-2xl border border-gray-200">
         <table className="w-full border-collapse text-sm">
@@ -377,10 +384,14 @@ export const MeasurementBottomSheet = ({
                   if (!isNaN(na) && !isNaN(nb)) return na - nb;
                   return a.size.localeCompare(b.size);
                 });
-                const isAdded = !item.isRequired && item.supportedQuantity === 0;
+                const isAdded = item.isManuallyAdded;
+                const isBuying = item.supportedQuantity + item.additionalQuantity > 0;
+                const isRepairRequired = item.isCustomizationRequired && isBuying;
                 return (
                   <tr key={item.rowId} className="border-b border-gray-100 last:border-b-0">
-                    <td className="px-2 py-2 text-sm text-gray-700 align-middle">{item.name}</td>
+                    <td className="px-2 py-2 text-sm text-gray-700 align-middle">
+                      {item.name}
+                    </td>
                     <td className="px-2 py-2 text-right text-sm text-gray-500 align-middle tabular-nums whitespace-nowrap">
                       {item.unitPrice > 0 ? `${item.unitPrice.toLocaleString()}원` : '-'}
                     </td>
@@ -398,7 +409,25 @@ export const MeasurementBottomSheet = ({
                         ))}
                       </select>
                     </td>
-                    <td className="px-2 py-2 text-sm text-center text-gray-700 align-middle border-l border-gray-100">{item.supportedQuantity}</td>
+                    <td className="px-2 py-2 text-sm text-center text-gray-700 align-middle border-l border-gray-100">
+                      {item.groupId ? (
+                        <label
+                          className="inline-flex items-center justify-center gap-1 cursor-pointer"
+                          title="지원 한도를 공유하는 교체 가능 품목 — 이 품목이 무상지원을 받도록 하려면 체크하세요"
+                        >
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 cursor-pointer accent-primary-900"
+                            checked={!!item.isSupportChecked}
+                            onChange={() => onToggleGroupSupport(season, item.rowId)}
+                            aria-label={`${item.name} 무상지원 적용`}
+                          />
+                          <span className="tabular-nums">{item.supportedQuantity}</span>
+                        </label>
+                      ) : (
+                        item.supportedQuantity
+                      )}
+                    </td>
                     <td className="p-1 text-center align-middle border-l border-gray-100">
                       <Stepper
                         value={item.additionalQuantity}
@@ -410,10 +439,12 @@ export const MeasurementBottomSheet = ({
                       {item.isCustomizationRequired ? (
                         <input
                           type="text"
-                          className="w-full px-1 py-1.5 border border-gray-200 rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900"
+                          className={`w-full px-1 py-1.5 border rounded text-sm text-center text-gray-700 bg-white outline-none focus:border-primary-900 ${
+                            !isRepairRequired || item.repair.trim() ? 'border-gray-200' : 'border-red-400'
+                          }`}
                           value={item.repair}
                           onChange={(e) => onUpdateUniform(season, item.rowId, { repair: e.target.value })}
-                          placeholder="수선 필수"
+                          placeholder={isRepairRequired ? '수선 필수 *' : '수선'}
                         />
                       ) : (
                         <span className="text-gray-300">-</span>
@@ -556,8 +587,11 @@ export const MeasurementBottomSheet = ({
   };
 
   const renderNameTagSection = () => {
+    if (!hasNameTagService) return null;
+
     const nameTagTotal = [...winterUniforms, ...summerUniforms].reduce((sum, i) => sum + i.nameTagCount, 0);
-    const minCeiled = nameTagTotal === 0 ? 0 : Math.ceil(nameTagTotal / nameTagMinUnit) * nameTagMinUnit;
+    const nameTagMinUnitSafe = nameTagMinUnit > 0 ? nameTagMinUnit : 1;
+    const minCeiled = nameTagTotal === 0 ? 0 : Math.ceil(nameTagTotal / nameTagMinUnitSafe) * nameTagMinUnitSafe;
     return (
       <div className="flex-none flex flex-col gap-2">
         <div className="flex items-center gap-2">
@@ -716,7 +750,6 @@ export const MeasurementBottomSheet = ({
 
   const renderConfirmTable = () => {
     const hasSupply = supplies.some((s) => s.quantity > 0);
-    const hasNameTagService = !!(measurementData.name_tag_service?.available);
     const hasNameTag = nameTag.orderQuantity > 0 || nameTag.attachQuantity > 0 || hasNameTagService;
     return (
       <div className="flex flex-col gap-5">
@@ -812,8 +845,9 @@ export const MeasurementBottomSheet = ({
           const payable = wCalc.payable + sCalc.payable + supplyTotal;
 
           const nameTagSvc = measurementData.name_tag_service;
+          const nameTagMinUnitSafe = nameTagMinUnit > 0 ? nameTagMinUnit : 1;
           const nameTagCashTotal = hasNameTag && nameTagSvc
-            ? (nameTagSvc.unit_price ?? 0) * nameTag.orderQuantity + (nameTagSvc.attach_price ?? 0) * nameTag.attachQuantity
+            ? Math.ceil(nameTag.orderQuantity / nameTagMinUnitSafe) * (nameTagSvc.unit_price ?? 0) + (nameTagSvc.attach_price ?? 0) * nameTag.attachQuantity
             : 0;
 
           if (total === 0 && nameTagCashTotal === 0) return null;
@@ -949,31 +983,6 @@ export const MeasurementBottomSheet = ({
               {activeSeasonTab === 'winter'
                 ? renderUniformSection('동복', winterUniforms, 'winter')
                 : renderUniformSection('하복', summerUniforms, 'summer')}
-              {(() => {
-                const currentItems = activeSeasonTab === 'winter' ? winterUniforms : summerUniforms;
-                const usedIds = new Set(currentItems.map((i) => i.productId));
-                const addableProducts = (measurementData.uniform_products ?? []).filter(
-                  (p) => !usedIds.has(String(p.product_id)),
-                );
-                if (addableProducts.length === 0) return null;
-                return (
-                  <select
-                    className="w-full px-3 py-2 border border-dashed border-blue-300 rounded-xl text-sm text-blue-600 bg-blue-50 outline-none cursor-pointer"
-                    value=""
-                    onChange={(e) => {
-                      const product = addableProducts.find((p) => String(p.product_id) === e.target.value);
-                      if (product) onAddUniformFromProduct(activeSeasonTab, product);
-                    }}
-                  >
-                    <option value="">+ 품목 추가</option>
-                    {addableProducts.map((p) => (
-                      <option key={p.product_id} value={String(p.product_id)}>
-                        {p.product_name}
-                      </option>
-                    ))}
-                  </select>
-                );
-              })()}
               <div className="flex gap-4 items-start">
                 {renderSupplySection()}
                 {renderNameTagSection()}
