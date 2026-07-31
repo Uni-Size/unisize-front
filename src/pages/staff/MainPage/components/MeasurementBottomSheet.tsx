@@ -258,6 +258,7 @@ export const MeasurementBottomSheet = ({
 
   useEffect(() => {
     if (isOpen) {
+      setStep(1);
       setActiveSeasonTab('winter');
       setSignature(measurementData?.signature || '');
     }
