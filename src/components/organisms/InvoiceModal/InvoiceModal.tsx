@@ -512,7 +512,8 @@ export const InvoiceModal = ({
 
     const unitPrice = student?.nameTagPrice ?? nameTag.unitPrice;
     const attachPrice = student?.nameTagAttachPrice ?? nameTag.attachPrice;
-    const nameTagTotal = unitPrice != null ? unitPrice * nameTag.orderQuantity : null;
+    const minUnit = student?.nameTagMinUnit ?? 1;
+    const nameTagTotal = unitPrice != null ? Math.ceil(nameTag.orderQuantity / minUnit) * unitPrice : null;
     const attachTotal = attachPrice != null ? attachPrice * nameTag.attachQuantity : null;
     const grandCash = (nameTagTotal ?? 0) + (attachTotal ?? 0);
     const showPrice = unitPrice != null || attachPrice != null;
@@ -775,7 +776,8 @@ export const InvoiceModal = ({
                     const nameTag = student?.nameTag;
                     const unitPrice = student?.nameTagPrice ?? nameTag?.unitPrice;
                     const attachPrice = student?.nameTagAttachPrice ?? nameTag?.attachPrice;
-                    const nameTagTotal = unitPrice != null && nameTag ? unitPrice * nameTag.orderQuantity : 0;
+                    const minUnit = student?.nameTagMinUnit ?? 1;
+                    const nameTagTotal = unitPrice != null && nameTag ? Math.ceil(nameTag.orderQuantity / minUnit) * unitPrice : 0;
                     const attachTotal = attachPrice != null && nameTag ? attachPrice * nameTag.attachQuantity : 0;
                     const cashTotal = nameTagTotal + attachTotal;
                     if (cashTotal === 0) return null;
