@@ -174,7 +174,7 @@ export const InvoiceModal = ({
             uniform_items: [...winterUniforms, ...summerUniforms, ...allUniforms]
               .filter((i) => !i.isDeleted)
               .map((i) => ({
-                item_id: i.id,
+                item_id: i.itemId ?? i.productId ?? i.id,
                 name: i.name,
                 season: winterUniforms.includes(i) ? "winter" : summerUniforms.includes(i) ? "summer" : "all",
                 selected_size: i.size,
