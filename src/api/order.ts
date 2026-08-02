@@ -44,15 +44,15 @@ export const DELIVERY_STATUS_LABELS: Record<DeliveryStatus, string> = {
 // ============================================================================
 
 export interface PendingOrderStudent {
-  id: number;
+  id: string;
   name: string;
   gender: string;
 }
 
 export interface PendingOrderItem {
-  id: number;
-  order_id: number;
-  product_id: number;
+  id: string;
+  order_id: string;
+  product_id: string;
   size: string;
   quantity: number;
   supported_quantity: number;
@@ -65,9 +65,9 @@ export interface PendingOrderItem {
 }
 
 export interface PendingOrder {
-  id: number;
+  id: string;
   order_number: string;
-  student_id: number;
+  student_id: string;
   student: PendingOrderStudent;
   total_amount: number;
   status: OrderStatus;
@@ -91,7 +91,7 @@ export interface GetOrdersResponse {
 }
 
 export interface GetOrdersParams {
-  student_id?: number;
+  student_id?: string;
   status?: string;
   start_date?: string;
   end_date?: string;
@@ -121,9 +121,9 @@ export async function getOrders(params?: GetOrdersParams): Promise<{
 }
 
 export interface PaymentPendingOrder {
-  order_id: number;
+  order_id: string;
   order_number: string;
-  student_id: number;
+  student_id: string;
   student_name: string;
   gender: string;
   school_name: string;
@@ -218,8 +218,8 @@ export interface OrderHistoryItem {
 }
 
 export interface OrderDetail {
-  order_id: number;
-  student_id: number;
+  order_id: string;
+  student_id: string;
   student_name: string;
   gender: string;
   admission_school: string;
@@ -242,7 +242,7 @@ export interface OrderDetail {
  * 주문 상세 조회
  * GET /api/v1/orders/:id
  */
-export async function getOrderDetail(orderId: number): Promise<OrderDetail> {
+export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
   const response = await apiClient.get<ApiResponse<OrderDetail>>(
     `/api/v1/orders/${orderId}`,
   );
@@ -325,7 +325,7 @@ export async function updateAdminOrder(
  * PUT /api/v1/staff/orders/:id
  */
 export async function updateStaffOrder(
-  orderId: number,
+  orderId: string,
   data: UpdateStaffOrderRequest,
 ): Promise<void> {
   await apiClient.put<ApiResponse<void>>(
@@ -339,8 +339,8 @@ export async function updateStaffOrder(
 // ============================================================================
 
 export interface UpdateOrderItemRequest {
-  id: number;
-  product_id: number;
+  id: string;
+  product_id: string;
   size: string;
   quantity: number;
   unit_price: number;
@@ -357,7 +357,7 @@ export interface UpdateOrderRequest {
  * PUT /api/v1/orders/:id
  */
 export async function updateOrder(
-  orderId: number,
+  orderId: string,
   data: UpdateOrderRequest,
 ): Promise<void> {
   await apiClient.put<ApiResponse<void>>(`/api/v1/orders/${orderId}`, data);
@@ -378,7 +378,7 @@ export async function updateOrderStatus(
  * 주문 취소
  * POST /api/v1/orders/:id/cancel
  */
-export async function cancelOrder(orderId: number): Promise<void> {
+export async function cancelOrder(orderId: string): Promise<void> {
   await apiClient.post<ApiResponse<void>>(`/api/v1/orders/${orderId}/cancel`);
 }
 
@@ -387,8 +387,8 @@ export async function cancelOrder(orderId: number): Promise<void> {
  * PUT /api/v1/orders/:id/items/:item_id/delivery-status
  */
 export async function updateItemDeliveryStatus(
-  orderId: number,
-  itemId: number,
+  orderId: string,
+  itemId: string,
   status: DeliveryStatus,
 ): Promise<void> {
   await apiClient.put<ApiResponse<void>>(
@@ -401,7 +401,7 @@ export async function updateItemDeliveryStatus(
  * 학생 ID로 주문 상세 조회
  * GET /api/v1/orders/student/:id
  */
-export async function getOrderDetailByStudentId(studentId: number): Promise<OrderDetail> {
+export async function getOrderDetailByStudentId(studentId: string): Promise<OrderDetail> {
   const response = await apiClient.get<ApiResponse<OrderDetail>>(
     `/api/v1/orders/student/${studentId}`,
   );
@@ -428,7 +428,7 @@ export interface StockRound {
 }
 
 export interface InventorySizeStat {
-  inventory_id?: number;
+  inventory_id?: string;
   size: string;
   stock: number;
   ordered: number;
@@ -439,7 +439,7 @@ export interface InventorySizeStat {
 }
 
 export interface InventoryDetail {
-  id: number;
+  id: string;
   size: string;
   quantity: number;
   rounds: StockRound[];
@@ -449,7 +449,7 @@ export interface InventoryDetail {
  * 재고 상세 조회 (rounds 포함)
  * GET /api/v1/inventories/:id
  */
-export async function getInventoryDetail(inventoryId: number): Promise<InventoryDetail> {
+export async function getInventoryDetail(inventoryId: string): Promise<InventoryDetail> {
   const response = await apiClient.get<ApiResponse<InventoryDetail>>(
     `/api/v1/inventories/${inventoryId}`,
   );

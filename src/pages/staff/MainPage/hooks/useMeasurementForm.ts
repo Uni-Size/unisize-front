@@ -65,7 +65,7 @@ export interface MeasurementUniformItem {
 
 export interface MeasurementSupplyItem {
   rowId: string;
-  productId: number;
+  productId: string;
   name: string;
   category: string;
   unitPrice: number;

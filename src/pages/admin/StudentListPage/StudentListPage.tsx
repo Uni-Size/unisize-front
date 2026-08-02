@@ -23,7 +23,7 @@ import { downloadCSV } from '@/utils/csvUtils';
 import { sortUniformsByCategoryGroup } from '@/constants/productCategories';
 
 interface StudentRow {
-  id: number;
+  id: string;
   no: number;
   category: string;
   school: string;
@@ -580,7 +580,7 @@ export const StudentListPage = () => {
     }
   };
 
-  const handleDeleteStudent = async (e: React.MouseEvent, studentId: number) => {
+  const handleDeleteStudent = async (e: React.MouseEvent, studentId: string) => {
     e.stopPropagation();
     if (!window.confirm('정말 삭제하시겠습니까?')) return;
     try {

@@ -6,7 +6,7 @@ import type { ApiResponse } from "./auth";
 // ============================================================================
 
 export interface School {
-  id: number;
+  id: string;
   name: string;
   year: number;
   measurement_start_date?: string;
@@ -29,14 +29,14 @@ export type SchoolTypeFull = '초등학교' | '중학교' | '고등학교';
 export type SchoolType = SchoolTypeCode;
 
 export interface SupportedYear {
-  id?: number;
+  id?: string;
   year: number;
   measurement_start_date: string | null;
   measurement_end_date: string | null;
 }
 
 export interface SchoolListItem {
-  id?: number;
+  id?: string;
   school_id: string;
   school_name: string;
   school_type: SchoolType;
@@ -310,7 +310,7 @@ export async function updateSupportedSchool(schoolId: string, data: UpdateSchool
  * 지원 학교 삭제
  * DELETE /api/v1/schools/supported/:id
  */
-export async function deleteSupportedSchool(id: number): Promise<void> {
+export async function deleteSupportedSchool(id: string): Promise<void> {
   await apiClient.delete<ApiResponse<void>>(
     `/api/v1/schools/supported/${id}`
   );

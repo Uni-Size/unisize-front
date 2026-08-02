@@ -21,9 +21,9 @@ import { formatDate, formatDateTime } from "@/utils/dateUtils";
 import { formatGender } from "@/utils/genderUtils";
 
 interface PendingRow {
-  id: number;
-  orderId: number;
-  studentId: number;
+  id: string;
+  orderId: string;
+  studentId: string;
   no: number;
   measuredAt: string;
   studentName: string;
@@ -300,7 +300,7 @@ export const MainPage = () => {
         onPaymentComplete={async (orderId) => {
           const amount = orders.find((o) => o.orderId === orderId)?.remainingAmountRaw ?? 0;
           try {
-            await completePayment(Number(orderId), { amount, method: "cash" });
+            await completePayment(String(orderId), { amount, method: "cash" });
             setIsDetailOpen(false);
             setPaymentSuccess(true);
             fetchOrders(currentPage);

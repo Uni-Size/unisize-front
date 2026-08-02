@@ -2,7 +2,7 @@ import { apiClient } from "@/lib/apiClient";
 import type { ApiResponse } from "./auth";
 
 export interface StaffProfile {
-  id: number;
+  id: string;
   employee_id: string;
   employee_name: string;
   gender: string;
@@ -19,9 +19,9 @@ export interface StaffProfile {
 }
 
 export interface PaymentPendingOrder {
-  order_id: number;
+  order_id: string;
   order_number: string;
-  student_id: number;
+  student_id: string;
   student_name: string;
   gender: string;
   school_name: string;
@@ -50,7 +50,7 @@ export async function getMyPaymentPending(): Promise<PaymentPendingResponse["dat
 }
 
 export interface StaffItem {
-  id: number;
+  id: string;
   employee_id: string;
   employee_name: string;
   gender: "M" | "F";
@@ -126,7 +126,7 @@ export async function getPendingStaffList(params?: GetStaffListParams): Promise<
  * 스태프 승인
  * POST /api/v1/admin/staff/approve
  */
-export async function approveStaff(staffId: number): Promise<void> {
+export async function approveStaff(staffId: string): Promise<void> {
   await apiClient.post<ApiResponse<void>>("/api/v1/admin/staff/approve", {
     user_ids: [staffId],
   });
@@ -140,8 +140,10 @@ export interface CompletePaymentRequest {
 /**
  * 결제 완료 처리
  * POST /api/v1/admin/orders/:id/payment
+ *
+ * 주문 ID는 UUID 문자열이므로 숫자로 변환하지 않는다.
  */
-export async function completePayment(orderId: number, data: CompletePaymentRequest): Promise<void> {
+export async function completePayment(orderId: string, data: CompletePaymentRequest): Promise<void> {
   await apiClient.post<ApiResponse<void>>(`/api/v1/admin/orders/${orderId}/payment`, data);
 }
 

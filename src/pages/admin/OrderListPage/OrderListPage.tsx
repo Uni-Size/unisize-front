@@ -36,7 +36,7 @@ export const OrderListPage = ({ schoolType }: OrderListPageProps) => {
     if (!schoolId) return;
     const targetYear = getTargetYear();
     getSupportedSchoolsByYear(targetYear).then((schools) => {
-      const found = schools.find((s) => s.id === Number(schoolId));
+      const found = schools.find((s) => s.id === schoolId);
       if (found) setSchoolName(found.name);
     });
   }, [schoolId]);

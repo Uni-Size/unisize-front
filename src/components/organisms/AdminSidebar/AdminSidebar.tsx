@@ -92,7 +92,7 @@ export const AdminSidebar = () => {
   // 학교 삭제 이벤트 수신 → store에서 낙관적 제거
   useEffect(() => {
     const handleSchoolDeleted = (e: Event) => {
-      const { schoolId } = (e as CustomEvent<{ schoolId: number }>).detail;
+      const { schoolId } = (e as CustomEvent<{ schoolId: string }>).detail;
       useSchoolStore.setState((state) => ({
         schools: state.schools.filter((s) => s.id !== schoolId),
       }));

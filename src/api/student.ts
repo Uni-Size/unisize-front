@@ -66,7 +66,7 @@ export interface RecommendedSizeItem {
 }
 
 export interface AddStudentResponse {
-  id: number;
+  id: string;
   name: string;
   birth_date: string;
   gender: string;
@@ -95,7 +95,7 @@ export interface AddStudentResponse {
 // ============================================================================
 
 export interface RegisterStudent {
-  id: number;
+  id: string;
   name: string;
   gender: string;
   birth_date: string;
@@ -141,7 +141,7 @@ export interface RegisterStudentsResponse {
 // ============================================================================
 
 export interface UniformProduct {
-  product_id: number;
+  product_id: string;
   product_name: string;
   category: string;
   season?: string; // "W"(동복) | "S"(하복)
@@ -181,7 +181,7 @@ export interface RecommendedUniformItem {
 }
 
 export interface SupplyItemResponse {
-  product_id: number;
+  product_id: string;
   name: string;
   category?: string;
   season?: string;
@@ -227,7 +227,7 @@ export interface CatalogUniformItem {
 }
 
 export interface StartMeasurementResponse {
-  student_id: number;
+  student_id: string;
   student_name: string;
   from_school: string;
   to_school: string;
@@ -259,7 +259,7 @@ export interface StartMeasurementResponse {
 }
 
 export interface StudentMeasurementData {
-  id: number;
+  id: string;
   name: string;
   gender: string;
   birth_date: string;
@@ -375,8 +375,8 @@ export async function addStudent(
 // ============================================================================
 
 export interface CheckinResponse {
-  id: number;
-  measurement_id: number | null;
+  id: string;
+  measurement_id: string | null;
   name: string;
   birth_date: string | null;
   gender: string;
@@ -412,7 +412,7 @@ export interface CheckinResponse {
  * PUT /api/v1/measurements/:id
  */
 export async function updateMeasurement(
-  measurementId: number,
+  measurementId: string,
   body: { height: number; weight: number; shoulder_width: number; waist: number },
 ): Promise<void> {
   await apiClient.put(`/api/v1/measurements/${measurementId}`, body);
@@ -455,7 +455,7 @@ export async function getRegisterStudents(params?: {
  * 측정 페이지 데이터 조회 (측정 중 재진입)
  * GET /api/v1/students/:id/measurement-page
  */
-export async function getMeasurementPage(studentId: number): Promise<StartMeasurementResponse> {
+export async function getMeasurementPage(studentId: string): Promise<StartMeasurementResponse> {
   const response = await apiClient.get<ApiResponse<StartMeasurementResponse>>(
     `/api/v1/students/${studentId}/measurement-page`,
   );
@@ -489,7 +489,7 @@ export async function getMeasuringStudents(params?: {
  * POST /api/v1/students/:studentId/start-measurement
  */
 export async function startMeasurement(
-  studentId: number,
+  studentId: string,
 ): Promise<StartMeasurementResponse> {
   const response = await apiClient.post<ApiResponse<StartMeasurementResponse>>(
     `/api/v1/students/${studentId}/start-measurement`,
@@ -526,7 +526,7 @@ export async function submitMeasurementOrder(
  * POST /api/v1/students/:studentId/finalize-measurement
  */
 export async function completeMeasurement(
-  studentId: number,
+  studentId: string,
   body: { signature: string },
 ): Promise<void> {
   await apiClient.post(
@@ -540,7 +540,7 @@ export async function completeMeasurement(
 // ============================================================================
 
 export interface AdminOrderItemProduct {
-  id: number;
+  id: string;
   name: string;
   category: string;
   gender: string;
@@ -562,9 +562,9 @@ export type DeliveryStatus =
   | 'cancelled';
 
 export interface AdminOrderItem {
-  id: number;
-  order_id: number;
-  product_id: number;
+  id: string;
+  order_id: string;
+  product_id: string;
   product?: AdminOrderItemProduct;
   selected_size: string;
   purchase_quantity: number;
@@ -589,9 +589,9 @@ export type OrderStatus =
   | 'cancelled'; // 취소됨
 
 export interface AdminStudentOrder {
-  id: number;
+  id: string;
   order_number: string;
-  student_id: number;
+  student_id: string;
   student?: null;
   total_amount: number;
   order_status: OrderStatus;
@@ -625,7 +625,7 @@ export interface SupportAllowance {
 }
 
 export interface AdminStudent {
-  id: number;
+  id: string;
   name: string;
   birth_date?: string | null;
   gender: string;
@@ -759,7 +759,7 @@ export async function getStudentDetail(id: string | number): Promise<AdminStuden
  * 학생 삭제
  * DELETE /api/v1/students/:id
  */
-export async function deleteStudent(id: number): Promise<void> {
+export async function deleteStudent(id: string): Promise<void> {
   await apiClient.delete<ApiResponse<void>>(`/api/v1/students/${id}`);
 }
 
@@ -814,16 +814,16 @@ export async function updateStudentSupport(
 // ============================================================================
 
 export interface OrderItemProduct {
-  id: number;
+  id: string;
   name: string;
   season: string;
   price: number;
 }
 
 export interface StudentOrderItem {
-  id: number;
-  orderId: number;
-  productId: number;
+  id: string;
+  orderId: string;
+  productId: string;
   size: string;
   quantity: number;
   supportedQuantity: number;
@@ -836,9 +836,9 @@ export interface StudentOrderItem {
 }
 
 export interface StudentOrder {
-  id: number;
+  id: string;
   orderNumber: string;
-  studentId: number;
+  studentId: string;
   totalAmount: number;
   status: string;
   orderType: string;
@@ -851,7 +851,7 @@ export interface StudentOrder {
 }
 
 export interface StudentOrdersData {
-  id: number;
+  id: string;
   name: string;
   birth_date: string;
   gender: string;
@@ -883,7 +883,7 @@ export interface StudentOrdersData {
  * GET /api/v1/students/:id/orders
  */
 export async function getStudentOrders(
-  studentId: number,
+  studentId: string,
 ): Promise<StudentOrdersData> {
   const response = await apiClient.get<ApiResponse<StudentOrdersData>>(
     `/api/v1/students/${studentId}/orders`,
@@ -896,9 +896,9 @@ export async function getStudentOrders(
 // ============================================================================
 
 export interface OrderHistory {
-  id: number;
-  orderId: number;
-  changedById: number;
+  id: string;
+  orderId: string;
+  changedById: string;
   action: string;
   fieldName: string | null;
   oldValue: string | null;
@@ -906,7 +906,7 @@ export interface OrderHistory {
   reason: string | null;
   createdAt: string;
   changedBy?: {
-    id: number;
+    id: string;
     employeeId: string;
     employeeName: string;
     role: string;
@@ -940,8 +940,8 @@ export async function getOrderHistory(
  * PATCH /api/v1/orders/:id/items/:item_id/receive
  */
 export async function updateOrderItemReceive(
-  orderId: number,
-  itemId: number,
+  orderId: string,
+  itemId: string,
   received: boolean,
 ): Promise<void> {
   await apiClient.patch(`/api/v1/orders/${orderId}/items/${itemId}/receive`, { received });
@@ -1001,7 +1001,7 @@ export async function updateAdminOrder(
 // ============================================================================
 
 export interface PhoneOrderItem {
-  product_id: number;
+  product_id: string;
   size: string;
   supported_quantity: number;
   extra_quantity: number;
@@ -1011,7 +1011,7 @@ export interface PhoneOrderItem {
 }
 
 export interface PhoneOrderSupplyItem {
-  item_id: number;
+  item_id: string;
   name: string;
   selected_size: string;
   purchase_count: number;
@@ -1035,7 +1035,7 @@ export interface PhoneOrderRequest {
 }
 
 export interface PhoneOrderStudentResult {
-  id: number;
+  id: string;
   name: string;
   gender: string;
   school_name: string;
@@ -1048,7 +1048,7 @@ export interface PhoneOrderStudentResult {
 }
 
 export interface PhoneOrderResult {
-  id: number;
+  id: string;
   order_number: string;
   total_amount: number;
   status: string;

@@ -15,7 +15,7 @@ import { downloadCSV } from '@/utils/csvUtils';
 import { formatGender } from '@/utils/genderUtils';
 
 interface StaffRow {
-  id: number;
+  id: string;
   no: number;
   name: string;
   gender: '남' | '여';

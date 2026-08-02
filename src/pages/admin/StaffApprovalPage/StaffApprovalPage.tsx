@@ -14,7 +14,7 @@ import { formatGender } from '@/utils/genderUtils';
 import { Toast } from '@components/atoms/Toast';
 
 interface PendingStaffRow {
-  id: number;
+  id: string;
   no: number;
   employeeId: string;
   name: string;
@@ -59,7 +59,7 @@ export const StaffApprovalPage = () => {
     fetchPendingList(currentPage);
   }, [currentPage, fetchPendingList]);
 
-  const handleApprove = async (staffId: number) => {
+  const handleApprove = async (staffId: string) => {
     try {
       await approveStaff(staffId);
       fetchPendingList(currentPage);

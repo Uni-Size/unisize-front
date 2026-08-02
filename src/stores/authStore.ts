@@ -4,7 +4,7 @@ import { deleteCookie } from "@/utils/cookieUtils";
 
 // 스태프 정보 타입 (API 응답의 user 객체)
 export interface StaffInfo {
-  id: number;
+  id: string;
   employee_id: string;
   employee_name: string;
   role: string;
