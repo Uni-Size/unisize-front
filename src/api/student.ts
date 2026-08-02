@@ -572,7 +572,7 @@ export interface AdminOrderItem {
   unit_price: number;
   subtotal: number;
   name_tag_count: number;
-  name_tag_attach: number;
+  name_tag_attach: boolean;
   name_tag_name?: string;
   customization?: string;
   delivery_status: DeliveryStatus;

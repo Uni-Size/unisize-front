@@ -979,7 +979,7 @@ export const StudentModal = ({
           (sum, item) => sum + (item.nameTag ?? 0),
           0,
         );
-        const unit = student?.nameTagMinUnit ?? 1;
+        const unit = student?.nameTagMinUnit && student.nameTagMinUnit > 0 ? student.nameTagMinUnit : 1;
         const ceiled = total === 0 ? 0 : Math.ceil(total / unit) * unit;
         setNameTag((prev) => ({
           ...prev,
@@ -1044,7 +1044,7 @@ export const StudentModal = ({
     winterCalc.supported + summerCalc.supported + allCalc.supported;
   const grandPayable = grandTotal - grandSupported;
 
-  const nameTagMinUnit = student?.nameTagMinUnit ?? 1;
+  const nameTagMinUnit = student?.nameTagMinUnit && student.nameTagMinUnit > 0 ? student.nameTagMinUnit : 1;
   const nameTagUnitPrice =
     nameTag.unitPrice != null && nameTag.unitPrice > 0
       ? nameTag.unitPrice
@@ -1547,7 +1547,7 @@ export const StudentModal = ({
 
   const renderNameTagTable = () => {
     if (!hasNameTagService) return null;
-    const minUnit = student?.nameTagMinUnit ?? 1;
+    const minUnit = student?.nameTagMinUnit && student.nameTagMinUnit > 0 ? student.nameTagMinUnit : 1;
     const nameTagPrice =
       nameTag.unitPrice != null && nameTag.unitPrice > 0
         ? nameTag.unitPrice

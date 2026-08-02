@@ -174,7 +174,7 @@ export const InvoiceModal = ({
             uniform_items: [...winterUniforms, ...summerUniforms, ...allUniforms]
               .filter((i) => !i.isDeleted)
               .map((i) => ({
-                item_id: i.id,
+                item_id: i.itemId ?? i.productId ?? i.id,
                 name: i.name,
                 season: winterUniforms.includes(i) ? "winter" : summerUniforms.includes(i) ? "summer" : "all",
                 selected_size: i.size,
@@ -284,6 +284,14 @@ export const InvoiceModal = ({
                 {items.map((item) => {
                   const totalQty = item.supportedQuantity + item.additionalQuantity;
                   const rowTotal = item.unitPrice != null ? item.unitPrice * totalQty : null;
+                  const baseSizeOptions = item.availableSizes && item.availableSizes.length > 0
+                    ? item.availableSizes.map((s) => ({ value: s, label: s }))
+                    : sizeOptions;
+                  // 확정된 사이즈가 옵션 목록에 없으면(예: 체육복 등 표준 사이즈 밖의 값) 드롭다운에서
+                  // 값이 비어 보이므로, 현재 사이즈를 항상 옵션에 포함시켜 기본값이 유지되도록 한다.
+                  const rowSizeOptions = item.size && !baseSizeOptions.some((o) => o.value === item.size)
+                    ? [{ value: item.size, label: item.size }, ...baseSizeOptions]
+                    : baseSizeOptions;
                   return (
                     <tr key={item.id} className={item.isDeleted ? "bg-red-050 [&_td]:text-red-700" : ""}>
                       <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
@@ -297,7 +305,7 @@ export const InvoiceModal = ({
                           <span>{item.size || "-"}</span>
                         ) : (
                           <Select
-                            options={sizeOptions}
+                            options={rowSizeOptions}
                             value={item.size}
                             onChange={(value) => handleUniformChange(orderId, season, item.id, "size", value)}
                             fullWidth
@@ -372,21 +380,12 @@ export const InvoiceModal = ({
                         {readOnly ? (
                           <span>{item.attachCount > 0 ? item.attachCount : "-"}</span>
                         ) : (
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              type="button"
-                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
-                              onClick={() => handleUniformChange(orderId, season, item.id, "attachCount", Math.max(0, (item.attachCount ?? 0) - 1))}
-                              disabled={(item.attachCount ?? 0) <= 0}
-                            >−</button>
-                            <span className="w-5 text-center text-sm text-gray-800 tabular-nums">{item.attachCount ?? 0}</span>
-                            <button
-                              type="button"
-                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-gray-600 bg-white hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
-                              onClick={() => handleUniformChange(orderId, season, item.id, "attachCount", (item.attachCount ?? 0) + 1)}
-                              disabled={(item.attachCount ?? 0) >= totalQty}
-                            >+</button>
-                          </div>
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 accent-primary-900 cursor-pointer"
+                            checked={(item.attachCount ?? 0) > 0}
+                            onChange={(e) => handleUniformChange(orderId, season, item.id, "attachCount", e.target.checked ? totalQty : 0)}
+                          />
                         )}
                       </td>
                     </tr>
@@ -512,7 +511,9 @@ export const InvoiceModal = ({
 
     const unitPrice = student?.nameTagPrice ?? nameTag.unitPrice;
     const attachPrice = student?.nameTagAttachPrice ?? nameTag.attachPrice;
-    const nameTagTotal = unitPrice != null ? unitPrice * nameTag.orderQuantity : null;
+    const minUnit = student?.nameTagMinUnit && student.nameTagMinUnit > 0 ? student.nameTagMinUnit : 1;
+    const ceiledOrderQuantity = Math.ceil(nameTag.orderQuantity / minUnit) * minUnit;
+    const nameTagTotal = unitPrice != null ? Math.ceil(nameTag.orderQuantity / minUnit) * unitPrice : null;
     const attachTotal = attachPrice != null ? attachPrice * nameTag.attachQuantity : null;
     const grandCash = (nameTagTotal ?? 0) + (attachTotal ?? 0);
     const showPrice = unitPrice != null || attachPrice != null;
@@ -537,8 +538,7 @@ export const InvoiceModal = ({
           <thead>
             <tr>
               <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap">구분</th>
-              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">주문수량</th>
-              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">부착수량</th>
+              <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-20">수량</th>
               {showPrice && (
                 <>
                   <th className="px-2 py-2.5 font-medium text-bg-800 bg-bg-050 border border-gray-200 text-center whitespace-nowrap w-22">단가</th>
@@ -549,9 +549,10 @@ export const InvoiceModal = ({
           </thead>
           <tbody>
             <tr>
-              <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">명찰</td>
-              <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle tabular-nums">{nameTag.orderQuantity}</td>
-              <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle tabular-nums">{nameTag.attachQuantity}</td>
+              <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">명찰 주문</td>
+              <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle tabular-nums">
+                {ceiledOrderQuantity !== nameTag.orderQuantity ? `${ceiledOrderQuantity}/${nameTag.orderQuantity}` : nameTag.orderQuantity}
+              </td>
               {showPrice && (
                 <>
                   <td className="p-2 border border-gray-200 text-right text-gray-500 align-middle tabular-nums pr-3">
@@ -566,7 +567,6 @@ export const InvoiceModal = ({
             {nameTag.attachQuantity > 0 && (
               <tr>
                 <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">부착</td>
-                <td className="p-2 border border-gray-200 text-center text-gray-400 align-middle">-</td>
                 <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle tabular-nums">{nameTag.attachQuantity}</td>
                 {showPrice && (
                   <>
@@ -582,7 +582,7 @@ export const InvoiceModal = ({
             )}
             {showPrice && grandCash > 0 && (
               <tr className="bg-amber-50">
-                <td colSpan={showPrice ? 4 : 2} className="px-3 py-2 border border-gray-200 text-right text-sm font-semibold text-amber-800">
+                <td colSpan={3} className="px-3 py-2 border border-gray-200 text-right text-sm font-semibold text-amber-800">
                   명찰 합계 <span className="ml-1 text-xs font-normal text-amber-600">(현금)</span>
                 </td>
                 <td className="px-3 py-2 border border-gray-200 text-right text-sm font-bold text-amber-800 tabular-nums">
@@ -775,7 +775,8 @@ export const InvoiceModal = ({
                     const nameTag = student?.nameTag;
                     const unitPrice = student?.nameTagPrice ?? nameTag?.unitPrice;
                     const attachPrice = student?.nameTagAttachPrice ?? nameTag?.attachPrice;
-                    const nameTagTotal = unitPrice != null && nameTag ? unitPrice * nameTag.orderQuantity : 0;
+                    const minUnit = student?.nameTagMinUnit && student.nameTagMinUnit > 0 ? student.nameTagMinUnit : 1;
+                    const nameTagTotal = unitPrice != null && nameTag ? Math.ceil(nameTag.orderQuantity / minUnit) * unitPrice : 0;
                     const attachTotal = attachPrice != null && nameTag ? attachPrice * nameTag.attachQuantity : 0;
                     const cashTotal = nameTagTotal + attachTotal;
                     if (cashTotal === 0) return null;

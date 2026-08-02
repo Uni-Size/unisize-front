@@ -258,6 +258,7 @@ export const MeasurementBottomSheet = ({
 
   useEffect(() => {
     if (isOpen) {
+      setStep(1);
       setActiveSeasonTab('winter');
       setSignature(measurementData?.signature || '');
     }
@@ -589,7 +590,8 @@ export const MeasurementBottomSheet = ({
     if (!hasNameTagService) return null;
 
     const nameTagTotal = [...winterUniforms, ...summerUniforms].reduce((sum, i) => sum + i.nameTagCount, 0);
-    const minCeiled = nameTagTotal === 0 ? 0 : Math.ceil(nameTagTotal / nameTagMinUnit) * nameTagMinUnit;
+    const nameTagMinUnitSafe = nameTagMinUnit > 0 ? nameTagMinUnit : 1;
+    const minCeiled = nameTagTotal === 0 ? 0 : Math.ceil(nameTagTotal / nameTagMinUnitSafe) * nameTagMinUnitSafe;
     return (
       <div className="flex-none flex flex-col gap-2">
         <div className="flex items-center gap-2">
@@ -843,8 +845,9 @@ export const MeasurementBottomSheet = ({
           const payable = wCalc.payable + sCalc.payable + supplyTotal;
 
           const nameTagSvc = measurementData.name_tag_service;
+          const nameTagMinUnitSafe = nameTagMinUnit > 0 ? nameTagMinUnit : 1;
           const nameTagCashTotal = hasNameTag && nameTagSvc
-            ? (nameTagSvc.unit_price ?? 0) * nameTag.orderQuantity + (nameTagSvc.attach_price ?? 0) * nameTag.attachQuantity
+            ? Math.ceil(nameTag.orderQuantity / nameTagMinUnitSafe) * (nameTagSvc.unit_price ?? 0) + (nameTagSvc.attach_price ?? 0) * nameTag.attachQuantity
             : 0;
 
           if (total === 0 && nameTagCashTotal === 0) return null;
