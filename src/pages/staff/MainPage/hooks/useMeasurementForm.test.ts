@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyGroupSupportToggle, type MeasurementUniformItem } from './useMeasurementForm';
+import { applyGroupSupportToggle, calcNameTagSummary, type MeasurementUniformItem } from './useMeasurementForm';
 
 // 치마/바지처럼 지원 한도 1개를 공유하는 교체 가능 그룹의 두 행을 만든다.
 const makeGroupRow = (
@@ -118,5 +118,66 @@ describe('applyGroupSupportToggle', () => {
     expect(byId2.a).toMatchObject({ isSupportChecked: false, supportedQuantity: 0 });
     expect(byId2.b).toMatchObject({ isSupportChecked: true, supportedQuantity: 2 });
     expect(byId2.c).toMatchObject({ isSupportChecked: true, supportedQuantity: 2 });
+  });
+});
+
+describe('calcNameTagSummary', () => {
+  it('부착비는 명찰 신청 개수가 아니라 실제 구매 수량(옷 벌수)을 기준으로 합산된다', () => {
+    // 후드 1벌(무상지원 1) + 명찰 1개 부착, 카라긴티 2벌(무상지원 1 + 추가 1) + 명찰 2개 부착
+    // → 부착 대상 옷 벌수 합계는 1 + 2 = 3벌이어야 한다 (명찰 개수 합계인 1 + 2 = 3과 이 예시는
+    // 우연히 같으므로, additionalQuantity를 다르게 준 아래 두 번째 케이스로 실제 구분한다).
+    const hood = makeGroupRow({
+      rowId: 'hood',
+      name: '후드',
+      supportedQuantity: 1,
+      additionalQuantity: 0,
+      nameTagCount: 1,
+      nameTagAttach: true,
+      groupId: undefined,
+      groupQuantity: undefined,
+    });
+    const collar = makeGroupRow({
+      rowId: 'collar',
+      name: '카라긴티',
+      supportedQuantity: 1,
+      additionalQuantity: 1,
+      nameTagCount: 2,
+      nameTagAttach: true,
+      groupId: undefined,
+      groupQuantity: undefined,
+    });
+    const summary = calcNameTagSummary([hood, collar], 8, 0);
+    expect(summary.attachQuantity).toBe(3); // (1+0) + (1+1) = 3벌
+  });
+
+  it('명찰 신청 개수와 구매 수량이 다르면 구매 수량을 따른다', () => {
+    // 명찰은 1개만 신청했지만 옷은 3벌 구매 + 부착 체크 → 부착비는 3벌 기준이어야 한다.
+    const item = makeGroupRow({
+      rowId: 'pants',
+      name: '바지',
+      supportedQuantity: 1,
+      additionalQuantity: 2,
+      nameTagCount: 1,
+      nameTagAttach: true,
+      groupId: undefined,
+      groupQuantity: undefined,
+    });
+    const summary = calcNameTagSummary([item], 8, 0);
+    expect(summary.attachQuantity).toBe(3);
+  });
+
+  it('부착을 신청하지 않은 품목은 구매 수량과 무관하게 부착 합계에서 제외된다', () => {
+    const item = makeGroupRow({
+      rowId: 'shorts',
+      name: '반바지',
+      supportedQuantity: 1,
+      additionalQuantity: 1,
+      nameTagCount: 2,
+      nameTagAttach: false,
+      groupId: undefined,
+      groupQuantity: undefined,
+    });
+    const summary = calcNameTagSummary([item], 8, 0);
+    expect(summary.attachQuantity).toBe(0);
   });
 });
