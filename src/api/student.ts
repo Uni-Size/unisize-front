@@ -582,7 +582,7 @@ export interface FinalizeMeasurementResponse {
   notes: string;
   total_name_tag_count: number;
   total_name_tag_attach_count: number;
-  seller_name: string; // 판매자
+  seller_name?: string; // 판매자 (백엔드 조회 실패 시 키 자체가 없을 수 있음)
   winter_subtotal: number;
   summer_subtotal: number;
   name_tag_subtotal: number;
