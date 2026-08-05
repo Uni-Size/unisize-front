@@ -393,7 +393,7 @@ export async function updateItemDeliveryStatus(
 ): Promise<void> {
   await apiClient.put<ApiResponse<void>>(
     `/api/v1/orders/${orderId}/items/${itemId}/delivery-status`,
-    { status },
+    { delivery_status: status },
   );
 }
 
