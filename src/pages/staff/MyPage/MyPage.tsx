@@ -19,6 +19,8 @@ import { useToast } from '../../../hooks/useToast';
 import { formatDateTime } from '@/utils/dateUtils';
 import { MeasurementBottomSheet } from '../MainPage/components';
 import { useMeasurementForm } from '../MainPage/hooks';
+import { mapFinalizeMeasurementToInvoiceData } from '@/lib/invoiceMapper';
+import { printA6Invoice } from '@/lib/printInvoice';
 
 type Tab = 'in_progress' | 'payment_pending';
 
@@ -209,13 +211,23 @@ export const MyPage = () => {
       showToast(`수선 정보를 입력해주세요: ${missingCustomizationItems.join(', ')}`);
       return;
     }
-    await completeMeasurement(selectedStudent.id, { signature });
+    const finalizeResponse = await completeMeasurement(selectedStudent.id, { signature });
     setIsMeasurementOpen(false);
     setMeasurementData(null);
     setSelectedStudent(null);
     form.reset();
     showToast('확정 완료되었습니다.');
     fetchInProgress();
+
+    // A6 인보이스 자동 인쇄 — MainPage의 확정 플로우와 동일하게 fire-and-forget으로
+    // 시도하고, 실패해도 확정 자체(이미 저장 완료)에는 영향을 주지 않는다.
+    const invoiceData = mapFinalizeMeasurementToInvoiceData(finalizeResponse, {
+      sellerName: staff?.employee_name,
+    });
+    printA6Invoice(invoiceData).catch((err) => {
+      console.error('A6 인보이스 인쇄 실패:', err);
+      showToast('프린터 연결 안됨 — 수동 확인 필요');
+    });
   };
 
   const filteredOrders = pendingOrders.filter((o) =>

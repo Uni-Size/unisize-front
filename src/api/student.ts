@@ -521,6 +521,77 @@ export async function submitMeasurementOrder(
   return response.data.data;
 }
 
+// ----------------------------------------------------------------------
+// 측정 완료(확정) 응답 — A6 인쇄 인보이스에 필요한 필드를 포함한다.
+// backend-dev(order_service.go/models/order.go 실제 코드 확인 완료)와 확정한 계약.
+// 기존 order_items 배열 구조를 그대로 유지하고(별도 uniform_items/supply_items
+// 분리 없음), 각 항목의 item_group("W"|"S"|"supply")으로 동복/하복/용품을
+// 클라이언트에서 분류한다. 아직 서버에 실제 배포되지는 않았다는 안내를
+// 받았으므로, 배포 후 실제 응답과 다르면 이 타입들과 invoiceMapper의 매핑을
+// 함께 갱신해야 한다.
+// ----------------------------------------------------------------------
+
+export interface FinalizeMeasurementProduct {
+  id: string;
+  name: string;
+  category: string;
+  season: string; // "W" | "S" | 드물게 "A"
+  price: number;
+}
+
+export interface FinalizeMeasurementOrderItem {
+  id: string;
+  order_id: string;
+  product_id: string;
+  product: FinalizeMeasurementProduct;
+  selected_size: string;
+  purchase_quantity: number; // 총수량(지원+추가)
+  supported_quantity: number; // 지원수량
+  additional_quantity: number; // 추가수량 = purchase_quantity - supported_quantity
+  unit_price: number;
+  subtotal: number;
+  customization: string; // 수선
+  item_group: 'W' | 'S' | 'supply'; // 동복 / 하복 / 용품
+  name_tag_count: number; // 명찰 배정 개수
+  name_tag_attach: boolean; // 부착 서비스 구매 여부(배치 단위, 부분 수량 없음)
+  name_tag_attach_count: number; // name_tag_count면 attach=true, 아니면 0
+  delivery_status: DeliveryStatus;
+  is_reserved: boolean; // true→예약, false(=delivery_status "receipt")→수령
+  created_at: string;
+}
+
+export interface FinalizeMeasurementStudent {
+  id: string;
+  name: string;
+  gender: string;
+  student_phone: string;
+  guardian_phone: string;
+  admission_school: string; // 입학학교
+  previous_school: string; // 출신학교
+}
+
+export interface FinalizeMeasurementResponse {
+  id: string;
+  order_number: string;
+  student_id: string;
+  student: FinalizeMeasurementStudent;
+  total_amount: number; // 총결제대금
+  order_status: string;
+  order_status_display: string;
+  order_date: string;
+  notes: string;
+  total_name_tag_count: number;
+  total_name_tag_attach_count: number;
+  seller_name?: string; // 판매자 (백엔드 조회 실패 시 키 자체가 없을 수 있음)
+  winter_subtotal: number;
+  summer_subtotal: number;
+  name_tag_subtotal: number;
+  signature: string;
+  order_items: FinalizeMeasurementOrderItem[];
+  created_at: string;
+  updated_at: string;
+}
+
 /**
  * 측정 완료
  * POST /api/v1/students/:studentId/finalize-measurement
@@ -528,11 +599,21 @@ export async function submitMeasurementOrder(
 export async function completeMeasurement(
   studentId: string,
   body: { signature: string },
-): Promise<void> {
-  await apiClient.post(
+): Promise<FinalizeMeasurementResponse> {
+  const response = await apiClient.post<ApiResponse<FinalizeMeasurementResponse>>(
     `/api/v1/students/${studentId}/finalize-measurement`,
     body,
   );
+
+  if (
+    response.data &&
+    typeof response.data === "object" &&
+    "data" in response.data
+  ) {
+    return (response.data as ApiResponse<FinalizeMeasurementResponse>).data;
+  }
+
+  return response.data as unknown as FinalizeMeasurementResponse;
 }
 
 // ============================================================================
