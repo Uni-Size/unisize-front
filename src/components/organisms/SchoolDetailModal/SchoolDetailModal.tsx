@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Modal } from "@components/atoms";
 import { Toast } from "@components/atoms/Toast";
 import { updateProductSelectable } from "@/api/product";
-import type { SchoolListItem, SupportedYear, UpdateUniformItem } from "@/api/school";
+import type { SchoolListItem, SupportedYear, UniformItem } from "@/api/school";
 import { getSchoolDetailById } from "@/api/school";
 import { getApiErrorString } from "@/utils/errorUtils";
 import {
@@ -27,7 +27,7 @@ export interface SchoolDetailModalProps {
         measurement_start_date?: string;
         measurement_end_date?: string;
       }[];
-      uniforms?: { winter?: UpdateUniformItem[]; summer?: UpdateUniformItem[] };
+      uniforms?: { winter?: UniformItem[]; summer?: UniformItem[] };
       has_name_tag?: boolean;
       name_tag_price?: number | null;
       name_tag_attach_price?: number | null;
@@ -40,7 +40,7 @@ export interface SchoolDetailModalProps {
   ) => void;
 }
 
-const toUpdateUniform = (p: EditableProduct): UpdateUniformItem => ({
+const toUpdateUniform = (p: EditableProduct): UniformItem => ({
   product_id: p.productApiId ?? "",
   display_name: p.displayName,
   contract_price: p.contractPrice,
