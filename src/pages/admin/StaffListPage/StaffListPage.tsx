@@ -8,7 +8,7 @@ import { Table } from '@components/atoms/Table';
 import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
 import type { StaffEditData } from '@components/organisms/StaffEditModal';
-import { getStaffList, type StaffItem, type StaffListResponse } from '@/api/staff';
+import { getStaffList, updateStaff, deleteStaff, type StaffItem, type StaffListResponse } from '@/api/staff';
 import { getApiErrorMessage } from '@/utils/errorUtils';
 import { formatDate } from '@/utils/dateUtils';
 import { downloadCSV } from '@/utils/csvUtils';
@@ -80,10 +80,31 @@ export const StaffListPage = () => {
     setSelectedStaff(null);
   };
 
-  const handleUpdateStaff = (data: StaffEditData) => {
-    console.log('스태프 정보 수정:', data);
-    handleCloseEditModal();
-    fetchStaffList(currentPage);
+  const handleUpdateStaff = async (data: StaffEditData) => {
+    try {
+      await updateStaff(data.id, {
+        employee_name: data.name,
+        gender: data.gender === '남' ? 'M' : 'F',
+      });
+      handleCloseEditModal();
+      fetchStaffList(currentPage);
+    } catch (err) {
+      console.error('스태프 정보 수정 실패:', err);
+      alert(getApiErrorMessage(err, '스태프 정보 수정에 실패했습니다.'));
+    }
+  };
+
+  const handleDeleteClick = async (staff: StaffRow) => {
+    const confirmed = window.confirm(`${staff.name} 스태프를 삭제하시겠습니까?`);
+    if (!confirmed) return;
+
+    try {
+      await deleteStaff(staff.id);
+      fetchStaffList(currentPage);
+    } catch (err) {
+      console.error('스태프 삭제 실패:', err);
+      alert(getApiErrorMessage(err, '스태프 삭제에 실패했습니다.'));
+    }
   };
 
   const handleExportCSV = () => {
@@ -116,7 +137,15 @@ export const StaffListPage = () => {
           >
             수정
           </button>
-          <button className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-red-200 text-red-700">삭제</button>
+          <button
+            className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-red-200 text-red-700"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteClick(item);
+            }}
+          >
+            삭제
+          </button>
         </div>
       ),
     },
