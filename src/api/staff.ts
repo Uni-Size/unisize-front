@@ -156,3 +156,24 @@ export async function resetStaffPassword(targetEmployeeId: string): Promise<void
     target_employee_id: targetEmployeeId,
   });
 }
+
+export interface UpdateStaffRequest {
+  employee_name?: string;
+  gender?: "M" | "F";
+}
+
+/**
+ * 스태프 정보 수정
+ * PUT /api/v1/staff/:id
+ */
+export async function updateStaff(staffId: string, data: UpdateStaffRequest): Promise<void> {
+  await apiClient.put<ApiResponse<void>>(`/api/v1/staff/${staffId}`, data);
+}
+
+/**
+ * 스태프 삭제
+ * DELETE /api/v1/staff/:id
+ */
+export async function deleteStaff(staffId: string): Promise<void> {
+  await apiClient.delete<ApiResponse<void>>(`/api/v1/staff/${staffId}`);
+}
