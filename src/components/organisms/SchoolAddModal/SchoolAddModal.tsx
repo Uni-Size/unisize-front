@@ -22,20 +22,13 @@ export interface SchoolAddModalProps {
   ) => void;
 }
 
-const toUniformItem = (
-  p: EditableProduct,
-  hasNameTag: boolean,
-  nameTagPrice: number | "",
-  nameTagAttachPrice: number | "",
-  nameTagMinUnit: number | "",
-): UniformItem => ({
+const toUniformItem = (p: EditableProduct): UniformItem => ({
   product_id: p.productApiId ?? "",
+  display_name: p.displayName,
   contract_price: p.contractPrice,
-  quantity: p.freeQuantity,
-  has_name_tag: hasNameTag,
-  name_tag_price: hasNameTag && nameTagPrice !== "" ? nameTagPrice : undefined,
-  name_tag_attach_price: hasNameTag && nameTagAttachPrice !== "" ? nameTagAttachPrice : undefined,
-  name_tag_min_unit: hasNameTag && nameTagMinUnit !== "" ? nameTagMinUnit : undefined,
+  free_support_count: p.freeQuantity ?? 0,
+  is_selectable: p.is_selectable ?? false,
+  selectable_with: (p.selectable_with ?? []).map((s) => s.product_id),
 });
 
 export const SchoolAddModal = ({
@@ -56,12 +49,8 @@ export const SchoolAddModal = ({
     try {
       const { schoolName, schoolId, years, winterProducts, summerProducts, hasNameTag, nameTagPrice, nameTagAttachPrice, nameTagMinUnit } = state;
       const y = years[0];
-      const winter = winterProducts
-        .filter((p) => p.productApiId)
-        .map((p) => toUniformItem(p, hasNameTag, nameTagPrice, nameTagAttachPrice, nameTagMinUnit));
-      const summer = summerProducts
-        .filter((p) => p.productApiId)
-        .map((p) => toUniformItem(p, hasNameTag, nameTagPrice, nameTagAttachPrice, nameTagMinUnit));
+      const winter = winterProducts.filter((p) => p.productApiId).map(toUniformItem);
+      const summer = summerProducts.filter((p) => p.productApiId).map(toUniformItem);
 
       await addSupportedSchool({
         school_id: schoolId ?? undefined,
@@ -70,6 +59,10 @@ export const SchoolAddModal = ({
         expected_student_count: y?.expected_student_count || undefined,
         measurement_start_date: y?.measurement_start_date || undefined,
         measurement_end_date: y?.measurement_end_date || undefined,
+        has_name_tag: hasNameTag,
+        name_tag_price: hasNameTag && nameTagPrice !== "" ? nameTagPrice : undefined,
+        name_tag_attach_price: hasNameTag && nameTagAttachPrice !== "" ? nameTagAttachPrice : undefined,
+        name_tag_min_unit: hasNameTag && nameTagMinUnit !== "" ? nameTagMinUnit : undefined,
         uniforms:
           winter.length > 0 || summer.length > 0
             ? { winter: winter.length > 0 ? winter : undefined, summer: summer.length > 0 ? summer : undefined }

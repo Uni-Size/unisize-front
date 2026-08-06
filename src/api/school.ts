@@ -57,19 +57,12 @@ export interface SchoolListParams {
   year?: number;
 }
 
-/** POST /uniforms (일괄 등록) 용 */
+/**
+ * 등록(POST /schools/supported)과 수정(PUT /schools/supported/by-id/:school_id)이
+ * 공유하는 uniforms 배열 항목. 서버의 UniformItemRequest와 1:1 대응한다.
+ * 명찰 설정은 품목이 아니라 학교 단위 설정이므로 여기 포함되지 않는다.
+ */
 export interface UniformItem {
-  product_id: string;
-  contract_price: number;
-  quantity: number;
-  has_name_tag?: boolean;
-  name_tag_price?: number;
-  name_tag_attach_price?: number;
-  name_tag_min_unit?: number;
-}
-
-/** PUT /schools/supported/by-name/:school_name 의 uniforms 배열 항목 */
-export interface UpdateUniformItem {
   product_id: string;
   display_name: string;
   contract_price: number;
@@ -136,6 +129,12 @@ export interface AddSchoolRequest {
   expected_student_count?: number;
   measurement_start_date?: string; // YYYY-MM-DD
   measurement_end_date?: string;   // YYYY-MM-DD
+  /** 명찰 설정은 품목이 아니라 학교 단위이므로 요청 최상위에 한 번만 싣는다 */
+  has_name_tag?: boolean;
+  name_tag_price?: number;
+  name_tag_attach_price?: number;
+  /** 생략하거나 0이면 서버가 8을 적용한다 */
+  name_tag_min_unit?: number;
   uniforms?: {
     winter?: UniformItem[];
     summer?: UniformItem[];
@@ -157,8 +156,8 @@ export interface UpdateSchoolRequest {
   name_tag_min_unit?: number | null;
   years?: UpdateSchoolYearInfo[];
   uniforms?: {
-    winter?: UpdateUniformItem[];
-    summer?: UpdateUniformItem[];
+    winter?: UniformItem[];
+    summer?: UniformItem[];
   };
 }
 
