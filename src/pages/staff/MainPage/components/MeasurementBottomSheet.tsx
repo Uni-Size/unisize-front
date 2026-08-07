@@ -374,11 +374,10 @@ export const MeasurementBottomSheet = ({
                 const baseSizes = item.availableSizes.length > 0
                   ? item.availableSizes
                   : DEFAULT_SIZE_OPTIONS.map((s) => ({ size: s, inStock: true, stockCount: 0 }));
-                const hasRecommended = baseSizes.some((s) => s.size === item.recommendedSize);
-                const sizeOptions = (hasRecommended || !item.recommendedSize
-                  ? baseSizes
-                  : [{ size: item.recommendedSize, inStock: true, stockCount: 0 }, ...baseSizes]
-                ).slice().sort((a, b) => {
+                // 추천 사이즈가 baseSizes에 없더라도 옵션으로 끼워넣지 않는다. 예전에는
+                // inStock: true인 가짜 옵션을 만들어 넣었는데, 그러면 그 상품이 취급하지도
+                // 않는 사이즈가 "재고 있음"으로 보여서 스태프가 이상함을 눈치챌 수 없었다.
+                const sizeOptions = baseSizes.slice().sort((a, b) => {
                   const na = parseFloat(a.size);
                   const nb = parseFloat(b.size);
                   if (!isNaN(na) && !isNaN(nb)) return na - nb;
