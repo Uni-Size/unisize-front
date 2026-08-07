@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { AxiosError } from 'axios';
 import type { RegisterStudent, StartMeasurementResponse } from '../../../../api/student';
 import { formatGender } from '../../../../utils/genderUtils';
+import { compareSizes } from '@/constants/product';
 import type {
   MeasurementUniformItem,
   MeasurementSupplyItem,
@@ -377,12 +378,7 @@ export const MeasurementBottomSheet = ({
                 // 추천 사이즈가 baseSizes에 없더라도 옵션으로 끼워넣지 않는다. 예전에는
                 // inStock: true인 가짜 옵션을 만들어 넣었는데, 그러면 그 상품이 취급하지도
                 // 않는 사이즈가 "재고 있음"으로 보여서 스태프가 이상함을 눈치챌 수 없었다.
-                const sizeOptions = baseSizes.slice().sort((a, b) => {
-                  const na = parseFloat(a.size);
-                  const nb = parseFloat(b.size);
-                  if (!isNaN(na) && !isNaN(nb)) return na - nb;
-                  return a.size.localeCompare(b.size);
-                });
+                const sizeOptions = baseSizes.slice().sort((a, b) => compareSizes(a.size, b.size));
                 const isAdded = item.isManuallyAdded;
                 const isBuying = item.supportedQuantity + item.additionalQuantity > 0;
                 const isRepairRequired = item.isCustomizationRequired && isBuying;
@@ -524,12 +520,7 @@ export const MeasurementBottomSheet = ({
           </thead>
           <tbody>
             {supplies.map((item) => {
-              const sizes = item.availableSizes.slice().sort((a, b) => {
-                const na = parseFloat(a.size);
-                const nb = parseFloat(b.size);
-                if (!isNaN(na) && !isNaN(nb)) return na - nb;
-                return a.size.localeCompare(b.size);
-              });
+              const sizes = item.availableSizes.slice().sort((a, b) => compareSizes(a.size, b.size));
               const needsSelect = sizes.length > 1 || (sizes.length === 1 && sizes[0].size !== 'FREE');
               const isAdded = item.quantity > 0 && supplies.filter((s) => s.productId === item.productId).indexOf(item) > 0;
               return (

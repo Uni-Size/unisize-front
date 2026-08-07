@@ -82,16 +82,17 @@ export const DEFAULT_SIZES: Record<string, string[]> = {
 
 const ALPHA_ORDER = ["XXS", "XS", "S", "M", "L", "XL", "XXL"];
 
-export const sortSizes = (sizes: string[]): string[] =>
-  [...sizes].sort((a, b) => {
-    const ai = ALPHA_ORDER.indexOf(a.toUpperCase());
-    const bi = ALPHA_ORDER.indexOf(b.toUpperCase());
-    if (ai !== -1 && bi !== -1) return ai - bi;
-    const an = parseFloat(a);
-    const bn = parseFloat(b);
-    if (!isNaN(an) && !isNaN(bn)) return an - bn;
-    return a.localeCompare(b);
-  });
+export const compareSizes = (a: string, b: string): number => {
+  const ai = ALPHA_ORDER.indexOf(a.toUpperCase());
+  const bi = ALPHA_ORDER.indexOf(b.toUpperCase());
+  if (ai !== -1 && bi !== -1) return ai - bi;
+  const an = parseFloat(a);
+  const bn = parseFloat(b);
+  if (!isNaN(an) && !isNaN(bn)) return an - bn;
+  return a.localeCompare(b);
+};
+
+export const sortSizes = (sizes: string[]): string[] => [...sizes].sort(compareSizes);
 
 /** @deprecated SIZE_TYPE_OPTIONS 사용 */
 export const SIZE_UNIT_OPTIONS = SIZE_TYPE_OPTIONS;
