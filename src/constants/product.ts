@@ -80,18 +80,40 @@ export const DEFAULT_SIZES: Record<string, string[]> = {
   free: ["FREE"],
 };
 
-const ALPHA_ORDER = ["XXS", "XS", "S", "M", "L", "XL", "XXL"];
+const ALPHA_ORDER = [
+  "5XS", "4XS", "3XS", "XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL",
+];
 
-export const sortSizes = (sizes: string[]): string[] =>
-  [...sizes].sort((a, b) => {
-    const ai = ALPHA_ORDER.indexOf(a.toUpperCase());
-    const bi = ALPHA_ORDER.indexOf(b.toUpperCase());
-    if (ai !== -1 && bi !== -1) return ai - bi;
-    const an = parseFloat(a);
-    const bn = parseFloat(b);
-    if (!isNaN(an) && !isNaN(bn)) return an - bn;
-    return a.localeCompare(b);
-  });
+// 사이즈는 관리자가 자유 텍스트로 입력해서 같은 등급이 "3XL"로도 "XXXL"로도 적힌다.
+// 백엔드(sortSizeLabels)와 같은 표를 써서 별칭을 정규 표기로 접어야 표기가 섞여도
+// 순서가 안 깨진다.
+const ALPHA_ALIASES: [string, string][] = [
+  ["2XS", "XXS"], ["XXXS", "3XS"], ["XXXXS", "4XS"], ["XXXXXS", "5XS"],
+  ["2XL", "XXL"], ["XXXL", "3XL"], ["XXXXL", "4XL"], ["XXXXXL", "5XL"],
+];
+
+const ALPHA_RANK = new Map<string, number>([
+  ...ALPHA_ORDER.map((size, i): [string, number] => [size, i]),
+  ...ALPHA_ALIASES.map(([alias, canonical]): [string, number] => [
+    alias,
+    ALPHA_ORDER.indexOf(canonical),
+  ]),
+]);
+
+const alphaRank = (size: string): number =>
+  ALPHA_RANK.get(size.trim().toUpperCase()) ?? -1;
+
+export const compareSizes = (a: string, b: string): number => {
+  const ai = alphaRank(a);
+  const bi = alphaRank(b);
+  if (ai !== -1 && bi !== -1) return ai - bi;
+  const an = parseFloat(a);
+  const bn = parseFloat(b);
+  if (!isNaN(an) && !isNaN(bn)) return an - bn;
+  return a.localeCompare(b);
+};
+
+export const sortSizes = (sizes: string[]): string[] => [...sizes].sort(compareSizes);
 
 /** @deprecated SIZE_TYPE_OPTIONS 사용 */
 export const SIZE_UNIT_OPTIONS = SIZE_TYPE_OPTIONS;
