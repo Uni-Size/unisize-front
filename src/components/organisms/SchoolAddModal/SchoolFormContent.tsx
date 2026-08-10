@@ -872,8 +872,11 @@ export const SchoolFormContent = ({
                 label="예상인원"
                 placeholder="100"
                 type="number"
+                min="0"
                 value={String(y.expected_student_count ?? "")}
-                onChange={(e) => handleYearChange(y._id, "expected_student_count", Number(e.target.value))}
+                onChange={(e) =>
+                  handleYearChange(y._id, "expected_student_count", Math.max(0, Number(e.target.value)))
+                }
                 fullWidth
               />
             </div>
@@ -944,8 +947,11 @@ export const SchoolFormContent = ({
                 <Input
                   label="예상인원"
                   type="number"
+                  min="0"
                   value={String(y.expected_student_count ?? "")}
-                  onChange={(e) => handleYearChange(y._id, "expected_student_count", Number(e.target.value))}
+                  onChange={(e) =>
+                    handleYearChange(y._id, "expected_student_count", Math.max(0, Number(e.target.value)))
+                  }
                   fullWidth
                 />
               ) : (
