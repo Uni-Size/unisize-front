@@ -30,7 +30,7 @@ import { downloadCSV } from "@/utils/csvUtils";
 import { sortUniformsByCategoryGroup } from "@/constants/productCategories";
 import { formatGender } from "@/utils/genderUtils";
 import { getOrderInventory, updateInventoryStock } from "@/api/order";
-import type { InventoryProduct } from "@/api/order";
+import type { InventoryProduct, StockUpdateItem } from "@/api/order";
 import { StockAddModal } from "@components/organisms/StockAddModal";
 
 interface StudentRow {
@@ -890,7 +890,7 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
     downloadCSV([], csvRows, `${schoolName}_주문예약`);
   };
 
-  const handleStockSubmit = async (items: { product_id: string; size: string; size_type?: "numeric" | "alpha" | "free"; stock: number; round_number?: number }[]) => {
+  const handleStockSubmit = async (items: StockUpdateItem[]) => {
     await updateInventoryStock(schoolName, { items });
     fetchInventory();
   };
