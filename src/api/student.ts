@@ -754,6 +754,7 @@ export interface AdminStudent {
   grade?: number;
   government_purchase?: boolean;
   is_deleted: boolean;
+  /** RFC3339라 파싱 가능. 같은 응답의 created_at/updated_at은 한국어 문자열이라 파싱되지 않는다 */
   deleted_at?: string;
   delete_reason?: string;
   created_at: string;
@@ -1249,6 +1250,16 @@ export interface AuditLog {
   meta: unknown | null;
   memo: string;
   created_at: string;
+}
+
+/**
+ * action === 'student.delete'인 항목의 meta 형태.
+ * AuditLog.meta가 unknown이라 키를 잘못 써도 컴파일에 안 걸리므로 이 타입으로 좁혀 쓴다.
+ * 이 항목의 memo가 곧 삭제 사유이고, actor.employee_name이 삭제 처리자다.
+ */
+export interface StudentDeleteAuditMeta {
+  cancelled_item_count: number;
+  pending_review_item_count: number;
 }
 
 export interface AuditLogMeta {

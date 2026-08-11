@@ -581,6 +581,7 @@ export interface RefundSummaryItem {
   product_name: string;
   size: string;
   quantity: number;
+  unit_price: number;
   subtotal: number;
   delivery_status: DeliveryStatus;
   return_status: ReturnStatus;
