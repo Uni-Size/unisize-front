@@ -532,12 +532,19 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     studentId: string,
   ) => {
     e.stopPropagation();
-    if (!window.confirm("정말 삭제하시겠습니까?")) return;
+    const reason = window.prompt("삭제 사유를 입력하세요 (필수)")?.trim();
+    if (!reason) return;
     try {
-      await deleteStudent(studentId);
+      const result = await deleteStudent(studentId, reason);
+      if (result.pending_review_item_count > 0) {
+        alert(
+          `이미 출고된 품목 ${result.pending_review_item_count}건이 있습니다. 학생 상세에서 회수/환불 처리를 완료해 주세요.`,
+        );
+      }
       fetchStudents(currentPage);
     } catch (error) {
       console.error("학생 삭제 실패:", error);
+      alert(getApiErrorMessage(error, "학생 삭제에 실패했습니다."));
     }
   };
 

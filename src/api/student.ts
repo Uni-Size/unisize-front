@@ -753,6 +753,9 @@ export interface AdminStudent {
   student_number?: string;
   grade?: number;
   government_purchase?: boolean;
+  is_deleted: boolean;
+  deleted_at?: string;
+  delete_reason?: string;
   created_at: string;
   updated_at: string;
 }
@@ -765,6 +768,10 @@ export interface GetStudentsParams {
   search?: string;
   student_type?: string;
   public_purchase?: boolean;
+  /** 삭제된 학생 포함 */
+  include_deleted?: boolean;
+  /** 삭제된 학생만. true면 include_deleted는 붙이지 않아도 된다 */
+  deleted_only?: boolean;
 }
 
 export interface GetStudentsResponse {
@@ -836,17 +843,40 @@ export async function createStudent(data: CreateStudentRequest): Promise<AdminSt
  * 학생 상세 조회 (주문 기록 포함)
  * GET /api/v1/students/:id
  */
-export async function getStudentDetail(id: string | number): Promise<AdminStudent> {
-  const response = await apiClient.get<ApiResponse<AdminStudent>>(`/api/v1/students/${id}`);
+export async function getStudentDetail(
+  id: string | number,
+  options?: { includeDeleted?: boolean },
+): Promise<AdminStudent> {
+  const response = await apiClient.get<ApiResponse<AdminStudent>>(`/api/v1/students/${id}`, {
+    params: options?.includeDeleted ? { include_deleted: true } : undefined,
+  });
   return response.data.data;
+}
+
+export interface DeleteStudentResult {
+  student_id: string;
+  deleted_at: string;
+  reason: string;
+  /** 미출고라 자동 취소된 품목 수 */
+  cancelled_item_count: number;
+  /** 이미 출고돼 회수/환불 확인이 필요한 품목 수 */
+  pending_review_item_count: number;
+  affected_order_ids: string[];
 }
 
 /**
  * 학생 삭제
  * DELETE /api/v1/students/:id
+ *
+ * reason은 필수(1~255자)라 생략하면 서버가 400을 낸다. 프리셋과 자유입력을
+ * 합친 한 문자열을 넘긴다.
  */
-export async function deleteStudent(id: string): Promise<void> {
-  await apiClient.delete<ApiResponse<void>>(`/api/v1/students/${id}`);
+export async function deleteStudent(id: string, reason: string): Promise<DeleteStudentResult> {
+  const response = await apiClient.delete<ApiResponse<DeleteStudentResult>>(
+    `/api/v1/students/${id}`,
+    { data: { reason } },
+  );
+  return response.data.data;
 }
 
 export interface UpdateStudentRequest {
