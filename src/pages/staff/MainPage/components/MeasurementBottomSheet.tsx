@@ -43,7 +43,6 @@ interface MeasurementBottomSheetProps {
 // 사이즈 옵션
 // ============================================================================
 
-const DEFAULT_SIZE_OPTIONS = ['77', '80', '85', '90', '95', '100', '105', '110'];
 
 // ============================================================================
 // Stepper
@@ -372,13 +371,14 @@ export const MeasurementBottomSheet = ({
               </tr>
             ) : (
               sortedItems.map((item) => {
-                const baseSizes = item.availableSizes.length > 0
-                  ? item.availableSizes
-                  : DEFAULT_SIZE_OPTIONS.map((s) => ({ size: s, inStock: true, stockCount: 0 }));
-                // 추천 사이즈가 baseSizes에 없더라도 옵션으로 끼워넣지 않는다. 예전에는
-                // inStock: true인 가짜 옵션을 만들어 넣었는데, 그러면 그 상품이 취급하지도
-                // 않는 사이즈가 "재고 있음"으로 보여서 스태프가 이상함을 눈치챌 수 없었다.
-                const sizeOptions = baseSizes.slice().sort((a, b) => compareSizes(a.size, b.size));
+                // 서버가 등록된 재고 사이즈만 내려주므로 목록이 비었으면 재고 미등록
+                // 상품이다. 하드코딩 목록으로 채우지 않는다 — 취급하지도 않는 사이즈가
+                // "재고 있음"으로 보이면 스태프가 그걸 골라 주문에 실어버린다.
+                // 추천 사이즈가 목록에 없을 때 끼워넣지 않는 것도 같은 이유다.
+                const sizeOptions = item.availableSizes
+                  .slice()
+                  .sort((a, b) => compareSizes(a.size, b.size));
+                const isSizeUnregistered = sizeOptions.length === 0;
                 const isAdded = item.isManuallyAdded;
                 const isBuying = item.supportedQuantity + item.additionalQuantity > 0;
                 const isRepairRequired = item.isCustomizationRequired && isBuying;
@@ -391,18 +391,29 @@ export const MeasurementBottomSheet = ({
                       {item.unitPrice > 0 ? `${item.unitPrice.toLocaleString()}원` : '-'}
                     </td>
                     <td className="p-1 text-center align-middle border-l border-gray-100">
-                      <select
-                        className="w-full px-1 py-1.5 border border-gray-200 rounded text-sm text-gray-700 bg-white outline-none focus:border-primary-900"
-                        value={item.selectedSize}
-                        onChange={(e) => onUpdateUniform(season, item.rowId, { selectedSize: e.target.value })}
-                      >
-                        <option value="">-</option>
-                        {sizeOptions.map(({ size, inStock }) => (
-                          <option key={size} value={size}>
-                            {size}{!inStock ? ' *' : ''}
-                          </option>
-                        ))}
-                      </select>
+                      {isSizeUnregistered ? (
+                        <span
+                          className="block text-12 text-red-500 leading-tight"
+                          title="이 상품은 등록된 재고 사이즈가 없어 선택할 수 없습니다. 담당자에게 문의하세요."
+                        >
+                          재고 미등록
+                          <br />
+                          담당자 문의
+                        </span>
+                      ) : (
+                        <select
+                          className="w-full px-1 py-1.5 border border-gray-200 rounded text-sm text-gray-700 bg-white outline-none focus:border-primary-900"
+                          value={item.selectedSize}
+                          onChange={(e) => onUpdateUniform(season, item.rowId, { selectedSize: e.target.value })}
+                        >
+                          <option value="">-</option>
+                          {sizeOptions.map(({ size, inStock }) => (
+                            <option key={size} value={size}>
+                              {size}{!inStock ? ' *' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </td>
                     <td className="px-2 py-2 text-sm text-center text-gray-700 align-middle border-l border-gray-100">
                       {item.groupId ? (
