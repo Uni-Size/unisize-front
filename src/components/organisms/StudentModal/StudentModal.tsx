@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Modal, Select } from "@components/atoms";
+import { DeletedStudentBanner } from "@components/organisms/DeletedStudentBanner";
+import { OrderReturnRefundPanel } from "@components/organisms/OrderReturnRefundPanel";
+import type { ReturnStatusDecision, RefundRequestPayload } from "@components/organisms/OrderReturnRefundPanel";
+import type { RefundSummary } from "@/api/order";
 import { Toast } from "@components/atoms/Toast";
 import type { ToastVariant } from "@components/atoms/Toast";
 import { GENDER_OPTIONS_MF } from "@/constants/gender";
@@ -209,6 +213,11 @@ export interface StudentDetailData {
   history?: HistoryItem[];
   isManuallySupported?: boolean;
   isSupported?: boolean;
+  // 삭제된 학생 표시용. deletedBy는 감사로그 student.delete 항목의 actor.employee_name.
+  isDeleted?: boolean;
+  deletedAt?: string;
+  deleteReason?: string;
+  deletedBy?: string;
 }
 
 export interface StudentFormInput {
@@ -262,6 +271,20 @@ export interface StudentModalProps {
     orderId: string | number,
     status: OrderStatusValue,
   ) => Promise<void>;
+  /** 현재 선택된 주문의 환불 요약. 학생 삭제로 정리 대상이 된 주문에만 값이 있다. */
+  refundSummary?: RefundSummary | null;
+  refundSummaryLoading?: boolean;
+  decidingReturnItemId?: string | null;
+  isRefunding?: boolean;
+  onDecideReturnStatus?: (
+    orderId: string,
+    itemId: string,
+    decision: ReturnStatusDecision,
+  ) => Promise<void> | void;
+  onRefund?: (
+    orderId: string,
+    payload: RefundRequestPayload,
+  ) => Promise<void> | void;
 }
 
 // ============================================================================
@@ -292,6 +315,12 @@ export const StudentModal = ({
   onPaymentComplete,
   onOrderCreate,
   onOrderUpdate,
+  refundSummary,
+  refundSummaryLoading,
+  decidingReturnItemId,
+  isRefunding,
+  onDecideReturnStatus,
+  onRefund,
 }: StudentModalProps) => {
   // view 모드에서 수정 버튼 클릭 시 편집 상태
   const [isEditing, setIsEditing] = useState(false);
@@ -1688,6 +1717,8 @@ export const StudentModal = ({
   // 렌더링
   // ============================================================================
 
+  const isDeletedStudent = mode === "view" && (student?.isDeleted ?? false);
+
   const titleText =
     mode === "add"
       ? "학생추가"
@@ -1702,6 +1733,7 @@ export const StudentModal = ({
     !isEditing &&
     !isOrderCreateMode &&
     !isOrderEditMode &&
+    !isDeletedStudent &&
     student ? (
       <span className="flex items-center gap-1.5">
         {titleText}
@@ -1752,7 +1784,7 @@ export const StudentModal = ({
               >
                 닫기
               </button>
-              {onOrderUpdate && (activeOrderId ?? student?.orderId) && (
+              {onOrderUpdate && !isDeletedStudent && (activeOrderId ?? student?.orderId) && (
                 <button
                   className="px-6 py-2.5 bg-primary-900 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
                   onClick={() => setIsOrderEditMode(true)}
@@ -1760,7 +1792,7 @@ export const StudentModal = ({
                   주문 수정
                 </button>
               )}
-              {onPaymentComplete && (
+              {onPaymentComplete && !isDeletedStudent && (
                 <button
                   className="px-6 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg border-none cursor-pointer hover:opacity-90"
                   onClick={() => {
@@ -1835,6 +1867,13 @@ export const StudentModal = ({
         }
       >
         <div className="flex flex-col gap-4 w-full">
+          {isDeletedStudent && (
+            <DeletedStudentBanner
+              deletedAt={student?.deletedAt}
+              reason={student?.deleteReason}
+              processedBy={student?.deletedBy}
+            />
+          )}
           {/* 학생 정보 */}
           <div className="flex flex-col overflow-hidden [&_.input-wrapper]:flex-row [&_.input-wrapper]:items-center [&_.input-wrapper]:w-full [&_.input-wrapper]:gap-0 [&_.input-label]:flex-[0_0_100px] [&_.input-label]:px-3 [&_.input-label]:py-3 [&_.input-label]:text-15 [&_.input-label]:font-medium [&_.input-label]:text-bg-800 [&_.input-label]:bg-bg-050 [&_.input-label]:border-r [&_.input-label]:border-gray-200 [&_.input-label]:mb-0 [&_.input-label]:h-full [&_.input-label]:flex [&_.input-label]:items-center [&_.input]:border-none [&_.input]:rounded-none [&_.input]:h-12 [&_.input:focus]:shadow-none [&_.input:focus]:border-none [&_.select-wrapper]:flex-row [&_.select-wrapper]:items-center [&_.select-wrapper]:w-full [&_.select-wrapper]:gap-0 [&_.select-label]:flex-[0_0_100px] [&_.select-label]:px-3 [&_.select-label]:py-3 [&_.select-label]:text-15 [&_.select-label]:font-medium [&_.select-label]:text-bg-800 [&_.select-label]:bg-bg-050 [&_.select-label]:border-r [&_.select-label]:border-gray-200 [&_.select-label]:mb-0 [&_.select-label]:h-full [&_.select-label]:flex [&_.select-label]:items-center [&_.select]:border-none [&_.select]:rounded-none [&_.select]:h-12">
             <div className="grid grid-cols-[1fr_1fr_256px]">
@@ -2492,6 +2531,25 @@ export const StudentModal = ({
                   </div>
                 )}
               </div>
+            )}
+
+          {/* 회수/환불 (학생 삭제로 정리 대상이 된 주문에만 노출) */}
+          {mode === "view" && !isEditing && !isOrderEditMode && !isOrderCreateMode &&
+            onDecideReturnStatus && onRefund && (refundSummary || refundSummaryLoading) && (
+              <OrderReturnRefundPanel
+                summary={refundSummary ?? null}
+                loading={refundSummaryLoading}
+                decidingItemId={decidingReturnItemId}
+                isRefunding={isRefunding}
+                onDecideReturnStatus={(itemId, decision) => {
+                  if (!refundSummary) return;
+                  return onDecideReturnStatus(refundSummary.order_id, itemId, decision);
+                }}
+                onRefund={(payload) => {
+                  if (!refundSummary) return;
+                  return onRefund(refundSummary.order_id, payload);
+                }}
+              />
             )}
 
           {/* 이력 + 등록일/최종수정일 (view 모드) */}

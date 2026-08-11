@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import { AdminHeader } from '@components/organisms/AdminHeader';
 import { StudentModal } from '@components/organisms/StudentModal';
+import { StudentDeleteModal } from '@components/organisms/StudentDeleteModal';
 import type { StudentDetailData, StudentFormInput, AvailableUniform } from '@components/organisms/StudentModal';
 import { Table } from '@components/atoms/Table';
 import { Input } from '@components/atoms/Input';
@@ -32,12 +33,16 @@ interface StudentRow {
   parentPhone: string;
   governmentPurchase: string;
   registeredDate: string;
+  isDeleted: boolean;
+  deletedAt: string;
+  deleteReason: string;
 }
 
 export const StudentListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('통합검색');
   const [categoryFilter, setCategoryFilter] = useState('전체');
+  const [deletedOnly, setDeletedOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [students, setStudents] = useState<StudentRow[]>([]);
@@ -50,6 +55,11 @@ export const StudentListPage = () => {
   const [modalMode, setModalMode] = useState<'add' | 'view' | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<StudentDetailData | null>(null);
 
+  // 삭제 사유 입력 모달
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<ReactNode>(null);
+
   const mapToRow = (student: AdminStudent, index: number, page: number): StudentRow => ({
     id: student.id,
     no: (page - 1) * itemsPerPage + index + 1,
@@ -61,9 +71,12 @@ export const StudentListPage = () => {
     parentPhone: student.guardian_phone || '-',
     governmentPurchase: student.is_eligible_for_public_purchase ? 'O' : 'X',
     registeredDate: formatDate(student.created_at),
+    isDeleted: student.is_deleted ?? false,
+    deletedAt: student.deleted_at ? formatDate(student.deleted_at) : '',
+    deleteReason: student.delete_reason ?? '',
   });
 
-  const fetchStudents = useCallback(async (page: number, search?: string, school?: string, grade?: number) => {
+  const fetchStudents = useCallback(async (page: number, search?: string, school?: string, grade?: number, onlyDeleted = false) => {
     setLoading(true);
     setError(null);
     try {
@@ -73,6 +86,7 @@ export const StudentListPage = () => {
         search,
         school,
         grade,
+        ...(onlyDeleted ? { deleted_only: true } : {}),
       });
       const rows = response.data.map((s, i) => mapToRow(s, i, page));
       setStudents(rows);
@@ -86,19 +100,20 @@ export const StudentListPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchStudents(currentPage);
-  }, [currentPage, fetchStudents]);
+    fetchStudents(currentPage, undefined, undefined, undefined, deletedOnly);
+  }, [currentPage, deletedOnly, fetchStudents]);
 
   const handleSearch = () => {
     setCurrentPage(1);
     const gradeParam = categoryFilter === '신입' ? 1 : categoryFilter === '재학' ? 2 : undefined;
-    fetchStudents(1, searchTerm || undefined, undefined, gradeParam);
+    fetchStudents(1, searchTerm || undefined, undefined, gradeParam, deletedOnly);
   };
 
   const handleReset = () => {
     setSearchTerm('');
     setSearchType('통합검색');
     setCategoryFilter('전체');
+    setDeletedOnly(false);
     setCurrentPage(1);
     fetchStudents(1);
   };
@@ -508,21 +523,32 @@ export const StudentListPage = () => {
     }
   };
 
-  const handleDeleteStudent = async (e: React.MouseEvent, studentId: string) => {
+  const handleDeleteStudent = (e: React.MouseEvent, row: StudentRow) => {
     e.stopPropagation();
-    const reason = window.prompt('삭제 사유를 입력하세요 (필수)')?.trim();
-    if (!reason) return;
+    setDeleteError(null);
+    setDeleteTarget({ id: row.id, name: row.name });
+  };
+
+  const handleConfirmDelete = async (reason: string) => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    setDeleteError(null);
     try {
-      const result = await deleteStudent(studentId, reason);
-      if (result.pending_review_item_count > 0) {
-        alert(
-          `이미 출고된 품목 ${result.pending_review_item_count}건이 있습니다. 학생 상세에서 회수/환불 처리를 완료해 주세요.`,
-        );
-      }
-      fetchStudents(currentPage);
+      const result = await deleteStudent(deleteTarget.id, reason);
+      setDeleteTarget(null);
+      setToast({
+        message:
+          result.pending_review_item_count > 0
+            ? `삭제되었습니다. 회수 확인이 필요한 품목이 ${result.pending_review_item_count}건 있습니다.`
+            : '삭제되었습니다.',
+        variant: result.pending_review_item_count > 0 ? 'info' : 'success',
+      });
+      fetchStudents(currentPage, undefined, undefined, undefined, deletedOnly);
     } catch (error) {
       console.error('학생 삭제 실패:', error);
-      alert(getApiErrorMessage(error, '학생 삭제에 실패했습니다.'));
+      setDeleteError(getApiErrorMessage(error, '학생 삭제에 실패했습니다.'));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -561,6 +587,22 @@ export const StudentListPage = () => {
     { key: 'parentPhone', header: '학부모 연락처', width: '120px', align: 'center' },
     { key: 'governmentPurchase', header: '주관구매', width: '60px', align: 'center' },
     { key: 'registeredDate', header: '등록일', width: '80px', align: 'center' },
+    ...(deletedOnly
+      ? ([
+          { key: 'deletedAt', header: '삭제일', width: '80px', align: 'center' },
+          {
+            key: 'deleteReason',
+            header: '삭제사유',
+            width: '160px',
+            align: 'center',
+            render: (row) => (
+              <span className="block truncate" title={row.deleteReason}>
+                {row.deleteReason || '-'}
+              </span>
+            ),
+          },
+        ] as Column<StudentRow>[])
+      : []),
     {
       key: 'actions',
       header: '관리',
@@ -574,12 +616,14 @@ export const StudentListPage = () => {
           >
             상세
           </button>
-          <button
-            className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-red-200 text-red-700"
-            onClick={(e) => handleDeleteStudent(e, row.id)}
-          >
-            삭제
-          </button>
+          {!row.isDeleted && (
+            <button
+              className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-red-200 text-red-700"
+              onClick={(e) => handleDeleteStudent(e, row)}
+            >
+              삭제
+            </button>
+          )}
         </div>
       ),
     },
@@ -630,7 +674,7 @@ export const StudentListPage = () => {
           </div>
 
           {/* 학년 */}
-          <div className="flex items-stretch">
+          <div className="flex items-stretch border-b border-gray-200">
             <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
               학년
             </div>
@@ -650,6 +694,29 @@ export const StudentListPage = () => {
                   {opt.label}
                 </label>
               ))}
+            </div>
+          </div>
+
+          {/* 삭제 학생 */}
+          <div className="flex items-stretch">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
+              삭제 학생
+            </div>
+            <div className="flex items-center gap-3 flex-1 px-4 py-3 bg-white">
+              <label className="flex items-center gap-1.5 text-14 text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={deletedOnly}
+                  onChange={() => { setCurrentPage(1); setDeletedOnly((prev) => !prev); }}
+                  className="w-4 h-4 accent-red-700"
+                />
+                삭제된 학생만 보기
+              </label>
+              {deletedOnly && (
+                <span className="text-13 text-red-700">
+                  삭제된 학생은 조회만 가능하며 목록에서 다시 삭제할 수 없습니다.
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -686,6 +753,15 @@ export const StudentListPage = () => {
           onOrderCreate={handleOrderCreate}
           onOrderUpdate={handleOrderUpdate}
           onStatusChange={handleStatusChange}
+        />
+
+        <StudentDeleteModal
+          isOpen={deleteTarget !== null}
+          onClose={() => setDeleteTarget(null)}
+          studentName={deleteTarget?.name ?? ''}
+          onConfirm={handleConfirmDelete}
+          isSubmitting={isDeleting}
+          error={deleteError}
         />
       </div>
       {toast && (
