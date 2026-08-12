@@ -4,7 +4,8 @@ import { Toast } from "@components/atoms/Toast";
 import { formatGender } from "@/utils/genderUtils";
 import { formatDate } from "@/utils/dateUtils";
 import { updateAdminOrder, updateItemDeliveryStatus } from "@/api/order";
-import type { DeliveryStatus } from "@/api/order";
+import type { DeliveryStatus, UpdateDeliveryStatusResult } from "@/api/order";
+import type { AdminOrderItem } from "@/api/student";
 import { getApiErrorString } from "@/utils/errorUtils";
 import { useAuthStore } from "@/stores/authStore";
 import type {
@@ -20,19 +21,6 @@ export interface InvoiceModalProps {
   onClose: () => void;
   student?: StudentDetailData | null;
   onPaymentComplete?: (orderId: string | number) => void;
-  /**
-   * 부분 수량 분리. 전량 토글과 달리 [저장]과 무관하게 즉시 호출된다.
-   * remainderStatus를 생략하면 남는 수량은 현재 상태를 유지한다.
-   */
-  onSplit?: (
-    orderId: string | number,
-    itemId: string,
-    status: DeliveryStatus,
-    quantity: number,
-    remainderStatus?: DeliveryStatus,
-  ) => Promise<void> | void;
-  /** 분리 요청이 진행 중인 item id */
-  splittingItemId?: string | null;
 }
 
 const sizeOptions = [
@@ -73,8 +61,6 @@ export const InvoiceModal = ({
   onClose,
   student,
   onPaymentComplete,
-  onSplit,
-  splittingItemId,
 }: InvoiceModalProps) => {
   const [activeDateKey, setActiveDateKey] = useState<string>("");
   const [snapshotStates, setSnapshotStates] = useState<Map<string | number, SnapshotState>>(new Map());
@@ -83,6 +69,7 @@ export const InvoiceModal = ({
   const [saving, setSaving] = useState(false);
   // 행별 분리 수량. 비어 있으면 1로 본다.
   const [splitQuantities, setSplitQuantities] = useState<Record<string, number>>({});
+  const [splittingItemId, setSplittingItemId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
   // 수령 완료를 예약으로 되돌리는 건 서버가 관리자에게만 허용한다(비관리자는 403).
   // 눌러보고 실패하는 대신 미리 막아 이유를 보여준다.
@@ -125,6 +112,84 @@ export const InvoiceModal = ({
     setActiveHistory(student.history ?? []);
     setNameTagName(snapshots[0]?.nameTagName ?? student.nameTagName ?? '');
   }, [isOpen, student]);
+
+  // 서버 응답의 품목을 화면 행에 반영한다. 아는 id는 교체, 모르는 id는 추가,
+  // deleted_item_ids는 제거 — 이 한 규칙으로 수량 변경/행 분리/형제 병합이 모두 덮인다.
+  // 낙관적 업데이트를 하지 않는 이유는 병합 여부를 서버만 알기 때문이다.
+  const toRowPatch = (row: UniformItem, item: AdminOrderItem): UniformItem => ({
+    ...row,
+    itemId: item.id,
+    size: item.selected_size,
+    supportedQuantity: item.supported_quantity,
+    additionalQuantity: Math.max(0, item.purchase_quantity - item.supported_quantity),
+    unitPrice: item.unit_price,
+    repair: item.customization ?? "",
+    nameTag: item.name_tag_count || null,
+    attachCount: item.name_tag_attach_count ?? 0,
+    itemStatus: item.delivery_status,
+    reservation: item.delivery_status === "reserved",
+    received: item.delivery_status === "receipt",
+  });
+
+  const applyItemUpdates = (
+    list: UniformItem[],
+    result: UpdateDeliveryStatusResult,
+    template: UniformItem,
+  ): UniformItem[] => {
+    const deleted = new Set(result.deleted_item_ids);
+    const byId = new Map(result.items.map((i) => [i.id, i]));
+    const merged = list
+      .filter((row) => !deleted.has(row.id))
+      .map((row) => {
+        const updated = byId.get(row.id);
+        if (!updated) return row;
+        byId.delete(row.id);
+        return toRowPatch(row, updated);
+      });
+    // 남은 것은 분리로 새로 생긴 행이다. 같은 상품이므로 원본 행을 본떠 만든다
+    // (사이즈 목록·교체가능 목록처럼 주문 응답에 없는 값이 유지된다).
+    for (const created of byId.values()) {
+      merged.push({ ...toRowPatch(template, created), id: created.id });
+    }
+    return merged;
+  };
+
+  /** 부분 수량 분리. 배치 저장과 달리 즉시 실행하고 응답으로 행을 교체한다. */
+  const handleSplitItem = async (
+    orderId: string | number,
+    item: UniformItem,
+    status: DeliveryStatus,
+    quantity: number,
+    remainderStatus?: DeliveryStatus,
+  ) => {
+    setSplittingItemId(item.id);
+    try {
+      const result = await updateItemDeliveryStatus(String(orderId), item.id, status, {
+        quantity,
+        remainder_status: remainderStatus,
+      });
+      setSnapshotStates((prev) => {
+        const cur = prev.get(orderId);
+        if (!cur) return prev;
+        const next = new Map(prev);
+        next.set(orderId, {
+          ...cur,
+          winterUniforms: applyItemUpdates(cur.winterUniforms, result, item),
+          summerUniforms: applyItemUpdates(cur.summerUniforms, result, item),
+          allUniforms: applyItemUpdates(cur.allUniforms, result, item),
+        });
+        return next;
+      });
+      setToast({ message: "품목이 분리되었습니다.", variant: "success" });
+    } catch (error) {
+      setToast({
+        message: getApiErrorString(error, "품목 분리에 실패했습니다."),
+        variant: "error",
+      });
+    } finally {
+      setSplittingItemId(null);
+    }
+  };
 
   const handleDateTabClick = (key: string) => {
     if (key === activeDateKey) return;
@@ -463,7 +528,7 @@ export const InvoiceModal = ({
                             <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${item.reservation ? "translate-x-4" : "translate-x-1"}`} />
                           </button>
                         )}
-                        {!readOnly && onSplit && totalQty >= 2 && (() => {
+                        {!readOnly && totalQty >= 2 && (() => {
                           // 분리는 즉시 API를 타므로 화면의 토글 값이 아니라 서버가 아는
                           // 상태(itemStatus)를 기준으로 목적 상태를 정한다.
                           const pendingStatus = item.reservation
@@ -507,7 +572,7 @@ export const InvoiceModal = ({
                                 type="button"
                                 className="px-2 py-0.5 border border-gray-300 rounded text-xs text-gray-700 bg-white cursor-pointer hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
                                 disabled={disabled}
-                                onClick={() => onSplit(orderId, item.id, target, quantity)}
+                                onClick={() => void handleSplitItem(orderId, item, target, quantity)}
                               >
                                 {isSplitting ? "분리 중..." : "분리"}
                               </button>
