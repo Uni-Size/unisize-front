@@ -276,6 +276,14 @@ export interface StudentModalProps {
   refundSummaryLoading?: boolean;
   decidingReturnItemId?: string | null;
   isRefunding?: boolean;
+  /** 회수 확정 실패 사유. 확인 모달 안에 인라인으로 표시된다. */
+  decideReturnError?: React.ReactNode;
+  refundError?: React.ReactNode;
+  /**
+   * 선택된 주문이 바뀔 때 호출된다. 회수/환불 요약이 주문 단위라 페이지가
+   * 어느 주문을 조회할지 정하는 데 쓴다. 주문이 없으면 null.
+   */
+  onActiveOrderChange?: (orderId: string | null) => void;
   onDecideReturnStatus?: (
     orderId: string,
     itemId: string,
@@ -320,6 +328,9 @@ export const StudentModal = ({
   refundSummaryLoading,
   decidingReturnItemId,
   isRefunding,
+  decideReturnError,
+  refundError,
+  onActiveOrderChange,
   onDecideReturnStatus,
   onRefund,
 }: StudentModalProps) => {
@@ -399,6 +410,19 @@ export const StudentModal = ({
   const [activeOrderId, setActiveOrderId] = useState<
     string | number | undefined
   >(undefined);
+
+  // 선택된 주문을 바깥에 알린다. 회수/환불 요약은 주문 단위라 페이지가 어느 주문을
+  // 조회할지 알아야 한다. 같은 id를 두 번 알리지 않아 콜백이 매 렌더 새로 와도 안전하다.
+  const effectiveOrderId = activeOrderId ?? student?.orderId;
+  const lastEmittedOrderIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (mode !== "view") return;
+    const next = effectiveOrderId != null ? String(effectiveOrderId) : null;
+    if (lastEmittedOrderIdRef.current === next) return;
+    lastEmittedOrderIdRef.current = next;
+    onActiveOrderChange?.(next);
+  }, [mode, effectiveOrderId, onActiveOrderChange]);
+
   // 학생 감사 로그
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [auditLogsLoading, setAuditLogsLoading] = useState(false);
@@ -2542,6 +2566,8 @@ export const StudentModal = ({
                 loading={refundSummaryLoading}
                 decidingItemId={decidingReturnItemId}
                 isRefunding={isRefunding}
+                decideError={decideReturnError}
+                refundError={refundError}
                 onDecideReturnStatus={(itemId, decision, note) => {
                   if (!refundSummary) return;
                   return onDecideReturnStatus(refundSummary.order_id, itemId, decision, note);
