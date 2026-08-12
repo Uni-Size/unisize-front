@@ -20,6 +20,19 @@ export interface InvoiceModalProps {
   onClose: () => void;
   student?: StudentDetailData | null;
   onPaymentComplete?: (orderId: string | number) => void;
+  /**
+   * 부분 수량 분리. 전량 토글과 달리 [저장]과 무관하게 즉시 호출된다.
+   * remainderStatus를 생략하면 남는 수량은 현재 상태를 유지한다.
+   */
+  onSplit?: (
+    orderId: string | number,
+    itemId: string,
+    status: DeliveryStatus,
+    quantity: number,
+    remainderStatus?: DeliveryStatus,
+  ) => Promise<void> | void;
+  /** 분리 요청이 진행 중인 item id */
+  splittingItemId?: string | null;
 }
 
 const sizeOptions = [
@@ -60,12 +73,16 @@ export const InvoiceModal = ({
   onClose,
   student,
   onPaymentComplete,
+  onSplit,
+  splittingItemId,
 }: InvoiceModalProps) => {
   const [activeDateKey, setActiveDateKey] = useState<string>("");
   const [snapshotStates, setSnapshotStates] = useState<Map<string | number, SnapshotState>>(new Map());
   const [activeHistory, setActiveHistory] = useState<HistoryItem[]>([]);
   const [nameTagName, setNameTagName] = useState('');
   const [saving, setSaving] = useState(false);
+  // 행별 분리 수량. 비어 있으면 1로 본다.
+  const [splitQuantities, setSplitQuantities] = useState<Record<string, number>>({});
   const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
   // 수령 완료를 예약으로 되돌리는 건 서버가 관리자에게만 허용한다(비관리자는 403).
   // 눌러보고 실패하는 대신 미리 막아 이유를 보여준다.
@@ -446,6 +463,57 @@ export const InvoiceModal = ({
                             <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${item.reservation ? "translate-x-4" : "translate-x-1"}`} />
                           </button>
                         )}
+                        {!readOnly && onSplit && totalQty >= 2 && (() => {
+                          // 분리는 즉시 API를 타므로 화면의 토글 값이 아니라 서버가 아는
+                          // 상태(itemStatus)를 기준으로 목적 상태를 정한다.
+                          const pendingStatus = item.reservation
+                            ? "reserved"
+                            : item.received
+                              ? "receipt"
+                              : item.itemStatus;
+                          const hasUnsavedToggle = pendingStatus !== item.itemStatus;
+                          const receiptLocked = item.itemStatus === "receipt" && !isAdmin;
+                          const isSplitting = splittingItemId === item.id;
+                          const target: DeliveryStatus =
+                            item.itemStatus === "reserved" ? "receipt" : "reserved";
+                          const quantity = Math.min(
+                            Math.max(splitQuantities[item.id] ?? 1, 1),
+                            totalQty,
+                          );
+                          const disabled = receiptLocked || hasUnsavedToggle || isSplitting;
+                          const reason = receiptLocked
+                            ? "수령 완료는 관리자만 되돌릴 수 있습니다."
+                            : hasUnsavedToggle
+                              ? "저장하지 않은 상태 변경이 있습니다. 먼저 저장하거나 되돌려주세요."
+                              : `${quantity}개를 ${target === "receipt" ? "수령" : "예약"}으로 분리합니다.`;
+                          return (
+                            <div className="mt-1.5 flex items-center justify-center gap-1" title={reason}>
+                              <input
+                                type="number"
+                                aria-label="분리할 수량"
+                                className="w-11 px-1 py-0.5 border border-gray-200 rounded text-xs text-center text-gray-700 bg-white outline-none focus:border-primary-900 disabled:opacity-40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                value={quantity}
+                                min={1}
+                                max={totalQty}
+                                disabled={disabled}
+                                onChange={(e) =>
+                                  setSplitQuantities((prev) => ({
+                                    ...prev,
+                                    [item.id]: Number(e.target.value),
+                                  }))
+                                }
+                              />
+                              <button
+                                type="button"
+                                className="px-2 py-0.5 border border-gray-300 rounded text-xs text-gray-700 bg-white cursor-pointer hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                                disabled={disabled}
+                                onClick={() => onSplit(orderId, item.id, target, quantity)}
+                              >
+                                {isSplitting ? "분리 중..." : "분리"}
+                              </button>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                         {readOnly ? (
