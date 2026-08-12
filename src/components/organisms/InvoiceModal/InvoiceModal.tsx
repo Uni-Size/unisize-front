@@ -6,6 +6,7 @@ import { formatDate } from "@/utils/dateUtils";
 import { updateAdminOrder, updateItemDeliveryStatus } from "@/api/order";
 import type { DeliveryStatus } from "@/api/order";
 import { getApiErrorString } from "@/utils/errorUtils";
+import { useAuthStore } from "@/stores/authStore";
 import type {
   StudentDetailData,
   UniformItem,
@@ -66,6 +67,9 @@ export const InvoiceModal = ({
   const [nameTagName, setNameTagName] = useState('');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
+  // 수령 완료를 예약으로 되돌리는 건 서버가 관리자에게만 허용한다(비관리자는 403).
+  // 눌러보고 실패하는 대신 미리 막아 이유를 보여준다.
+  const isAdmin = useAuthStore((s) => s.staff?.role === "admin");
 
   // 날짜 기준으로 스냅샷 그룹핑
   const dateGroups = React.useMemo(() => {
@@ -427,11 +431,17 @@ export const InvoiceModal = ({
                             type="button"
                             role="switch"
                             aria-checked={item.reservation}
+                            disabled={item.itemStatus === "receipt" && !isAdmin}
+                            title={
+                              item.itemStatus === "receipt" && !isAdmin
+                                ? "수령 완료는 관리자만 되돌릴 수 있습니다."
+                                : undefined
+                            }
                             onClick={() => {
                               handleUniformChange(orderId, season, item.id, "reservation", !item.reservation);
                               handleUniformChange(orderId, season, item.id, "received", item.reservation);
                             }}
-                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none cursor-pointer border-none ${item.reservation ? "bg-blue-500" : "bg-gray-300"}`}
+                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none border-none disabled:opacity-40 disabled:cursor-not-allowed ${item.reservation ? "bg-blue-500" : "bg-gray-300"} ${item.itemStatus === "receipt" && !isAdmin ? "" : "cursor-pointer"}`}
                           >
                             <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${item.reservation ? "translate-x-4" : "translate-x-1"}`} />
                           </button>
