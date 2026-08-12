@@ -70,8 +70,6 @@ export const StudentListPage = () => {
   const [isRefunding, setIsRefunding] = useState(false);
   const [decideReturnError, setDecideReturnError] = useState<ReactNode>(null);
   const [refundError, setRefundError] = useState<ReactNode>(null);
-  // 삭제된 학생만 회수 대상이 된다. 모달에서 주문 탭을 옮기면 그 주문으로 다시 조회한다.
-  const [isDeletedStudentOpen, setIsDeletedStudentOpen] = useState(false);
 
   const loadRefundSummary = async (orderId?: string | number) => {
     if (!orderId) {
@@ -132,11 +130,12 @@ export const StudentListPage = () => {
   // 모달이 알려주는 선택 주문으로 요약을 맞춘다. 첫 주문 고정이던 것을 대체한다.
   const handleActiveOrderChange = useCallback(
     (orderId: string | null) => {
-      if (!isDeletedStudentOpen) return;
+      // 일반 학생은 return_status가 없어 매번 빈 조회가 되므로 삭제된 학생만 조회한다.
+      if (!selectedStudent?.isDeleted) return;
       void loadRefundSummary(orderId ?? undefined);
     },
     // StudentModal이 같은 주문을 두 번 알리지 않으므로 재조회가 반복되지 않는다.
-    [isDeletedStudentOpen],
+    [selectedStudent?.isDeleted],
   );
 
   const mapToRow = (student: AdminStudent, index: number, page: number): StudentRow => ({
@@ -453,7 +452,6 @@ export const StudentListPage = () => {
       setRefundSummary(null);
       setDecideReturnError(null);
       setRefundError(null);
-      setIsDeletedStudentOpen(detailData.isDeleted ?? false);
     } catch (error) {
       console.error('학생 상세 조회 실패:', error);
     }
@@ -848,7 +846,6 @@ export const StudentListPage = () => {
           onClose={() => {
             setModalMode(null);
             setRefundSummary(null);
-            setIsDeletedStudentOpen(false);
             setDecideReturnError(null);
             setRefundError(null);
           }}
