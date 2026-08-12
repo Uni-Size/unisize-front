@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { RefundConfirmModal } from './RefundConfirmModal';
+import { ReturnDecisionConfirmModal } from './ReturnDecisionConfirmModal';
 import type { RefundSummary, RefundSummaryItem } from '@/api/order';
 import type { RefundRequestPayload, ReturnStatusDecision } from './types';
 
@@ -52,7 +53,10 @@ export interface OrderReturnRefundPanelProps {
   onDecideReturnStatus: (
     itemId: string,
     decision: ReturnStatusDecision,
+    note: string,
   ) => Promise<void> | void;
+  /** 회수 확정 실패 사유 (409 등) */
+  decideError?: ReactNode;
   onRefund: (payload: RefundRequestPayload) => Promise<void> | void;
 }
 
@@ -63,10 +67,16 @@ export const OrderReturnRefundPanel = ({
   decidingItemId = null,
   isRefunding = false,
   refundError,
+  decideError,
   onDecideReturnStatus,
   onRefund,
 }: OrderReturnRefundPanelProps) => {
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  // 회수 확정은 재고를 실제로 움직이고 되돌릴 수 없어 확인을 한 번 받는다.
+  const [pendingDecision, setPendingDecision] = useState<{
+    item: RefundSummaryItem;
+    decision: ReturnStatusDecision;
+  } | null>(null);
 
   if (loading) {
     return (
@@ -161,7 +171,9 @@ export const OrderReturnRefundPanel = ({
                                   ? decision.activeClass
                                   : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-100/50'
                               }`}
-                              onClick={() => onDecideReturnStatus(item.item_id, decision.value)}
+                              onClick={() =>
+                                setPendingDecision({ item, decision: decision.value })
+                              }
                               disabled={isDeciding}
                             >
                               {decision.label}
@@ -200,6 +212,26 @@ export const OrderReturnRefundPanel = ({
           환불 처리
         </button>
       </div>
+
+      <ReturnDecisionConfirmModal
+        isOpen={pendingDecision !== null}
+        onClose={() => setPendingDecision(null)}
+        item={pendingDecision?.item ?? null}
+        decision={pendingDecision?.decision ?? null}
+        isSubmitting={
+          pendingDecision !== null && decidingItemId === pendingDecision.item.item_id
+        }
+        error={decideError}
+        onConfirm={async (note) => {
+          if (!pendingDecision) return;
+          await onDecideReturnStatus(
+            pendingDecision.item.item_id,
+            pendingDecision.decision,
+            note,
+          );
+          setPendingDecision(null);
+        }}
+      />
 
       <RefundConfirmModal
         isOpen={isRefundModalOpen}

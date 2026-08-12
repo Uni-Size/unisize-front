@@ -280,6 +280,7 @@ export interface StudentModalProps {
     orderId: string,
     itemId: string,
     decision: ReturnStatusDecision,
+    note: string,
   ) => Promise<void> | void;
   onRefund?: (
     orderId: string,
@@ -2541,9 +2542,9 @@ export const StudentModal = ({
                 loading={refundSummaryLoading}
                 decidingItemId={decidingReturnItemId}
                 isRefunding={isRefunding}
-                onDecideReturnStatus={(itemId, decision) => {
+                onDecideReturnStatus={(itemId, decision, note) => {
                   if (!refundSummary) return;
-                  return onDecideReturnStatus(refundSummary.order_id, itemId, decision);
+                  return onDecideReturnStatus(refundSummary.order_id, itemId, decision, note);
                 }}
                 onRefund={(payload) => {
                   if (!refundSummary) return;
