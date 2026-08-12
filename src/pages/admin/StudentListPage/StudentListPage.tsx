@@ -10,13 +10,16 @@ import { Input } from '@components/atoms/Input';
 import { Button } from '@components/atoms/Button';
 import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
-import { getStudents, getStudentDetail, deleteStudent, getOrderHistory, updateAdminOrder, createStudent } from '@/api/student';
+import { getStudents, getStudentDetail, deleteStudent, getOrderHistory, updateAdminOrder, createStudent, getStudentAuditLogs } from '@/api/student';
+import { getRefundSummary, updateOrderItemReturnStatus, createOrderRefund } from '@/api/order';
+import type { RefundSummary } from '@/api/order';
+import type { ReturnStatusDecision, RefundRequestPayload } from '@components/organisms/OrderReturnRefundPanel';
 import { updateAdminOrder as updateAdminOrderNew, type AdminOrderUniformItem } from '@/api/order';
 import type { AdminStudent } from '@/api/student';
 import { Toast } from '@components/atoms/Toast';
 import type { ToastVariant } from '@components/atoms/Toast';
 import { getSchoolDetail } from '@/api/school';
-import { getApiErrorMessage } from '@/utils/errorUtils';
+import { getApiErrorMessage, getApiErrorString } from '@/utils/errorUtils';
 import { formatDate } from '@/utils/dateUtils';
 import { formatGender } from '@/utils/genderUtils';
 import { downloadCSV } from '@/utils/csvUtils';
@@ -59,6 +62,69 @@ export const StudentListPage = () => {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<ReactNode>(null);
+
+  // 회수/환불 패널
+  const [refundSummary, setRefundSummary] = useState<RefundSummary | null>(null);
+  const [refundSummaryLoading, setRefundSummaryLoading] = useState(false);
+  const [decidingReturnItemId, setDecidingReturnItemId] = useState<string | null>(null);
+  const [isRefunding, setIsRefunding] = useState(false);
+
+  const loadRefundSummary = async (orderId?: string | number) => {
+    if (!orderId) {
+      setRefundSummary(null);
+      return;
+    }
+    setRefundSummaryLoading(true);
+    try {
+      setRefundSummary(await getRefundSummary(String(orderId)));
+    } catch (error) {
+      // 회수 대상이 없는 일반 주문에서도 실패할 수 있어 상세 조회를 막지 않는다.
+      console.error('환불 요약 조회 실패:', error);
+      setRefundSummary(null);
+    } finally {
+      setRefundSummaryLoading(false);
+    }
+  };
+
+  // 확정 후에는 재조회한다. 응답에 품목별 return_status가 개별로 오지 않아
+  // 부분 갱신하면 화면과 서버가 어긋나기 쉽다.
+  const handleDecideReturnStatus = async (
+    orderId: string,
+    itemId: string,
+    decision: ReturnStatusDecision,
+    note: string,
+  ) => {
+    setDecidingReturnItemId(itemId);
+    try {
+      await updateOrderItemReturnStatus(orderId, itemId, { return_status: decision, note });
+    } catch (error) {
+      console.error('회수 상태 확정 실패:', error);
+      setToast({
+        message: getApiErrorString(error, '회수 상태 확정에 실패했습니다.'),
+        variant: 'error',
+      });
+    } finally {
+      setDecidingReturnItemId(null);
+      await loadRefundSummary(orderId);
+    }
+  };
+
+  const handleRefund = async (orderId: string, payload: RefundRequestPayload) => {
+    setIsRefunding(true);
+    try {
+      await createOrderRefund(orderId, payload);
+      setToast({ message: '환불이 기록되었습니다.', variant: 'success' });
+    } catch (error) {
+      console.error('환불 기록 실패:', error);
+      setToast({
+        message: getApiErrorString(error, '환불 기록에 실패했습니다.'),
+        variant: 'error',
+      });
+    } finally {
+      setIsRefunding(false);
+      await loadRefundSummary(orderId);
+    }
+  };
 
   const mapToRow = (student: AdminStudent, index: number, page: number): StudentRow => ({
     id: student.id,
@@ -208,9 +274,21 @@ export const StudentListPage = () => {
     };
   };
 
-  const fetchStudentDetail = async (studentId: string | number): Promise<StudentDetailData> => {
-    const detail = await getStudentDetail(studentId);
+  const fetchStudentDetail = async (
+    studentId: string | number,
+    includeDeleted = false,
+  ): Promise<StudentDetailData> => {
+    const detail = await getStudentDetail(studentId, { includeDeleted });
     const adminOrders = detail.orders ?? [];
+
+    // 삭제 처리자 이름은 학생 응답에 없어서 감사로그에서 가져온다. 배너 표시용이라
+    // 실패해도 상세 조회 전체를 막지 않는다.
+    let deletedBy: string | undefined;
+    if (detail.is_deleted) {
+      const logs = await getStudentAuditLogs(String(studentId)).catch(() => null);
+      deletedBy =
+        logs?.data.find((l) => l.action === 'student.delete')?.actor?.employee_name ?? undefined;
+    }
 
     // 학교 정보 먼저 조회 (itemId 매칭에 필요)
     const schoolName = detail.admission_school ?? detail.school_name ?? '';
@@ -345,14 +423,23 @@ export const StudentListPage = () => {
       totalNameTagCount: detail.total_name_tag_count,
       history: firstHistory,
       isManuallySupported: detail.is_manually_supported,
+      isDeleted: detail.is_deleted,
+      deletedAt: detail.deleted_at,
+      deleteReason: detail.delete_reason,
+      deletedBy,
     };
   };
 
   const handleRowClick = async (student: StudentRow) => {
     try {
-      const detailData = await fetchStudentDetail(student.id);
+      const detailData = await fetchStudentDetail(student.id, student.isDeleted);
       setSelectedStudent(detailData);
       setModalMode('view');
+      // return_status는 학생 삭제로만 생기므로 삭제된 학생에서만 조회한다.
+      setRefundSummary(null);
+      if (detailData.isDeleted) {
+        void loadRefundSummary(detailData.orderSnapshots?.[0]?.orderId);
+      }
     } catch (error) {
       console.error('학생 상세 조회 실패:', error);
     }
@@ -744,7 +831,7 @@ export const StudentListPage = () => {
 
         <StudentModal
           isOpen={modalMode !== null}
-          onClose={() => setModalMode(null)}
+          onClose={() => { setModalMode(null); setRefundSummary(null); }}
           mode={modalMode ?? 'view'}
           student={selectedStudent}
           onSubmit={handleAddStudent}
@@ -753,6 +840,12 @@ export const StudentListPage = () => {
           onOrderCreate={handleOrderCreate}
           onOrderUpdate={handleOrderUpdate}
           onStatusChange={handleStatusChange}
+          refundSummary={refundSummary}
+          refundSummaryLoading={refundSummaryLoading}
+          decidingReturnItemId={decidingReturnItemId}
+          isRefunding={isRefunding}
+          onDecideReturnStatus={handleDecideReturnStatus}
+          onRefund={handleRefund}
         />
 
         <StudentDeleteModal
