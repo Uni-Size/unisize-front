@@ -19,7 +19,7 @@ import type { AdminStudent } from '@/api/student';
 import { Toast } from '@components/atoms/Toast';
 import type { ToastVariant } from '@components/atoms/Toast';
 import { getSchoolDetail } from '@/api/school';
-import { getApiErrorMessage, getApiErrorString } from '@/utils/errorUtils';
+import { getApiErrorMessage } from '@/utils/errorUtils';
 import { formatDate } from '@/utils/dateUtils';
 import { formatGender } from '@/utils/genderUtils';
 import { downloadCSV } from '@/utils/csvUtils';
@@ -68,6 +68,10 @@ export const StudentListPage = () => {
   const [refundSummaryLoading, setRefundSummaryLoading] = useState(false);
   const [decidingReturnItemId, setDecidingReturnItemId] = useState<string | null>(null);
   const [isRefunding, setIsRefunding] = useState(false);
+  const [decideReturnError, setDecideReturnError] = useState<ReactNode>(null);
+  const [refundError, setRefundError] = useState<ReactNode>(null);
+  // 삭제된 학생만 회수 대상이 된다. 모달에서 주문 탭을 옮기면 그 주문으로 다시 조회한다.
+  const [isDeletedStudentOpen, setIsDeletedStudentOpen] = useState(false);
 
   const loadRefundSummary = async (orderId?: string | number) => {
     if (!orderId) {
@@ -95,14 +99,14 @@ export const StudentListPage = () => {
     note: string,
   ) => {
     setDecidingReturnItemId(itemId);
+    setDecideReturnError(null);
     try {
       await updateOrderItemReturnStatus(orderId, itemId, { return_status: decision, note });
     } catch (error) {
       console.error('회수 상태 확정 실패:', error);
-      setToast({
-        message: getApiErrorString(error, '회수 상태 확정에 실패했습니다.'),
-        variant: 'error',
-      });
+      setDecideReturnError(getApiErrorMessage(error, '회수 상태 확정에 실패했습니다.'));
+      // 확인 모달은 이 호출이 reject될 때만 열린 채로 남는다. 삼키면 성공으로 보고 닫힌다.
+      throw error;
     } finally {
       setDecidingReturnItemId(null);
       await loadRefundSummary(orderId);
@@ -111,20 +115,29 @@ export const StudentListPage = () => {
 
   const handleRefund = async (orderId: string, payload: RefundRequestPayload) => {
     setIsRefunding(true);
+    setRefundError(null);
     try {
       await createOrderRefund(orderId, payload);
       setToast({ message: '환불이 기록되었습니다.', variant: 'success' });
     } catch (error) {
       console.error('환불 기록 실패:', error);
-      setToast({
-        message: getApiErrorString(error, '환불 기록에 실패했습니다.'),
-        variant: 'error',
-      });
+      setRefundError(getApiErrorMessage(error, '환불 기록에 실패했습니다.'));
+      throw error;
     } finally {
       setIsRefunding(false);
       await loadRefundSummary(orderId);
     }
   };
+
+  // 모달이 알려주는 선택 주문으로 요약을 맞춘다. 첫 주문 고정이던 것을 대체한다.
+  const handleActiveOrderChange = useCallback(
+    (orderId: string | null) => {
+      if (!isDeletedStudentOpen) return;
+      void loadRefundSummary(orderId ?? undefined);
+    },
+    // StudentModal이 같은 주문을 두 번 알리지 않으므로 재조회가 반복되지 않는다.
+    [isDeletedStudentOpen],
+  );
 
   const mapToRow = (student: AdminStudent, index: number, page: number): StudentRow => ({
     id: student.id,
@@ -436,10 +449,11 @@ export const StudentListPage = () => {
       setSelectedStudent(detailData);
       setModalMode('view');
       // return_status는 학생 삭제로만 생기므로 삭제된 학생에서만 조회한다.
+      // 실제 조회는 모달이 선택 주문을 알려줄 때(onActiveOrderChange) 이뤄진다.
       setRefundSummary(null);
-      if (detailData.isDeleted) {
-        void loadRefundSummary(detailData.orderSnapshots?.[0]?.orderId);
-      }
+      setDecideReturnError(null);
+      setRefundError(null);
+      setIsDeletedStudentOpen(detailData.isDeleted ?? false);
     } catch (error) {
       console.error('학생 상세 조회 실패:', error);
     }
@@ -831,7 +845,13 @@ export const StudentListPage = () => {
 
         <StudentModal
           isOpen={modalMode !== null}
-          onClose={() => { setModalMode(null); setRefundSummary(null); }}
+          onClose={() => {
+            setModalMode(null);
+            setRefundSummary(null);
+            setIsDeletedStudentOpen(false);
+            setDecideReturnError(null);
+            setRefundError(null);
+          }}
           mode={modalMode ?? 'view'}
           student={selectedStudent}
           onSubmit={handleAddStudent}
@@ -844,6 +864,9 @@ export const StudentListPage = () => {
           refundSummaryLoading={refundSummaryLoading}
           decidingReturnItemId={decidingReturnItemId}
           isRefunding={isRefunding}
+          decideReturnError={decideReturnError}
+          refundError={refundError}
+          onActiveOrderChange={handleActiveOrderChange}
           onDecideReturnStatus={handleDecideReturnStatus}
           onRefund={handleRefund}
         />

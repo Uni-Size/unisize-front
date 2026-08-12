@@ -414,14 +414,18 @@ export const StudentModal = ({
   // 선택된 주문을 바깥에 알린다. 회수/환불 요약은 주문 단위라 페이지가 어느 주문을
   // 조회할지 알아야 한다. 같은 id를 두 번 알리지 않아 콜백이 매 렌더 새로 와도 안전하다.
   const effectiveOrderId = activeOrderId ?? student?.orderId;
-  const lastEmittedOrderIdRef = useRef<string | null>(null);
+  // undefined = 아직 알린 적 없음. 닫힐 때 되돌려서, 같은 학생을 다시 열어도 한 번 더 알린다.
+  const lastEmittedOrderIdRef = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    if (mode !== "view") return;
+    if (!isOpen || mode !== "view") {
+      lastEmittedOrderIdRef.current = undefined;
+      return;
+    }
     const next = effectiveOrderId != null ? String(effectiveOrderId) : null;
     if (lastEmittedOrderIdRef.current === next) return;
     lastEmittedOrderIdRef.current = next;
     onActiveOrderChange?.(next);
-  }, [mode, effectiveOrderId, onActiveOrderChange]);
+  }, [isOpen, mode, effectiveOrderId, onActiveOrderChange]);
 
   // 학생 감사 로그
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
