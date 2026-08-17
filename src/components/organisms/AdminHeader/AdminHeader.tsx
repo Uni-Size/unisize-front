@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
 interface AdminHeaderProps {
   title: string;
@@ -14,8 +14,10 @@ export const AdminHeader = ({
   actions,
 }: AdminHeaderProps) => {
   return (
-    <header className="flex items-center justify-between w-full">
-      <h1 className="text-xl font-normal text-bg-900 leading-none m-0">{title}</h1>
+    <header className="flex items-center justify-between w-full mb-4">
+      <h1 className="text-xl font-normal text-bg-900 leading-none m-0">
+        {title}
+      </h1>
       <div className="flex items-center gap-2">
         {actions}
         {buttonLabel && (

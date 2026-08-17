@@ -13,6 +13,8 @@ import { useStudents, useInfiniteScroll, useMeasurementForm } from './hooks';
 import { Toast } from '@components/atoms/Toast';
 import { useToast } from '../../../hooks/useToast';
 import { AxiosError } from 'axios';
+import { mapFinalizeMeasurementToInvoiceData } from '@/lib/invoiceMapper';
+import { printA6Invoice } from '@/lib/printInvoice';
 
 export const MainPage = () => {
   const navigate = useNavigate();
@@ -158,13 +160,25 @@ export const MainPage = () => {
       return;
     }
     const payload = buildOrderPayload();
-    await completeMeasurement(selectedStudent.id, { ...payload, signature });
+    const finalizeResponse = await completeMeasurement(selectedStudent.id, { ...payload, signature });
     setIsMeasurementOpen(false);
     setMeasurementData(null);
     setSelectedStudent(null);
     form.reset();
     showToast('확정 완료되었습니다.');
     refresh();
+
+    // A6 인보이스 자동 인쇄는 확정과 완전히 분리된 부가 동작이다. 확정(저장)은
+    // 이미 끝난 뒤이므로, 인쇄가 실패해도 확정 실패로 취급하지 않고 화면에
+    // 보이지 않게 렌더링 → 캡처 → 로컬 프린트 에이전트 전송을 fire-and-forget으로
+    // 시도한 뒤, 실패 시에만 별도 토스트로 안내한다.
+    const invoiceData = mapFinalizeMeasurementToInvoiceData(finalizeResponse, {
+      sellerName: staff?.employee_name,
+    });
+    printA6Invoice(invoiceData).catch((err) => {
+      console.error('A6 인보이스 인쇄 실패:', err);
+      showToast('프린터 연결 안됨 — 수동 확인 필요');
+    });
   };
 
   return (

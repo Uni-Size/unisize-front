@@ -16,7 +16,7 @@ type Story = StoryObj<typeof meta>;
 
 const sampleStudents: RegisterStudent[] = [
   {
-    id: 1,
+    id: '1',
     name: '김인철',
     gender: 'M',
     birth_date: '2010-03-15',
@@ -38,7 +38,7 @@ const sampleStudents: RegisterStudent[] = [
     updated_at: '',
   },
   {
-    id: 2,
+    id: '2',
     name: '이영희',
     gender: 'F',
     birth_date: '2009-07-22',

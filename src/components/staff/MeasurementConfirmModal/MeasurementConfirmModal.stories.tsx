@@ -17,7 +17,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const sampleStudent: RegisterStudent = {
-  id: 1,
+  id: '1',
   name: '한기선',
   gender: 'M',
   birth_date: '2010-01-01',

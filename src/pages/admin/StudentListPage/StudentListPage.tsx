@@ -18,12 +18,11 @@ import { getSchoolDetail } from '@/api/school';
 import { getApiErrorMessage } from '@/utils/errorUtils';
 import { formatDate } from '@/utils/dateUtils';
 import { formatGender } from '@/utils/genderUtils';
-import { resolveNamedSelectableGroups } from '@/utils/selectableGroups';
 import { downloadCSV } from '@/utils/csvUtils';
 import { sortUniformsByCategoryGroup } from '@/constants/productCategories';
 
 interface StudentRow {
-  id: number;
+  id: string;
   no: number;
   category: string;
   school: string;
@@ -273,81 +272,11 @@ export const StudentListPage = () => {
     }
 
     // 주문 없을 때 recommended_uniforms를 초기 편집 항목으로 변환
-    const toUniformItem = (r: import('@/api/student').RecommendedUniformItem, idx: number, seasonCode: 'W' | 'S' | 'A'): import('@components/organisms/StudentModal').UniformItem => {
-      const avail = availableUniforms.find(u => u.productId === r.product_id);
-      return {
-        id: `rec-${r.product_id}-${idx}`,
-        productId: r.product_id,
-        itemId: r.item_id,
-        name: avail?.name ?? r.product_name,
-        size: r.recommended_size,
-        availableSizes: avail?.availableSizes ?? r.available_sizes.map(a => a.size),
-        supportedQuantity: r.supported_quantity,
-        additionalQuantity: r.purchase_quantity - r.supported_quantity,
-        unitPrice: r.price,
-        repair: r.customization ?? '',
-        reservation: r.delivery_status === 'reserved',
-        received: r.delivery_status === 'receipt',
-        nameTag: r.name_tag_count ?? null,
-        nameTagName: r.name_tag_name,
-        attachCount: r.name_tag_attach ? r.purchase_quantity : 0,
-        itemStatus: r.delivery_status,
-        seasonCode,
-        category: avail?.category ?? r.category,
-      };
-    };
-
-    const sortUniforms = sortUniformsByCategoryGroup;
-
-    // 교체 가능(selectable_with) 그룹은 지원 한도를 공유하므로 화면엔 그룹당
-    // 한 행(대표)만 노출한다. 그룹핑/대표 선택 알고리즘은 공용 유틸로 통합됨
-    // (src/utils/selectableGroups.ts) — 대표 선택 우선순위: 학생 성별과 일치
-    // > 그룹의 첫 품목.
-    const studentGender = detail.gender; // 'M' | 'F' | ...
-
-    const filterSelectableGroup = (items: import('@/api/student').RecommendedUniformItem[]) =>
-      resolveNamedSelectableGroups(items, studentGender).map((g) => g.canonical);
-
-    const recWinter = !firstSnapshot
-      ? sortUniforms(filterSelectableGroup((detail.recommended_uniforms?.winter ?? []).filter(r => r.season === 'W')).map((r, i) => toUniformItem(r, i, 'W')))
-      : [];
-    const recSummer = !firstSnapshot
-      ? sortUniforms(filterSelectableGroup((detail.recommended_uniforms?.summer ?? []).filter(r => r.season === 'S')).map((r, i) => toUniformItem(r, i, 'S')))
-      : [];
-    const recAll = !firstSnapshot
-      ? [
-          ...filterSelectableGroup((detail.recommended_uniforms?.winter ?? []).filter(r => r.season === 'A')).map((r, i) => toUniformItem(r, i, 'A')),
-          ...filterSelectableGroup((detail.recommended_uniforms?.summer ?? []).filter(r => r.season === 'A')).map((r, i) => toUniformItem(r, i, 'A')),
-        ]
-      : [];
-
-    // 주문도 없고 recommended_uniforms도 없을 때 support_allowances remaining >= 1 품목을 초기 리스트로
-    if (!firstSnapshot && recWinter.length === 0 && recSummer.length === 0 && recAll.length === 0) {
-      const pendingAllowances = (detail.support_allowances ?? []).filter(a => a.remaining >= 1);
-      for (const allowance of pendingAllowances) {
-        const avail = availableUniforms.find(u => u.productId === allowance.product_id);
-        if (!avail) continue;
-        const item: import('@components/organisms/StudentModal').UniformItem = {
-          id: `allowance-${allowance.product_id}`,
-          productId: allowance.product_id,
-          name: allowance.display_name,
-          size: '',
-          availableSizes: avail.availableSizes,
-          supportedQuantity: allowance.remaining,
-          additionalQuantity: 0,
-          unitPrice: avail.price,
-          repair: '',
-          reservation: false,
-          received: false,
-          nameTag: 0,
-          attachCount: 0,
-          seasonCode: avail.season === 'summer' ? 'S' : 'W',
-        };
-        if (avail.season === 'summer') recSummer.push(item);
-        else recWinter.push(item);
-      }
-    }
-
+    // 주문이 없는 학생은 교복 항목을 만들지 않는다. StudentModal은 주문 섹션을
+    // orderSnapshots가 있을 때만 그리고, "+ 주문 생성"을 누르면
+    // enterOrderCreateMode가 support_allowances 기준으로 목록을 새로 만들므로,
+    // 여기서 recommended_uniforms로 미리 채워봐야 화면에 뜨지도 않고 곧바로
+    // 덮어써진다.
     return {
       id: String(detail.id),
       orderId: firstSnapshot?.orderId,
@@ -378,9 +307,9 @@ export const StudentListPage = () => {
       nameTagPrice: detail.name_tag_service?.unit_price ?? nameTagPrice,
       nameTagAttachPrice: detail.name_tag_service?.attach_price ?? nameTagAttachPrice,
       nameTagName: detail.name_tag_name || detail.name,
-      winterUniforms: firstSnapshot?.winterUniforms ?? recWinter,
-      summerUniforms: firstSnapshot?.summerUniforms ?? recSummer,
-      allUniforms: firstSnapshot?.allUniforms ?? recAll,
+      winterUniforms: firstSnapshot?.winterUniforms ?? [],
+      summerUniforms: firstSnapshot?.summerUniforms ?? [],
+      allUniforms: firstSnapshot?.allUniforms ?? [],
       supplies: [],
       nameTag: (() => {
         if (!firstSnapshot) return { orderQuantity: 0, attachQuantity: 0 };
@@ -580,7 +509,7 @@ export const StudentListPage = () => {
     }
   };
 
-  const handleDeleteStudent = async (e: React.MouseEvent, studentId: number) => {
+  const handleDeleteStudent = async (e: React.MouseEvent, studentId: string) => {
     e.stopPropagation();
     if (!window.confirm('정말 삭제하시겠습니까?')) return;
     try {

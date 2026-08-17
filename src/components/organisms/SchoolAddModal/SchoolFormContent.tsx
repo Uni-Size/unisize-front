@@ -186,6 +186,11 @@ const toEditableFromPrev = (u: PreviousYearUniformItem): EditableProduct => ({
   contractPrice: u.contract_price,
   freeQuantity: u.free_support_count,
   productApiId: u.product_id,
+  is_selectable: u.is_selectable,
+  selectable_with: u.selectable_with.map((s) => ({
+    product_id: s.product_id,
+    display_name: s.display_name,
+  })),
 });
 
 export const SchoolFormContent = ({

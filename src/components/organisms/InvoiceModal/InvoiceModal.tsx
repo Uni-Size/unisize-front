@@ -3,7 +3,8 @@ import { Modal, Select } from "@components/atoms";
 import { Toast } from "@components/atoms/Toast";
 import { formatGender } from "@/utils/genderUtils";
 import { formatDate } from "@/utils/dateUtils";
-import { updateAdminOrder } from "@/api/order";
+import { updateAdminOrder, updateItemDeliveryStatus } from "@/api/order";
+import type { DeliveryStatus } from "@/api/order";
 import { getApiErrorString } from "@/utils/errorUtils";
 import type {
   StudentDetailData,
@@ -165,7 +166,34 @@ export const InvoiceModal = ({
     setSaving(true);
     try {
       const saveTargets = activeSnapshots.filter((s) => s.status !== "complete");
-      await Promise.all(
+
+      // 품목별 상태(예약/수령 토글) 변경 감지. delivery_status는 더 이상 updateAdminOrder(큰
+      // 수정 엔드포인트)로 보내지 않는다 — 주문이 preparing/ready/complete 등(결제 완료 후)이면
+      // 그 엔드포인트는 원본 품목을 수정하는 대신 별도의 "추가 주문"을 만들어버려서
+      // (createAdditionalOrder), 상태만 바꾸려던 것뿐인데 유령 주문과 재고 이중차감이 생길 수
+      // 있기 때문이다. 상태 변경은 주문 상태와 무관하게 원본 품목을 직접 갱신하는 전용
+      // 엔드포인트(updateItemDeliveryStatus)로만 보낸다.
+      const statusChanges: { orderId: string | number; itemId: string; status: DeliveryStatus }[] = [];
+      for (const snapshot of saveTargets) {
+        const state = snapshotStates.get(snapshot.orderId);
+        if (!state) continue;
+        for (const i of [...state.winterUniforms, ...state.summerUniforms, ...state.allUniforms]) {
+          if (i.isDeleted) continue;
+          const nextStatus = (i.reservation ? "reserved" : i.received ? "receipt" : i.itemStatus) as
+            | DeliveryStatus
+            | undefined;
+          if (nextStatus && nextStatus !== i.itemStatus) {
+            // 전용 엔드포인트의 item_id는 상품 ID가 아니라 이 주문 품목(order item) 자체의 ID다
+            // (updateAdminOrder의 item_id와 의미가 다르므로 혼동하지 않도록 주의).
+            statusChanges.push({ orderId: snapshot.orderId, itemId: i.id, status: nextStatus });
+          }
+        }
+      }
+
+      // 수량/사이즈/커스터마이징 등 상태 외 필드는 기존대로 큰 엔드포인트로 처리한다.
+      // 상태 변경 호출은 이 큰 업데이트가 (필요하다면 품목을 재생성한 뒤) 끝난 다음에
+      // 실행해야, 방금 갱신된 품목을 대상으로 상태를 반영할 수 있다.
+      const orderUpdateResults = await Promise.allSettled(
         saveTargets.map((snapshot) => {
           const state = snapshotStates.get(snapshot.orderId);
           if (!state) return Promise.resolve();
@@ -196,7 +224,61 @@ export const InvoiceModal = ({
           });
         }),
       );
-      setToast({ message: "저장되었습니다.", variant: "success" });
+
+      const statusUpdateResults = await Promise.allSettled(
+        statusChanges.map((c) => updateItemDeliveryStatus(String(c.orderId), c.itemId, c.status)),
+      );
+
+      const orderFailures = orderUpdateResults.filter(
+        (r): r is PromiseRejectedResult => r.status === "rejected",
+      );
+      const statusFailures = statusUpdateResults
+        .map((r, idx) => ({ r, change: statusChanges[idx] }))
+        .filter((x): x is { r: PromiseRejectedResult; change: (typeof statusChanges)[number] } =>
+          x.r.status === "rejected",
+        );
+
+      // 성공한 상태 변경 건은 로컬 state에도 반영한다. 이 엔드포인트는 갱신된 품목을
+      // 응답으로 돌려주지 않으므로(성공 메시지만 옴), 재조회 없이도 화면과 이후 저장 시
+      // 변경 감지가 최신 상태를 기준으로 이뤄지도록 낙관적으로 업데이트한다.
+      const failedItemIds = new Set(statusFailures.map((f) => f.change.itemId));
+      const succeededChanges = statusChanges.filter((c) => !failedItemIds.has(c.itemId));
+      if (succeededChanges.length > 0) {
+        setSnapshotStates((prev) => {
+          const next = new Map(prev);
+          const statusByItemId = new Map(succeededChanges.map((c) => [c.itemId, c.status]));
+          const patch = (items: UniformItem[]) =>
+            items.map((i) => (statusByItemId.has(i.id) ? { ...i, itemStatus: statusByItemId.get(i.id) } : i));
+          for (const snapshot of saveTargets) {
+            const cur = next.get(snapshot.orderId);
+            if (!cur) continue;
+            next.set(snapshot.orderId, {
+              ...cur,
+              winterUniforms: patch(cur.winterUniforms),
+              summerUniforms: patch(cur.summerUniforms),
+              allUniforms: patch(cur.allUniforms),
+            });
+          }
+          return next;
+        });
+      }
+
+      if (orderFailures.length === 0 && statusFailures.length === 0) {
+        setToast({ message: "저장되었습니다.", variant: "success" });
+      } else {
+        const parts: string[] = [];
+        if (orderFailures.length > 0) {
+          parts.push(
+            `품목 정보 저장 ${orderFailures.length}건 실패 (${getApiErrorString(orderFailures[0].reason, "알 수 없는 오류")})`,
+          );
+        }
+        if (statusFailures.length > 0) {
+          parts.push(
+            `상태 변경 ${statusFailures.length}/${statusChanges.length}건 실패 (${getApiErrorString(statusFailures[0].r.reason, "알 수 없는 오류")})`,
+          );
+        }
+        setToast({ message: parts.join(" / "), variant: "error" });
+      }
     } catch (err) {
       setToast({ message: getApiErrorString(err, "저장 중 오류가 발생했습니다."), variant: "error" });
     } finally {

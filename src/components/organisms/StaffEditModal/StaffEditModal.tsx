@@ -3,7 +3,7 @@ import { Modal, Input } from '@components/atoms';
 import { resetStaffPassword } from '@/api/staff';
 
 export interface StaffEditData {
-  id: number;
+  id: string;
   employeeId: string;
   name: string;
   gender: '남' | '여';

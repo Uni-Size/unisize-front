@@ -65,7 +65,7 @@ export interface MeasurementUniformItem {
 
 export interface MeasurementSupplyItem {
   rowId: string;
-  productId: number;
+  productId: string;
   name: string;
   category: string;
   unitPrice: number;
@@ -90,6 +90,13 @@ const toUniformItem = (
   // 그룹에 속한 행은 체크 상태에 따라 지원수량이 groupQuantity 또는 0이 된다.
   // 그룹에 속하지 않은 단독 품목은 백엔드가 내려준 supported_quantity를 그대로 쓴다.
   const supportedQuantity = group ? (group.isSupportChecked ? group.groupQuantity : 0) : item.supported_quantity;
+  const availableSizes = (item.available_sizes ?? []).map((s) => ({ size: s.size, inStock: s.in_stock, stockCount: s.stock_count }));
+  // 추천 사이즈가 그 상품에 실제로 없는 값이면 미리 선택하지 않고 비워 둔다. 그대로
+  // 선택해두면 드롭다운에는 아무것도 안 잡히는데 주문 payload에는 존재하지 않는
+  // 사이즈가 실려 나가고, 사이즈 미선택 검사(!selectedSize)도 통과해버린다.
+  // available_sizes가 비어 있으면 추천값이 틀렸다는 근거가 없으므로 그대로 둔다.
+  const recommendationIsReal =
+    availableSizes.length === 0 || availableSizes.some((s) => s.size === item.recommended_size);
   return {
     rowId: nextRowId(),
     productId: String(item.product_id),
@@ -97,8 +104,8 @@ const toUniformItem = (
     category: item.category,
     season,
     recommendedSize: item.recommended_size,
-    selectedSize: item.recommended_size,
-    availableSizes: (item.available_sizes ?? []).map((s) => ({ size: s.size, inStock: s.in_stock, stockCount: s.stock_count })),
+    selectedSize: recommendationIsReal ? item.recommended_size : '',
+    availableSizes,
     supportedQuantity,
     additionalQuantity: Math.max(0, (item.purchase_quantity ?? 0) - item.supported_quantity),
     unitPrice: item.price,
