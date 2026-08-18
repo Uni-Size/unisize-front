@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { BRAND_NAME } from "@/constants/brand";
 
 export const OnboardingPage = () => {
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ export const OnboardingPage = () => {
   return (
     <main className="p-4 text-center min-h-screen bg-primary-100 flex flex-col items-center justify-center">
       <h4 className="text-2xl font-bold leading-[1.4] mb-15 text-bg-900">
-        유니사이즈 <br />
+        {BRAND_NAME} <br />
         교복 측정 대기 등록
       </h4>
       <button
