@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import type { SchoolListItem } from '@/api/school';
-import { getTargetYear } from '@/utils/schoolUtils';
-import { logout } from '@/api/auth';
-import { useAuthStore } from '@/stores/authStore';
-import { useSchoolStore } from '@/stores/schoolStore';
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import type { SchoolListItem } from "@/api/school";
+import { getTargetYear } from "@/utils/schoolUtils";
+import { logout } from "@/api/auth";
+import { useAuthStore } from "@/stores/authStore";
+import { useSchoolStore } from "@/stores/schoolStore";
 
 interface SchoolSubPage {
   id: string;
@@ -35,11 +35,14 @@ interface MenuItem {
 
 // 스태프 서브메뉴
 const staffSubMenus: SubMenuItem[] = [
-  { id: 'staff-manage', name: '관리', path: '/admin/staff' },
-  { id: 'staff-approval', name: '승인', path: '/admin/staff/approval' },
+  { id: "staff-manage", name: "관리", path: "/admin/staff" },
+  { id: "staff-approval", name: "승인", path: "/admin/staff/approval" },
 ];
 
-const toSchoolItem = (school: SchoolListItem, type: 'elementary' | 'middle' | 'high'): SchoolItem => {
+const toSchoolItem = (
+  school: SchoolListItem,
+  type: "elementary" | "middle" | "high",
+): SchoolItem => {
   const id = school.id ?? school.school_name;
   const basePath = `/admin/orders/${type}/${id}`;
   return {
@@ -47,8 +50,16 @@ const toSchoolItem = (school: SchoolListItem, type: 'elementary' | 'middle' | 'h
     name: school.school_name,
     basePath,
     subPages: [
-      { id: `school-${id}-students`, name: '학생', path: `${basePath}/students` },
-      { id: `school-${id}-orders`, name: '주문/예약', path: `${basePath}/orders` },
+      {
+        id: `school-${id}-students`,
+        name: "학생",
+        path: `${basePath}/students`,
+      },
+      {
+        id: `school-${id}-orders`,
+        name: "주문/예약",
+        path: `${basePath}/orders`,
+      },
     ],
   };
 };
@@ -69,7 +80,7 @@ export const AdminSidebar = () => {
       // 실패해도 로컬 인증 정보는 제거
     } finally {
       clearAuth();
-      navigate('/admin/login');
+      navigate("/admin/login");
     }
   };
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
@@ -83,11 +94,20 @@ export const AdminSidebar = () => {
   }, [targetYear, fetchSchools]);
 
   const sort = (a: SchoolListItem, b: SchoolListItem) =>
-    a.school_name.localeCompare(b.school_name, 'ko');
+    a.school_name.localeCompare(b.school_name, "ko");
 
-  const elementarySchools = rawSchools.filter((s) => s.school_type === '초').sort(sort).map((s) => toSchoolItem(s, 'elementary'));
-  const middleSchools = rawSchools.filter((s) => s.school_type === '중').sort(sort).map((s) => toSchoolItem(s, 'middle'));
-  const highSchools = rawSchools.filter((s) => s.school_type === '고').sort(sort).map((s) => toSchoolItem(s, 'high'));
+  const elementarySchools = rawSchools
+    .filter((s) => s.school_type === "초")
+    .sort(sort)
+    .map((s) => toSchoolItem(s, "elementary"));
+  const middleSchools = rawSchools
+    .filter((s) => s.school_type === "중")
+    .sort(sort)
+    .map((s) => toSchoolItem(s, "middle"));
+  const highSchools = rawSchools
+    .filter((s) => s.school_type === "고")
+    .sort(sort)
+    .map((s) => toSchoolItem(s, "high"));
 
   // 학교 삭제 이벤트 수신 → store에서 낙관적 제거
   useEffect(() => {
@@ -96,20 +116,55 @@ export const AdminSidebar = () => {
       useSchoolStore.setState((state) => ({
         schools: state.schools.filter((s) => s.id !== schoolId),
       }));
-      setExpandedSchools((prev) => prev.filter((id) => id !== `school-${schoolId}`));
+      setExpandedSchools((prev) =>
+        prev.filter((id) => id !== `school-${schoolId}`),
+      );
     };
-    window.addEventListener('school-deleted', handleSchoolDeleted);
-    return () => window.removeEventListener('school-deleted', handleSchoolDeleted);
+    window.addEventListener("school-deleted", handleSchoolDeleted);
+    return () =>
+      window.removeEventListener("school-deleted", handleSchoolDeleted);
   }, []);
 
   const menuItems: MenuItem[] = [
-    ...(elementarySchools.length > 0 ? [{ id: 'elementary', label: `[${targetYear}]주관구매 -초`, path: '/admin/orders/elementary', schoolItems: elementarySchools }] : []),
-    ...(middleSchools.length > 0 ? [{ id: 'middle', label: `[${targetYear}]주관구매 -중`, path: '/admin/orders/middle', schoolItems: middleSchools }] : []),
-    ...(highSchools.length > 0 ? [{ id: 'high', label: `[${targetYear}]주관구매 -고`, path: '/admin/orders/high', schoolItems: highSchools }] : []),
-    { id: 'product', label: '교복/용품', path: '/admin/products' },
-    { id: 'school', label: '학교', path: '/admin/schools' },
-    { id: 'student', label: '학생', path: '/admin/students' },
-    { id: 'staff', label: '스태프', path: '/admin/staff', subMenus: staffSubMenus },
+    ...(elementarySchools.length > 0
+      ? [
+          {
+            id: "elementary",
+            label: `[${targetYear}]주관구매 -초`,
+            path: "/admin/orders/elementary",
+            schoolItems: elementarySchools,
+          },
+        ]
+      : []),
+    ...(middleSchools.length > 0
+      ? [
+          {
+            id: "middle",
+            label: `[${targetYear}]주관구매 -중`,
+            path: "/admin/orders/middle",
+            schoolItems: middleSchools,
+          },
+        ]
+      : []),
+    ...(highSchools.length > 0
+      ? [
+          {
+            id: "high",
+            label: `[${targetYear}]주관구매 -고`,
+            path: "/admin/orders/high",
+            schoolItems: highSchools,
+          },
+        ]
+      : []),
+    { id: "product", label: "교복/용품", path: "/admin/products" },
+    { id: "school", label: "학교", path: "/admin/schools" },
+    { id: "student", label: "학생", path: "/admin/students" },
+    {
+      id: "staff",
+      label: "스태프",
+      path: "/admin/staff",
+      subMenus: staffSubMenus,
+    },
   ];
 
   const pathname = location.pathname;
@@ -120,8 +175,10 @@ export const AdminSidebar = () => {
     school.subPages.some((sp) => pathname === sp.path);
 
   const isMenuActive = (menu: MenuItem) => {
-    if (menu.subMenus) return menu.subMenus.some((sub) => pathname === sub.path);
-    if (menu.schoolItems) return menu.schoolItems.some((s) => isSchoolActive(s));
+    if (menu.subMenus)
+      return menu.subMenus.some((sub) => pathname === sub.path);
+    if (menu.schoolItems)
+      return menu.schoolItems.some((s) => isSchoolActive(s));
     return false;
   };
 
@@ -144,7 +201,7 @@ export const AdminSidebar = () => {
   const toggleMenu = (menu: MenuItem) => {
     const isExpanded = expandedMenus.includes(menu.id);
     setExpandedMenus((prev) =>
-      isExpanded ? prev.filter((id) => id !== menu.id) : [...prev, menu.id]
+      isExpanded ? prev.filter((id) => id !== menu.id) : [...prev, menu.id],
     );
     // subMenus가 있는 메뉴를 펼칠 때 기본 경로로 이동
     if (!isExpanded && menu.subMenus && menu.subMenus.length > 0) {
@@ -153,9 +210,7 @@ export const AdminSidebar = () => {
   };
 
   const toggleSchool = (schoolId: string) => {
-    setExpandedSchools((prev) =>
-      prev.includes(schoolId) ? [] : [schoolId]
-    );
+    setExpandedSchools((prev) => (prev.includes(schoolId) ? [] : [schoolId]));
   };
 
   const renderSchoolItems = (schoolItems: SchoolItem[]) => (
@@ -165,7 +220,7 @@ export const AdminSidebar = () => {
           <button
             type="button"
             className={`flex items-center w-full h-7.5 px-5 font-medium no-underline leading-none transition-colors duration-200 bg-transparent border-none cursor-pointer text-left hover:text-bg-900 ${
-              isSchoolActive(school) ? 'text-bg-900' : 'text-gray-300'
+              isSchoolActive(school) ? "text-bg-900" : "text-gray-300"
             }`}
             onClick={() => toggleSchool(school.id)}
           >
@@ -178,7 +233,7 @@ export const AdminSidebar = () => {
                   key={sp.id}
                   to={sp.path}
                   className={`flex items-center w-full h-6.5 pl-10 pr-2 text-13 font-medium no-underline leading-none transition-colors duration-200 hover:text-bg-900 ${
-                    isActive(sp.path) ? 'text-bg-900' : 'text-gray-300'
+                    isActive(sp.path) ? "text-bg-900" : "text-gray-300"
                   }`}
                 >
                   {sp.name}
@@ -194,8 +249,11 @@ export const AdminSidebar = () => {
   return (
     <aside className="w-50 min-h-[calc(100vh-16px)] my-2 ml-0 pl-5 pt-5 pb-5 bg-primary-050 border border-primary-100 rounded-r-lg shadow-sm flex flex-col gap-6">
       <div className="p-0">
-        <Link to="/admin" className="text-17 font-medium text-bg-900 no-underline leading-none hover:text-bg-900">
-          스마트학생복 청주점
+        <Link
+          to="/admin"
+          className="text-17 font-medium text-bg-900 no-underline leading-none hover:text-bg-900"
+        >
+          유니사이즈
         </Link>
       </div>
       <nav className="flex flex-col flex-1">
@@ -206,7 +264,7 @@ export const AdminSidebar = () => {
                 <button
                   type="button"
                   className={`flex items-center w-45 h-8.5 pt-3.5 pr-2.5 pb-1.5 pl-2.5 text-17 font-medium no-underline leading-none transition-colors duration-200 bg-none border-none cursor-pointer text-left hover:text-bg-900 ${
-                    isMenuActive(menu) ? 'text-bg-900' : 'text-gray-300'
+                    isMenuActive(menu) ? "text-bg-900" : "text-gray-300"
                   }`}
                   onClick={() => toggleMenu(menu)}
                 >
@@ -221,7 +279,9 @@ export const AdminSidebar = () => {
                             key={sub.id}
                             to={sub.path}
                             className={`flex items-center w-full h-7.5 px-5 font-medium no-underline leading-none transition-colors duration-200 hover:text-bg-900 ${
-                              isActive(sub.path) ? 'text-bg-900' : 'text-gray-300'
+                              isActive(sub.path)
+                                ? "text-bg-900"
+                                : "text-gray-300"
                             }`}
                           >
                             {sub.name}
@@ -237,7 +297,7 @@ export const AdminSidebar = () => {
               <Link
                 to={menu.path}
                 className={`flex items-center w-45 h-8.5 pt-3.5 pr-2.5 pb-1.5 pl-2.5 text-17 font-medium no-underline leading-none transition-colors duration-200 hover:text-bg-900 ${
-                  isActive(menu.path) ? 'text-bg-900' : 'text-gray-300'
+                  isActive(menu.path) ? "text-bg-900" : "text-gray-300"
                 }`}
               >
                 {menu.label}

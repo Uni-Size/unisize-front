@@ -1,28 +1,28 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Input } from '../../../components/atoms/Input';
-import { Button } from '../../../components/atoms/Button';
-import { login } from '../../../api/auth';
-import { useAuthStore } from '../../../stores/authStore';
-import { AxiosError } from 'axios';
-import type { ApiResponse } from '../../../api/auth';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Input } from "../../../components/atoms/Input";
+import { Button } from "../../../components/atoms/Button";
+import { login } from "../../../api/auth";
+import { useAuthStore } from "../../../stores/authStore";
+import { AxiosError } from "axios";
+import type { ApiResponse } from "../../../api/auth";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
   const { setAuth, isAuthenticated, staff } = useAuthStore();
-  const [employeeId, setEmployeeId] = useState('');
-  const [password, setPassword] = useState('');
+  const [employeeId, setEmployeeId] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  const isFormValid = employeeId.trim() !== '' && password.trim() !== '';
+  const isFormValid = employeeId.trim() !== "" && password.trim() !== "";
 
   useEffect(() => {
     if (isAuthenticated && staff) {
-      if (staff.role === 'admin') {
-        navigate('/admin');
+      if (staff.role === "admin") {
+        navigate("/admin");
       } else {
-        navigate('/staff');
+        navigate("/staff");
       }
     }
   }, [isAuthenticated, staff, navigate]);
@@ -31,7 +31,7 @@ export const LoginPage = () => {
     e.preventDefault();
     if (!isFormValid) return;
 
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
@@ -43,22 +43,22 @@ export const LoginPage = () => {
       setAuth(
         loginResponse.user,
         loginResponse.access_token,
-        loginResponse.refresh_token
+        loginResponse.refresh_token,
       );
 
-      if (loginResponse.user.role === 'admin') {
-        navigate('/admin');
+      if (loginResponse.user.role === "admin") {
+        navigate("/admin");
       } else {
-        navigate('/staff');
+        navigate("/staff");
       }
     } catch (err) {
-      console.error('로그인 실패:', err);
+      console.error("로그인 실패:", err);
 
       if (err instanceof AxiosError && err.response?.data) {
         const errorData = err.response.data as ApiResponse<unknown>;
-        setError(errorData.error?.message || '로그인에 실패했습니다.');
+        setError(errorData.error?.message || "로그인에 실패했습니다.");
       } else {
-        setError('아이디 또는 비밀번호가 올바르지 않습니다.');
+        setError("아이디 또는 비밀번호가 올바르지 않습니다.");
       }
     } finally {
       setIsLoading(false);
@@ -95,7 +95,7 @@ export const LoginPage = () => {
 
         <div className="text-center mb-5">
           <p className="text-sm md:text-base font-semibold leading-relaxed text-gray-800">
-            본 시스템은 스마트학생복 청주점만을 위해 개발된
+            본 시스템은 유니사이즈만을 위해 개발된
             <br />
             내부 전용 고객/재고 관리 시스템입니다.
           </p>
@@ -142,7 +142,7 @@ export const LoginPage = () => {
           disabled={!isFormValid || isLoading}
           className="mt-2 w-full"
         >
-          {isLoading ? '로그인 중...' : '로그인'}
+          {isLoading ? "로그인 중..." : "로그인"}
         </Button>
 
         <p className="text-center text-sm text-gray-400">

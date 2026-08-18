@@ -654,7 +654,12 @@ export interface AdminOrderItem {
   subtotal: number;
   name_tag_count: number;
   name_tag_attach: boolean;
-  name_tag_name?: string;
+  /**
+   * 부착 개수. 부착이면 name_tag_count 전체, 아니면 0.
+   * purchase_quantity로 유추하면 안 된다 — 품목이 여러 행으로 분리됐을 때
+   * 행마다 자기 수량으로 계산해 부착비가 중복 집계된다.
+   */
+  name_tag_attach_count?: number;
   customization?: string;
   delivery_status: DeliveryStatus;
   created_at: string;

@@ -1,5 +1,6 @@
 import { apiClient } from "@/lib/apiClient";
 import type { ApiResponse } from "./auth";
+import type { AdminOrderItem } from "./student";
 
 export type OrderStatus =
   | 'pending'    // 대기중
@@ -382,19 +383,42 @@ export async function cancelOrder(orderId: string): Promise<void> {
   await apiClient.post<ApiResponse<void>>(`/api/v1/orders/${orderId}/cancel`);
 }
 
+export interface UpdateDeliveryStatusOptions {
+  /** 상태를 바꿀 수량. 생략하면 전량. 품목 수량보다 크면 400 */
+  quantity?: number;
+  /** 남는 수량이 가질 상태. 생략하면 현재 상태 유지 */
+  remainder_status?: DeliveryStatus;
+}
+
+export interface UpdateDeliveryStatusResult {
+  /** 갱신된 품목들. 주문 조회의 order_items와 동일 shape이라 그대로 교체하면 된다 */
+  items: AdminOrderItem[];
+  /** 형제 행과 병합되어 사라진 행. 화면에서 제거해야 한다 */
+  deleted_item_ids: string[];
+}
+
 /**
  * 품목별 출고 상태 변경
  * PUT /api/v1/orders/:id/items/:item_id/delivery-status
+ *
+ * quantity를 주면 그 수량만 상태가 바뀌고 나머지는 별도 행으로 갈라진다. 원본 ID는
+ * 남는 쪽이 유지하고 상태가 바뀐 수량이 새 행이 된다. 같은 (상품, 사이즈, 수선,
+ * 상태, 차수) 형제 행이 있으면 서버가 합치므로, 응답의 items로 교체하고
+ * deleted_item_ids는 제거해야 화면이 서버와 일치한다.
+ *
+ * 현재 상태가 receipt인 품목은 관리자만 되돌릴 수 있다(비관리자는 403).
  */
 export async function updateItemDeliveryStatus(
   orderId: string,
   itemId: string,
   status: DeliveryStatus,
-): Promise<void> {
-  await apiClient.put<ApiResponse<void>>(
+  options?: UpdateDeliveryStatusOptions,
+): Promise<UpdateDeliveryStatusResult> {
+  const response = await apiClient.put<ApiResponse<UpdateDeliveryStatusResult>>(
     `/api/v1/orders/${orderId}/items/${itemId}/delivery-status`,
-    { delivery_status: status },
+    { delivery_status: status, ...options },
   );
+  return response.data.data;
 }
 
 /**
