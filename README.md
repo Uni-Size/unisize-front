@@ -132,6 +132,8 @@ GitHub Actions가 브랜치별로 자동 배포합니다.
 
 빌드 시점에 `VITE_API_BASE_URL`을 Docker build arg로 주입하는 구조라, API 서버 주소가 바뀌면 재빌드가 필요합니다 (런타임 환경변수가 아님 — Vite가 빌드 타임에 값을 정적으로 박아 넣습니다).
 
+화면에 노출되는 브랜드명은 `VITE_BRAND_NAME`으로 갈아끼웁니다 (`src/constants/brand.ts`의 `BRAND_NAME`). 미설정 시 운영 문구인 "스마트학생복 청주점"으로 폴백하므로, dev 쪽에만 값을 지정하면 됩니다 — 로컬은 `.env.development`, 배포된 dev는 `docker-compose.dev.yml`의 build arg입니다. `docker-compose.yml`(prod)에는 이 인자를 넣지 마세요.
+
 ## 알려진 이슈 / 온보딩 시 주의할 점
 
 정직하게 적어둡니다. 헷갈리기 쉬운 부분들입니다.

@@ -4,6 +4,7 @@ import { Input } from '../../../components/atoms/Input';
 import { Button } from '../../../components/atoms/Button';
 import { login } from '@/api/auth';
 import { useAuthStore } from '@/stores/authStore';
+import { BRAND_NAME } from '@/constants/brand';
 
 export const LoginPage = () => {
   const [id, setId] = useState('');
@@ -56,7 +57,7 @@ export const LoginPage = () => {
 
         <div className="text-center mb-4">
           <p className="text-xl font-normal text-bg-900 leading-[1.2] mb-2">
-            본 시스템은 스마트학생복 청주점만을 위해 개발된
+            본 시스템은 {BRAND_NAME}만을 위해 개발된
             <br />
             내부 전용 고객/재고 관리 시스템입니다.
           </p>

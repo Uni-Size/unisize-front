@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { SchoolListItem } from '@/api/school';
+import { BRAND_NAME } from '@/constants/brand';
 import { getTargetYear } from '@/utils/schoolUtils';
 import { logout } from '@/api/auth';
 import { useAuthStore } from '@/stores/authStore';
@@ -195,7 +196,7 @@ export const AdminSidebar = () => {
     <aside className="w-50 min-h-[calc(100vh-16px)] my-2 ml-0 pl-5 pt-5 pb-5 bg-primary-050 border border-primary-100 rounded-r-lg shadow-sm flex flex-col gap-6">
       <div className="p-0">
         <Link to="/admin" className="text-17 font-medium text-bg-900 no-underline leading-none hover:text-bg-900">
-          스마트학생복 청주점
+          {BRAND_NAME}
         </Link>
       </div>
       <nav className="flex flex-col flex-1">

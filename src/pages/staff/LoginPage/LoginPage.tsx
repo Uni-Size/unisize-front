@@ -6,6 +6,7 @@ import { login } from '../../../api/auth';
 import { useAuthStore } from '../../../stores/authStore';
 import { AxiosError } from 'axios';
 import type { ApiResponse } from '../../../api/auth';
+import { BRAND_NAME } from '@/constants/brand';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -95,7 +96,7 @@ export const LoginPage = () => {
 
         <div className="text-center mb-5">
           <p className="text-sm md:text-base font-semibold leading-relaxed text-gray-800">
-            본 시스템은 스마트학생복 청주점만을 위해 개발된
+            본 시스템은 {BRAND_NAME}만을 위해 개발된
             <br />
             내부 전용 고객/재고 관리 시스템입니다.
           </p>
