@@ -5,10 +5,11 @@ import { Button } from "../../../components/atoms/Button";
 import { login } from "@/api/auth";
 import { useAuthStore } from "@/stores/authStore";
 import { BRAND_NAME } from "@/constants/brand";
+import { DEV_ADMIN_ACCOUNT } from "@/constants/devAccount";
 
 export const LoginPage = () => {
-  const [id, setId] = useState("");
-  const [password, setPassword] = useState("");
+  const [id, setId] = useState(DEV_ADMIN_ACCOUNT.employeeId);
+  const [password, setPassword] = useState(DEV_ADMIN_ACCOUNT.password);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();

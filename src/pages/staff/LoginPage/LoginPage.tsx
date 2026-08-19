@@ -7,12 +7,13 @@ import { useAuthStore } from "../../../stores/authStore";
 import { AxiosError } from "axios";
 import type { ApiResponse } from "../../../api/auth";
 import { BRAND_NAME } from "@/constants/brand";
+import { DEV_STAFF_ACCOUNT } from "@/constants/devAccount";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
   const { setAuth, isAuthenticated, staff } = useAuthStore();
-  const [employeeId, setEmployeeId] = useState("");
-  const [password, setPassword] = useState("");
+  const [employeeId, setEmployeeId] = useState(DEV_STAFF_ACCOUNT.employeeId);
+  const [password, setPassword] = useState(DEV_STAFF_ACCOUNT.password);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
