@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { SchoolListItem } from "@/api/school";
+import { BRAND_NAME } from "@/constants/brand";
 import { getTargetYear } from "@/utils/schoolUtils";
 import { logout } from "@/api/auth";
 import { useAuthStore } from "@/stores/authStore";
@@ -253,7 +254,7 @@ export const AdminSidebar = () => {
           to="/admin"
           className="text-17 font-medium text-bg-900 no-underline leading-none hover:text-bg-900"
         >
-          유니사이즈
+          {BRAND_NAME}
         </Link>
       </div>
       <nav className="flex flex-col flex-1">
