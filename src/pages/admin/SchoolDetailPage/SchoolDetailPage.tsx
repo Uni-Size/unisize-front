@@ -4,6 +4,7 @@ import { useParams, useLocation } from "react-router-dom";
 import { AdminLayout } from "@components/templates/AdminLayout";
 import { AdminHeader } from "@components/organisms/AdminHeader";
 import { StudentModal } from "@components/organisms/StudentModal";
+import { StudentDeleteModal } from "@components/organisms/StudentDeleteModal";
 import type {
   StudentDetailData,
   StudentFormInput,
@@ -63,6 +64,11 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
   const itemsPerPage = 10;
 
   const [toast, setToast] = useState<{ message: string; variant: ToastVariant } | null>(null);
+
+  // 삭제 사유 입력 모달
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<ReactNode>(null);
   const [modalMode, setModalMode] = useState<'add' | 'view' | null>(null);
   const [selectedStudent, setSelectedStudent] =
     useState<StudentDetailData | null>(null);
@@ -527,17 +533,36 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     }
   };
 
-  const handleDeleteStudent = async (
+  const handleDeleteStudent = (
     e: React.MouseEvent,
     studentId: string,
+    studentName: string,
   ) => {
     e.stopPropagation();
-    if (!window.confirm("정말 삭제하시겠습니까?")) return;
+    setDeleteError(null);
+    setDeleteTarget({ id: studentId, name: studentName });
+  };
+
+  const handleConfirmDelete = async (reason: string) => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    setDeleteError(null);
     try {
-      await deleteStudent(studentId);
+      const result = await deleteStudent(deleteTarget.id, reason);
+      setDeleteTarget(null);
+      setToast({
+        message:
+          result.pending_review_item_count > 0
+            ? `삭제되었습니다. 회수 확인이 필요한 품목이 ${result.pending_review_item_count}건 있습니다.`
+            : '삭제되었습니다.',
+        variant: result.pending_review_item_count > 0 ? 'info' : 'success',
+      });
       fetchStudents(currentPage);
     } catch (error) {
       console.error("학생 삭제 실패:", error);
+      setDeleteError(getApiErrorMessage(error, '학생 삭제에 실패했습니다.'));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -606,7 +631,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
           </button>
           <button
             className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-red-200 text-red-700"
-            onClick={(e) => handleDeleteStudent(e, row.id)}
+            onClick={(e) => handleDeleteStudent(e, row.id, row.name)}
           >
             삭제
           </button>
@@ -760,6 +785,15 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         onOrderCreate={handleOrderCreate}
         onOrderUpdate={handleOrderUpdate}
         onStatusChange={handleStatusChange}
+      />
+
+      <StudentDeleteModal
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        studentName={deleteTarget?.name ?? ''}
+        onConfirm={handleConfirmDelete}
+        isSubmitting={isDeleting}
+        error={deleteError}
       />
 
       {toast && (

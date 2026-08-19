@@ -7,4 +7,7 @@ export * from './SchoolAddModal';
 export * from './SchoolDetailModal';
 export * from './OrderSizeTable';
 export * from './StockAddModal';
+export * from './StudentDeleteModal';
+export * from './DeletedStudentBanner';
+export * from './OrderReturnRefundPanel';
 export * from './NameTagSection/NameTagSection';

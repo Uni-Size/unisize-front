@@ -3,13 +3,17 @@ import type { ReactNode } from 'react';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import { AdminHeader } from '@components/organisms/AdminHeader';
 import { StudentModal } from '@components/organisms/StudentModal';
+import { StudentDeleteModal } from '@components/organisms/StudentDeleteModal';
 import type { StudentDetailData, StudentFormInput, AvailableUniform } from '@components/organisms/StudentModal';
 import { Table } from '@components/atoms/Table';
 import { Input } from '@components/atoms/Input';
 import { Button } from '@components/atoms/Button';
 import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
-import { getStudents, getStudentDetail, deleteStudent, getOrderHistory, updateAdminOrder, createStudent } from '@/api/student';
+import { getStudents, getStudentDetail, deleteStudent, getOrderHistory, updateAdminOrder, createStudent, getStudentAuditLogs } from '@/api/student';
+import { getRefundSummary, updateOrderItemReturnStatus, createOrderRefund } from '@/api/order';
+import type { RefundSummary } from '@/api/order';
+import type { ReturnStatusDecision, RefundRequestPayload } from '@components/organisms/OrderReturnRefundPanel';
 import { updateAdminOrder as updateAdminOrderNew, type AdminOrderUniformItem } from '@/api/order';
 import type { AdminStudent } from '@/api/student';
 import { Toast } from '@components/atoms/Toast';
@@ -32,12 +36,16 @@ interface StudentRow {
   parentPhone: string;
   governmentPurchase: string;
   registeredDate: string;
+  isDeleted: boolean;
+  deletedAt: string;
+  deleteReason: string;
 }
 
 export const StudentListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('통합검색');
   const [categoryFilter, setCategoryFilter] = useState('전체');
+  const [deletedOnly, setDeletedOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [students, setStudents] = useState<StudentRow[]>([]);
@@ -50,6 +58,86 @@ export const StudentListPage = () => {
   const [modalMode, setModalMode] = useState<'add' | 'view' | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<StudentDetailData | null>(null);
 
+  // 삭제 사유 입력 모달
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<ReactNode>(null);
+
+  // 회수/환불 패널
+  const [refundSummary, setRefundSummary] = useState<RefundSummary | null>(null);
+  const [refundSummaryLoading, setRefundSummaryLoading] = useState(false);
+  const [decidingReturnItemId, setDecidingReturnItemId] = useState<string | null>(null);
+  const [isRefunding, setIsRefunding] = useState(false);
+  const [decideReturnError, setDecideReturnError] = useState<ReactNode>(null);
+  const [refundError, setRefundError] = useState<ReactNode>(null);
+
+  const loadRefundSummary = async (orderId?: string | number) => {
+    if (!orderId) {
+      setRefundSummary(null);
+      return;
+    }
+    setRefundSummaryLoading(true);
+    try {
+      setRefundSummary(await getRefundSummary(String(orderId)));
+    } catch (error) {
+      // 회수 대상이 없는 일반 주문에서도 실패할 수 있어 상세 조회를 막지 않는다.
+      console.error('환불 요약 조회 실패:', error);
+      setRefundSummary(null);
+    } finally {
+      setRefundSummaryLoading(false);
+    }
+  };
+
+  // 확정 후에는 재조회한다. 응답에 품목별 return_status가 개별로 오지 않아
+  // 부분 갱신하면 화면과 서버가 어긋나기 쉽다.
+  const handleDecideReturnStatus = async (
+    orderId: string,
+    itemId: string,
+    decision: ReturnStatusDecision,
+    note: string,
+  ) => {
+    setDecidingReturnItemId(itemId);
+    setDecideReturnError(null);
+    try {
+      await updateOrderItemReturnStatus(orderId, itemId, { return_status: decision, note });
+    } catch (error) {
+      console.error('회수 상태 확정 실패:', error);
+      setDecideReturnError(getApiErrorMessage(error, '회수 상태 확정에 실패했습니다.'));
+      // 확인 모달은 이 호출이 reject될 때만 열린 채로 남는다. 삼키면 성공으로 보고 닫힌다.
+      throw error;
+    } finally {
+      setDecidingReturnItemId(null);
+      await loadRefundSummary(orderId);
+    }
+  };
+
+  const handleRefund = async (orderId: string, payload: RefundRequestPayload) => {
+    setIsRefunding(true);
+    setRefundError(null);
+    try {
+      await createOrderRefund(orderId, payload);
+      setToast({ message: '환불이 기록되었습니다.', variant: 'success' });
+    } catch (error) {
+      console.error('환불 기록 실패:', error);
+      setRefundError(getApiErrorMessage(error, '환불 기록에 실패했습니다.'));
+      throw error;
+    } finally {
+      setIsRefunding(false);
+      await loadRefundSummary(orderId);
+    }
+  };
+
+  // 모달이 알려주는 선택 주문으로 요약을 맞춘다. 첫 주문 고정이던 것을 대체한다.
+  const handleActiveOrderChange = useCallback(
+    (orderId: string | null) => {
+      // 일반 학생은 return_status가 없어 매번 빈 조회가 되므로 삭제된 학생만 조회한다.
+      if (!selectedStudent?.isDeleted) return;
+      void loadRefundSummary(orderId ?? undefined);
+    },
+    // StudentModal이 같은 주문을 두 번 알리지 않으므로 재조회가 반복되지 않는다.
+    [selectedStudent?.isDeleted],
+  );
+
   const mapToRow = (student: AdminStudent, index: number, page: number): StudentRow => ({
     id: student.id,
     no: (page - 1) * itemsPerPage + index + 1,
@@ -61,9 +149,12 @@ export const StudentListPage = () => {
     parentPhone: student.guardian_phone || '-',
     governmentPurchase: student.is_eligible_for_public_purchase ? 'O' : 'X',
     registeredDate: formatDate(student.created_at),
+    isDeleted: student.is_deleted ?? false,
+    deletedAt: student.deleted_at ? formatDate(student.deleted_at) : '',
+    deleteReason: student.delete_reason ?? '',
   });
 
-  const fetchStudents = useCallback(async (page: number, search?: string, school?: string, grade?: number) => {
+  const fetchStudents = useCallback(async (page: number, search?: string, school?: string, grade?: number, onlyDeleted = false) => {
     setLoading(true);
     setError(null);
     try {
@@ -73,6 +164,7 @@ export const StudentListPage = () => {
         search,
         school,
         grade,
+        ...(onlyDeleted ? { deleted_only: true } : {}),
       });
       const rows = response.data.map((s, i) => mapToRow(s, i, page));
       setStudents(rows);
@@ -86,19 +178,20 @@ export const StudentListPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchStudents(currentPage);
-  }, [currentPage, fetchStudents]);
+    fetchStudents(currentPage, undefined, undefined, undefined, deletedOnly);
+  }, [currentPage, deletedOnly, fetchStudents]);
 
   const handleSearch = () => {
     setCurrentPage(1);
     const gradeParam = categoryFilter === '신입' ? 1 : categoryFilter === '재학' ? 2 : undefined;
-    fetchStudents(1, searchTerm || undefined, undefined, gradeParam);
+    fetchStudents(1, searchTerm || undefined, undefined, gradeParam, deletedOnly);
   };
 
   const handleReset = () => {
     setSearchTerm('');
     setSearchType('통합검색');
     setCategoryFilter('전체');
+    setDeletedOnly(false);
     setCurrentPage(1);
     fetchStudents(1);
   };
@@ -193,9 +286,21 @@ export const StudentListPage = () => {
     };
   };
 
-  const fetchStudentDetail = async (studentId: string | number): Promise<StudentDetailData> => {
-    const detail = await getStudentDetail(studentId);
+  const fetchStudentDetail = async (
+    studentId: string | number,
+    includeDeleted = false,
+  ): Promise<StudentDetailData> => {
+    const detail = await getStudentDetail(studentId, { includeDeleted });
     const adminOrders = detail.orders ?? [];
+
+    // 삭제 처리자 이름은 학생 응답에 없어서 감사로그에서 가져온다. 배너 표시용이라
+    // 실패해도 상세 조회 전체를 막지 않는다.
+    let deletedBy: string | undefined;
+    if (detail.is_deleted) {
+      const logs = await getStudentAuditLogs(String(studentId)).catch(() => null);
+      deletedBy =
+        logs?.data.find((l) => l.action === 'student.delete')?.actor?.employee_name ?? undefined;
+    }
 
     // 학교 정보 먼저 조회 (itemId 매칭에 필요)
     const schoolName = detail.admission_school ?? detail.school_name ?? '';
@@ -330,14 +435,23 @@ export const StudentListPage = () => {
       totalNameTagCount: detail.total_name_tag_count,
       history: firstHistory,
       isManuallySupported: detail.is_manually_supported,
+      isDeleted: detail.is_deleted,
+      deletedAt: detail.deleted_at,
+      deleteReason: detail.delete_reason,
+      deletedBy,
     };
   };
 
   const handleRowClick = async (student: StudentRow) => {
     try {
-      const detailData = await fetchStudentDetail(student.id);
+      const detailData = await fetchStudentDetail(student.id, student.isDeleted);
       setSelectedStudent(detailData);
       setModalMode('view');
+      // return_status는 학생 삭제로만 생기므로 삭제된 학생에서만 조회한다.
+      // 실제 조회는 모달이 선택 주문을 알려줄 때(onActiveOrderChange) 이뤄진다.
+      setRefundSummary(null);
+      setDecideReturnError(null);
+      setRefundError(null);
     } catch (error) {
       console.error('학생 상세 조회 실패:', error);
     }
@@ -508,14 +622,32 @@ export const StudentListPage = () => {
     }
   };
 
-  const handleDeleteStudent = async (e: React.MouseEvent, studentId: string) => {
+  const handleDeleteStudent = (e: React.MouseEvent, row: StudentRow) => {
     e.stopPropagation();
-    if (!window.confirm('정말 삭제하시겠습니까?')) return;
+    setDeleteError(null);
+    setDeleteTarget({ id: row.id, name: row.name });
+  };
+
+  const handleConfirmDelete = async (reason: string) => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    setDeleteError(null);
     try {
-      await deleteStudent(studentId);
-      fetchStudents(currentPage);
+      const result = await deleteStudent(deleteTarget.id, reason);
+      setDeleteTarget(null);
+      setToast({
+        message:
+          result.pending_review_item_count > 0
+            ? `삭제되었습니다. 회수 확인이 필요한 품목이 ${result.pending_review_item_count}건 있습니다.`
+            : '삭제되었습니다.',
+        variant: result.pending_review_item_count > 0 ? 'info' : 'success',
+      });
+      fetchStudents(currentPage, undefined, undefined, undefined, deletedOnly);
     } catch (error) {
       console.error('학생 삭제 실패:', error);
+      setDeleteError(getApiErrorMessage(error, '학생 삭제에 실패했습니다.'));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -554,6 +686,22 @@ export const StudentListPage = () => {
     { key: 'parentPhone', header: '학부모 연락처', width: '120px', align: 'center' },
     { key: 'governmentPurchase', header: '주관구매', width: '60px', align: 'center' },
     { key: 'registeredDate', header: '등록일', width: '80px', align: 'center' },
+    ...(deletedOnly
+      ? ([
+          { key: 'deletedAt', header: '삭제일', width: '80px', align: 'center' },
+          {
+            key: 'deleteReason',
+            header: '삭제사유',
+            width: '160px',
+            align: 'center',
+            render: (row) => (
+              <span className="block truncate" title={row.deleteReason}>
+                {row.deleteReason || '-'}
+              </span>
+            ),
+          },
+        ] as Column<StudentRow>[])
+      : []),
     {
       key: 'actions',
       header: '관리',
@@ -567,12 +715,14 @@ export const StudentListPage = () => {
           >
             상세
           </button>
-          <button
-            className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-red-200 text-red-700"
-            onClick={(e) => handleDeleteStudent(e, row.id)}
-          >
-            삭제
-          </button>
+          {!row.isDeleted && (
+            <button
+              className="px-2 py-1 border-none rounded text-xs cursor-pointer hover:opacity-80 bg-red-200 text-red-700"
+              onClick={(e) => handleDeleteStudent(e, row)}
+            >
+              삭제
+            </button>
+          )}
         </div>
       ),
     },
@@ -623,7 +773,7 @@ export const StudentListPage = () => {
           </div>
 
           {/* 학년 */}
-          <div className="flex items-stretch">
+          <div className="flex items-stretch border-b border-gray-200">
             <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
               학년
             </div>
@@ -643,6 +793,29 @@ export const StudentListPage = () => {
                   {opt.label}
                 </label>
               ))}
+            </div>
+          </div>
+
+          {/* 삭제 학생 */}
+          <div className="flex items-stretch">
+            <div className="flex items-center justify-center min-w-25 px-4 py-3 bg-gray-100 text-14 font-medium text-gray-700 border-r border-gray-200">
+              삭제 학생
+            </div>
+            <div className="flex items-center gap-3 flex-1 px-4 py-3 bg-white">
+              <label className="flex items-center gap-1.5 text-14 text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={deletedOnly}
+                  onChange={() => { setCurrentPage(1); setDeletedOnly((prev) => !prev); }}
+                  className="w-4 h-4 accent-red-700"
+                />
+                삭제된 학생만 보기
+              </label>
+              {deletedOnly && (
+                <span className="text-13 text-red-700">
+                  삭제된 학생은 조회만 가능하며 목록에서 다시 삭제할 수 없습니다.
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -670,7 +843,12 @@ export const StudentListPage = () => {
 
         <StudentModal
           isOpen={modalMode !== null}
-          onClose={() => setModalMode(null)}
+          onClose={() => {
+            setModalMode(null);
+            setRefundSummary(null);
+            setDecideReturnError(null);
+            setRefundError(null);
+          }}
           mode={modalMode ?? 'view'}
           student={selectedStudent}
           onSubmit={handleAddStudent}
@@ -679,6 +857,24 @@ export const StudentListPage = () => {
           onOrderCreate={handleOrderCreate}
           onOrderUpdate={handleOrderUpdate}
           onStatusChange={handleStatusChange}
+          refundSummary={refundSummary}
+          refundSummaryLoading={refundSummaryLoading}
+          decidingReturnItemId={decidingReturnItemId}
+          isRefunding={isRefunding}
+          decideReturnError={decideReturnError}
+          refundError={refundError}
+          onActiveOrderChange={handleActiveOrderChange}
+          onDecideReturnStatus={handleDecideReturnStatus}
+          onRefund={handleRefund}
+        />
+
+        <StudentDeleteModal
+          isOpen={deleteTarget !== null}
+          onClose={() => setDeleteTarget(null)}
+          studentName={deleteTarget?.name ?? ''}
+          onConfirm={handleConfirmDelete}
+          isSubmitting={isDeleting}
+          error={deleteError}
         />
       </div>
       {toast && (

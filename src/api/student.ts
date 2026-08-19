@@ -753,6 +753,10 @@ export interface AdminStudent {
   student_number?: string;
   grade?: number;
   government_purchase?: boolean;
+  is_deleted: boolean;
+  /** RFC3339라 파싱 가능. 같은 응답의 created_at/updated_at은 한국어 문자열이라 파싱되지 않는다 */
+  deleted_at?: string;
+  delete_reason?: string;
   created_at: string;
   updated_at: string;
 }
@@ -765,6 +769,10 @@ export interface GetStudentsParams {
   search?: string;
   student_type?: string;
   public_purchase?: boolean;
+  /** 삭제된 학생 포함 */
+  include_deleted?: boolean;
+  /** 삭제된 학생만. true면 include_deleted는 붙이지 않아도 된다 */
+  deleted_only?: boolean;
 }
 
 export interface GetStudentsResponse {
@@ -836,17 +844,40 @@ export async function createStudent(data: CreateStudentRequest): Promise<AdminSt
  * 학생 상세 조회 (주문 기록 포함)
  * GET /api/v1/students/:id
  */
-export async function getStudentDetail(id: string | number): Promise<AdminStudent> {
-  const response = await apiClient.get<ApiResponse<AdminStudent>>(`/api/v1/students/${id}`);
+export async function getStudentDetail(
+  id: string | number,
+  options?: { includeDeleted?: boolean },
+): Promise<AdminStudent> {
+  const response = await apiClient.get<ApiResponse<AdminStudent>>(`/api/v1/students/${id}`, {
+    params: options?.includeDeleted ? { include_deleted: true } : undefined,
+  });
   return response.data.data;
+}
+
+export interface DeleteStudentResult {
+  student_id: string;
+  deleted_at: string;
+  reason: string;
+  /** 미출고라 자동 취소된 품목 수 */
+  cancelled_item_count: number;
+  /** 이미 출고돼 회수/환불 확인이 필요한 품목 수 */
+  pending_review_item_count: number;
+  affected_order_ids: string[];
 }
 
 /**
  * 학생 삭제
  * DELETE /api/v1/students/:id
+ *
+ * reason은 필수(1~255자)라 생략하면 서버가 400을 낸다. 프리셋과 자유입력을
+ * 합친 한 문자열을 넘긴다.
  */
-export async function deleteStudent(id: string): Promise<void> {
-  await apiClient.delete<ApiResponse<void>>(`/api/v1/students/${id}`);
+export async function deleteStudent(id: string, reason: string): Promise<DeleteStudentResult> {
+  const response = await apiClient.delete<ApiResponse<DeleteStudentResult>>(
+    `/api/v1/students/${id}`,
+    { data: { reason } },
+  );
+  return response.data.data;
 }
 
 export interface UpdateStudentRequest {
@@ -1219,6 +1250,16 @@ export interface AuditLog {
   meta: unknown | null;
   memo: string;
   created_at: string;
+}
+
+/**
+ * action === 'student.delete'인 항목의 meta 형태.
+ * AuditLog.meta가 unknown이라 키를 잘못 써도 컴파일에 안 걸리므로 이 타입으로 좁혀 쓴다.
+ * 이 항목의 memo가 곧 삭제 사유이고, actor.employee_name이 삭제 처리자다.
+ */
+export interface StudentDeleteAuditMeta {
+  cancelled_item_count: number;
+  pending_review_item_count: number;
 }
 
 export interface AuditLogMeta {

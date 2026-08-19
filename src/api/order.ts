@@ -540,3 +540,105 @@ export async function updateInventoryStock(
     data,
   );
 }
+
+// ============================================================================
+// 학생 삭제 후 회수/환불 처리 (admin 전용)
+// ============================================================================
+
+/** 빈 문자열은 학생 삭제와 무관한 일반 품목이라는 뜻이다. */
+export type ReturnStatus = '' | 'pending_review' | 'returned_to_stock' | 'not_refundable';
+
+export interface UpdateReturnStatusResult {
+  item_id: string;
+  return_status: ReturnStatus;
+  /** returned_to_stock일 때만 true — 이때만 재고가 복원된다 */
+  stock_restored: boolean;
+  refundable_amount: number;
+  pending_review_left: number;
+  order_status: OrderStatus;
+}
+
+/**
+ * 회수 여부 확정
+ * PATCH /api/v1/admin/orders/:id/items/:item_id/return-status
+ *
+ * pending_review가 아닌 품목에 호출하면 409.
+ */
+export async function updateOrderItemReturnStatus(
+  orderId: string,
+  itemId: string,
+  data: { return_status: 'returned_to_stock' | 'not_refundable'; note?: string },
+): Promise<UpdateReturnStatusResult> {
+  const response = await apiClient.patch<ApiResponse<UpdateReturnStatusResult>>(
+    `/api/v1/admin/orders/${orderId}/items/${itemId}/return-status`,
+    data,
+  );
+  return response.data.data;
+}
+
+export interface RefundSummaryItem {
+  item_id: string;
+  product_name: string;
+  size: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+  delivery_status: DeliveryStatus;
+  return_status: ReturnStatus;
+  return_status_display: string;
+  /** true면 관리자 선택 UI를 띄울 대상 */
+  needs_review: boolean;
+  refundable: boolean;
+}
+
+export interface RefundSummary {
+  order_id: string;
+  order_number: string;
+  order_status: OrderStatus;
+  total_amount: number;
+  paid_amount: number;
+  refunded_amount: number;
+  /** 실수령액 - 기환불액으로 상한 처리된 값 */
+  refundable_amount: number;
+  pending_review_count: number;
+  items: RefundSummaryItem[];
+}
+
+/**
+ * 환불 요약 조회
+ * GET /api/v1/admin/orders/:id/refund-summary
+ */
+export async function getRefundSummary(orderId: string): Promise<RefundSummary> {
+  const response = await apiClient.get<ApiResponse<RefundSummary>>(
+    `/api/v1/admin/orders/${orderId}/refund-summary`,
+  );
+  return response.data.data;
+}
+
+export type RefundMethod = 'cash' | 'card' | 'transfer';
+
+export interface RefundResult {
+  payment_id: string;
+  order_id: string;
+  amount: number;
+  total_refunded: number;
+  remaining_paid: number;
+  refunded_at: string;
+}
+
+/**
+ * 환불 기록
+ * POST /api/v1/admin/orders/:id/refund
+ *
+ * amount가 (결제완료합 - 기환불합)을 넘으면 400. 부분환불을 여러 번 나눠 기록할 수 있다.
+ */
+export async function createOrderRefund(
+  orderId: string,
+  data: { amount: number; method: RefundMethod; reason: string },
+): Promise<RefundResult> {
+  const response = await apiClient.post<ApiResponse<RefundResult>>(
+    `/api/v1/admin/orders/${orderId}/refund`,
+    data,
+  );
+  return response.data.data;
+}
