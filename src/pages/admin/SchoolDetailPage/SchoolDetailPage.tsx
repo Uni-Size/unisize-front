@@ -63,7 +63,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
   const [error, setError] = useState<ReactNode>(null);
   const itemsPerPage = 10;
 
-  const [toast, setToast] = useState<{ message: string; variant: ToastVariant } | null>(null);
+  const [toast, setToast] = useState<{ message: string; variant: ToastVariant; duration?: number } | null>(null);
 
   // 삭제 사유 입력 모달
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -550,12 +550,15 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     try {
       const result = await deleteStudent(deleteTarget.id, reason);
       setDeleteTarget(null);
+      // 회수/환불 처리는 학생 목록에만 있다. 이 화면은 삭제된 학생을 목록에 올리지
+      // 않아 패널에 도달할 경로가 없으므로, 갈 곳을 문구로 알려준다.
+      const needsReview = result.pending_review_item_count > 0;
       setToast({
-        message:
-          result.pending_review_item_count > 0
-            ? `삭제되었습니다. 회수 확인이 필요한 품목이 ${result.pending_review_item_count}건 있습니다.`
-            : '삭제되었습니다.',
-        variant: result.pending_review_item_count > 0 ? 'info' : 'success',
+        message: needsReview
+          ? `삭제되었습니다. 회수 확인이 필요한 품목이 ${result.pending_review_item_count}건 있습니다. 학생 목록 화면에서 '삭제된 학생만 보기'로 찾아 회수/환불을 처리하세요.`
+          : '삭제되었습니다.',
+        variant: needsReview ? 'info' : 'success',
+        duration: needsReview ? 8000 : undefined,
       });
       fetchStudents(currentPage);
     } catch (error) {
@@ -800,6 +803,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         <Toast
           message={toast.message}
           variant={toast.variant}
+          duration={toast.duration}
           onClose={() => setToast(null)}
         />
       )}
