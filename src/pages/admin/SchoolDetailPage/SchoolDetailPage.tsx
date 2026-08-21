@@ -780,8 +780,11 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
 
 type SeasonTab = '동복' | '하복';
 
-function getSeasonTab(product: InventoryProduct): SeasonTab {
-  return product.season === 'S' ? '하복' : '동복';
+function belongsToSeasonTab(product: InventoryProduct, tab: SeasonTab): boolean {
+  const season = product.season?.toUpperCase();
+  if (season === 'A') return true;
+  if (season === 'S') return tab === '하복';
+  return tab === '동복';
 }
 
 const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
@@ -809,7 +812,7 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
     fetchInventory();
   }, [schoolName]);
 
-  const seasonProducts = allProducts.filter((p) => getSeasonTab(p) === seasonTab);
+  const seasonProducts = allProducts.filter((p) => belongsToSeasonTab(p, seasonTab));
   const productOptions = ["전체", ...seasonProducts.map((p) => p.display_name)];
   const individualOptions = productOptions.filter((o) => o !== "전체");
 

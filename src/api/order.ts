@@ -484,7 +484,7 @@ export interface InventoryProduct {
   product_id: string;
   display_name: string;
   category: string;
-  season: 'W' | 'S';
+  season: 'W' | 'S' | 'A';
   size_type?: "numeric" | "alpha" | "free";
   size_stats: InventorySizeStat[];
 }
