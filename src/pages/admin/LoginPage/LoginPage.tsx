@@ -4,13 +4,11 @@ import { Input } from "../../../components/atoms/Input";
 import { Button } from "../../../components/atoms/Button";
 import { login } from "@/api/auth";
 import { useAuthStore } from "@/stores/authStore";
-import { BRAND_NAME } from "@/constants/brand";
+import { BRAND_NAME, ADMIN_TEST_ID } from "@/constants/brand";
 
 export const LoginPage = () => {
-  const [id, setId] = useState(() => import.meta.env.VITE_ADMIN_TEST_ID || "");
-  const [password, setPassword] = useState(
-    () => import.meta.env.VITE_ADMIN_TEST_PW || "",
-  );
+  const [id, setId] = useState(() => ADMIN_TEST_ID || "");
+  const [password, setPassword] = useState(() => ADMIN_TEST_ID || "");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
