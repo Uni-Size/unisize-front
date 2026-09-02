@@ -7,11 +7,9 @@ import { useAuthStore } from "@/stores/authStore";
 import { BRAND_NAME } from "@/constants/brand";
 
 export const LoginPage = () => {
-  const [id, setId] = useState(() =>
-    import.meta.env.DEV ? import.meta.env.VITE_ADMIN_TEST_ID || "" : "",
-  );
-  const [password, setPassword] = useState(() =>
-    import.meta.env.DEV ? import.meta.env.VITE_ADMIN_TEST_ID || "" : "",
+  const [id, setId] = useState(() => import.meta.env.VITE_ADMIN_TEST_ID || "");
+  const [password, setPassword] = useState(
+    () => import.meta.env.VITE_ADMIN_TEST_PW || "",
   );
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
