@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { ReactNode } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { AdminLayout } from "@components/templates/AdminLayout";
@@ -11,6 +11,7 @@ import type {
   AvailableUniform,
 } from "@components/organisms/StudentModal";
 import { OrderSizeTable } from "@components/organisms/OrderSizeTable";
+import { UnregisteredOrderNotice } from "@components/organisms/UnregisteredOrderNotice";
 import { Table } from "@components/atoms/Table";
 import { Input } from "@components/atoms/Input";
 import { Button } from "@components/atoms/Button";
@@ -31,7 +32,7 @@ import { downloadCSV } from "@/utils/csvUtils";
 import { sortUniformsByCategoryGroup } from "@/constants/productCategories";
 import { formatGender } from "@/utils/genderUtils";
 import { getOrderInventory, updateInventoryStock } from "@/api/order";
-import type { InventoryProduct } from "@/api/order";
+import type { InventoryProduct, UnregisteredProduct } from "@/api/order";
 import { StockAddModal } from "@components/organisms/StockAddModal";
 
 interface StudentRow {
@@ -826,29 +827,56 @@ function belongsToSeasonTab(product: InventoryProduct, tab: SeasonTab): boolean 
 }
 
 const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
+  // --- 서버 상태 (GET /schools/:school_name/order-inventory 응답) ---
+  // products와 unregistered는 서버가 서로소로 보장한다. 같은 주문 라인이 양쪽에 나오면 서버 버그이므로
+  // 프론트에서 dedupe/병합하지 않는다 (dedupe를 넣으면 그 버그가 화면에서 안 보이게 된다).
+  //
+  // NOTE: 이 앱에는 QueryClientProvider가 어디에도 배선돼 있지 않아(grep -rn "QueryClient" src/ → 0건)
+  // TanStack Query를 쓸 수 없다. 설계 문서 §5는 useQuery를 제안하지만, Provider 전역 배선은
+  // 이번 작업 범위를 크게 넘으므로 앱의 기존 관례(useState + useEffect)를 따른다.
   const [allProducts, setAllProducts] = useState<InventoryProduct[]>([]);
-  const [selectedProducts, setSelectedProducts] = useState<string[]>(["전체"]);
-  const [seasonTab, setSeasonTab] = useState<SeasonTab>('동복');
+  const [unregisteredProducts, setUnregisteredProducts] = useState<UnregisteredProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // --- 화면 로컬 상태 (페이지를 벗어나면 사라져야 하므로 전역으로 올리지 않는다) ---
+  const [selectedProducts, setSelectedProducts] = useState<string[]>(["전체"]);
+  const [seasonTab, setSeasonTab] = useState<SeasonTab>('동복');
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
 
-  const fetchInventory = () => {
+  // 재고 추가 직후 재조회하면 요청이 겹칠 수 있다. 마지막 요청의 응답만 반영해
+  // 늦게 도착한 이전 응답이 최신 데이터를 덮어쓰는 것을 막는다.
+  const latestRequestIdRef = useRef(0);
+
+  const fetchInventory = useCallback(() => {
     if (!schoolName) return;
+    const requestId = ++latestRequestIdRef.current;
+    const isStale = () => requestId !== latestRequestIdRef.current;
+
     setLoading(true);
     setError(null);
     getOrderInventory(schoolName)
-      .then((data) => setAllProducts(data.products))
+      .then((data) => {
+        if (isStale()) return;
+        // 서버 계약상 두 배열 모두 null이 아니지만, 구버전 서버(unregistered 미배포)와도
+        // 안전하게 동작하도록 기본값을 준다.
+        setAllProducts(data.products ?? []);
+        setUnregisteredProducts(data.unregistered ?? []);
+      })
       .catch((err) => {
+        if (isStale()) return;
         console.error("주문/재고 조회 실패:", err);
         setError("데이터를 불러오는 중 오류가 발생했습니다.");
       })
-      .finally(() => setLoading(false));
-  };
+      .finally(() => {
+        if (isStale()) return;
+        setLoading(false);
+      });
+  }, [schoolName]);
 
   useEffect(() => {
     fetchInventory();
-  }, [schoolName]);
+  }, [fetchInventory]);
 
   const seasonProducts = allProducts.filter((p) => belongsToSeasonTab(p, seasonTab));
   const productOptions = ["전체", ...seasonProducts.map((p) => p.display_name)];
@@ -894,6 +922,9 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
       const stockRow = ['재고', ...sizeStats.map((s) => s.stock)];
       const orderedRow = ['주문', ...sizeStats.map((s) => s.ordered)];
       const remainRow = ['잔여', ...sizeStats.map((s) => s.remaining)];
+      // 예약 = max(0, 주문 - 재고). 잔여가 음수인 만큼을 양수로 읽는 값이고,
+      // 측정 종료 후 관리자가 추가 발주해야 할 수량이다. 서버가 계산해서 내려준다.
+      const reservedRow = ['예약', ...sizeStats.map((s) => s.reserved)];
 
       // 사이즈별 visibleOrders 모으기 (이름 중복 제거)
       const sizeOrders = sizeStats.map((s) => {
@@ -911,7 +942,9 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
         ...sizeOrders.map((orders) => orders[rowIdx]?.name ?? ''),
       ]);
 
-      return { cols: sizes.length + 1, rows: [headerRow, stockRow, orderedRow, remainRow, ...studentRows] };
+      // 미등록 품목 주문(unregistered)은 CSV에 섞지 않는다 — 재고/잔여 축이 없어
+      // 같은 표에 넣으면 열 의미가 달라진다. 필요하면 별도 블록으로 후속 과제.
+      return { cols: sizes.length + 1, rows: [headerRow, stockRow, orderedRow, remainRow, reservedRow, ...studentRows] };
     });
 
     if (sectionBlocks.length === 0) return;
@@ -1032,6 +1065,20 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
         <div className="flex items-center justify-center py-20 text-gray-400 text-14">
           주문/예약 데이터가 없습니다.
         </div>
+      )}
+
+      {/*
+        미등록 품목 주문 경고 섹션 (탭 최하단).
+
+        여기서 넘기는 배열에는 시즌 탭·품목 체크박스 필터를 일부러 적용하지 않았다.
+        미등록 품목은 학교 카탈로그 밖이라 season이 비어 있을 수 있어(belongsToSeasonTab 판정 불가)
+        productOptions 자체가 등록 품목으로만 구성되기 때문에 필터 기준이 성립하지 않는다.
+
+        건수 표기·접기/펼치기·품목→사이즈→학생 목록 렌더링과 "비어 있으면 렌더하지 않는다"는
+        판단은 전부 UnregisteredOrderNotice 내부 책임이다.
+      */}
+      {!loading && !error && (
+        <UnregisteredOrderNotice products={unregisteredProducts} />
       )}
 
       <StockAddModal
