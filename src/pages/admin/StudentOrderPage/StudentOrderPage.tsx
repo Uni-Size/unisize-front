@@ -1,56 +1,127 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { ReactNode } from 'react';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import { AdminHeader } from '@components/organisms/AdminHeader';
 import { downloadCSV } from '@/utils/csvUtils';
 import { formatGender } from '@/utils/genderUtils';
+import { formatDate } from '@/utils/dateUtils';
+import { getApiErrorMessage } from '@/utils/errorUtils';
+import { getOrders, ORDER_STATUS_LABELS } from '@/api/order';
+import type { OrderStatus, PendingOrder } from '@/api/order';
 import { Table } from '@components/atoms/Table';
 import { Badge } from '@components/atoms/Badge';
 import { Input } from '@components/atoms/Input';
 import { Pagination } from '@components/atoms/Pagination';
 import type { Column } from '@components/atoms/Table';
+import type { BadgeProps } from '@components/atoms/Badge';
 
+const ITEMS_PER_PAGE = 10;
+
+/** 화면 표시용 행. GET /api/v1/orders 응답 1건을 평평하게 편 형태다. */
 interface StudentOrder {
   id: string;
+  orderNumber: string;
+  studentId: string;
   studentName: string;
   phone: string;
   school: string;
   grade: string;
-  className: string;
-  gender: 'M' | 'F' | 'U';
+  gender: string;
   items: string[];
   totalAmount: number;
-  status: 'pending' | 'measured' | 'ordered' | 'received';
+  status: OrderStatus;
+  statusDisplay: string;
   registeredDate: string;
 }
 
-const mockStudentOrders: StudentOrder[] = [];
+const STATUS_VARIANTS: Record<OrderStatus, BadgeProps['variant']> = {
+  pending: 'warning',
+  confirmed: 'info',
+  preparing: 'info',
+  ready: 'info',
+  receive: 'success',
+  complete: 'success',
+  cancelled: 'error',
+};
 
-const getStatusBadge = (status: StudentOrder['status']) => {
-  const variants = {
-    pending: { variant: 'warning' as const, label: '대기' },
-    measured: { variant: 'info' as const, label: '치수측정' },
-    ordered: { variant: 'default' as const, label: '주문완료' },
-    received: { variant: 'success' as const, label: '수령완료' },
+const getStatusBadge = (row: StudentOrder) => (
+  <Badge variant={STATUS_VARIANTS[row.status] ?? 'default'}>
+    {row.statusDisplay}
+  </Badge>
+);
+
+/**
+ * 서버 응답(service.OrderResponse) → 테이블 행 변환.
+ *
+ * `student`는 서버가 Preload에 실패하면 통째로 빠질 수 있으므로(omitempty) 전부 옵셔널 접근한다.
+ */
+const toRow = (order: PendingOrder): StudentOrder => {
+  const student = order.student;
+  return {
+    id: order.id,
+    orderNumber: order.order_number,
+    studentId: order.student_id,
+    studentName: student?.name ?? '',
+    // 학생 본인 번호가 없으면 보호자 번호로 폴백 (서버 Student.GetContactPhone과 같은 우선순위)
+    phone: student?.student_phone || student?.guardian_phone || '',
+    school: student?.admission_school ?? '',
+    grade: student?.admission_grade ? `${student.admission_grade}학년` : '',
+    gender: student?.gender ?? '',
+    items: order.order_items
+      .map((item) => item.product?.name)
+      .filter((name): name is string => Boolean(name)),
+    totalAmount: order.total_amount,
+    status: order.order_status,
+    statusDisplay:
+      order.order_status_display ||
+      ORDER_STATUS_LABELS[order.order_status] ||
+      order.order_status,
+    registeredDate: formatDate(order.order_date),
   };
-  const { variant, label } = variants[status];
-  return <Badge variant={variant}>{label}</Badge>;
 };
 
 export const StudentOrderPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [orders, setOrders] = useState<StudentOrder[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<ReactNode>(null);
+
+  const fetchOrders = useCallback(async (page: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { orders: rawOrders, meta } = await getOrders({
+        page,
+        limit: ITEMS_PER_PAGE,
+      });
+      setOrders(rawOrders.map(toRow));
+      setTotalPages(Math.max(meta.total_pages, 1));
+    } catch (err) {
+      console.error('학생 주문 목록 조회 실패:', err);
+      setError(
+        getApiErrorMessage(
+          err,
+          '학생 주문 목록을 불러오는 중 오류가 발생했습니다.',
+        ),
+      );
+      setOrders([]);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOrders(currentPage);
+  }, [currentPage, fetchOrders]);
 
   const columns: Column<StudentOrder>[] = [
     { key: 'studentName', header: '학생명', width: '100px' },
     { key: 'phone', header: '연락처', width: '130px' },
     { key: 'school', header: '학교', width: '120px' },
-    {
-      key: 'gradeClass',
-      header: '학년/반',
-      width: '80px',
-      render: (item) => `${item.grade}-${item.className}`,
-    },
+    { key: 'grade', header: '학년', width: '80px' },
     {
       key: 'gender',
       header: '성별',
@@ -73,41 +144,42 @@ export const StudentOrderPage = () => {
       key: 'status',
       header: '상태',
       width: '80px',
-      render: (item) => getStatusBadge(item.status),
+      render: (item) => getStatusBadge(item),
     },
     { key: 'registeredDate', header: '등록일', width: '100px' },
   ];
 
-  const filteredOrders = mockStudentOrders.filter(
+  // 주의: GET /api/v1/orders에는 서버 사이드 검색 파라미터가 없다(student_id/status/기간 필터만 지원).
+  // 그래서 이 검색은 "현재 페이지에 로드된 행"만 걸러낸다. 전체 검색이 필요하면
+  // 백엔드에 search 쿼리 파라미터 추가가 선행되어야 한다.
+  const filteredOrders = orders.filter(
     (order) =>
       order.studentName.includes(searchTerm) ||
       order.phone.includes(searchTerm) ||
-      order.school.includes(searchTerm)
+      order.school.includes(searchTerm),
   );
 
   const handleExportCSV = () => {
     downloadCSV(
-      ['학생명', '연락처', '학교', '학년/반', '성별', '품목', '금액', '상태', '등록일'],
+      ['학생명', '연락처', '학교', '학년', '성별', '품목', '금액', '상태', '등록일'],
       filteredOrders.map((o) => [
         o.studentName,
         o.phone,
         o.school,
-        `${o.grade}-${o.className}`,
+        o.grade,
         formatGender(o.gender),
         o.items.join(', '),
         `${o.totalAmount.toLocaleString()}원`,
-        { pending: '대기', measured: '치수측정', ordered: '주문완료', received: '수령완료' }[o.status],
+        o.statusDisplay,
         o.registeredDate,
       ]),
       '학생주문목록',
     );
   };
 
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-  const paginatedOrders = filteredOrders.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const emptyMessage: ReactNode = loading
+    ? '불러오는 중...'
+    : (error ?? '데이터가 없습니다.');
 
   return (
     <AdminLayout>
@@ -145,9 +217,10 @@ export const StudentOrderPage = () => {
         <div className="flex-1">
           <Table
             columns={columns}
-            data={paginatedOrders}
+            data={filteredOrders}
             onRowClick={(order) => console.log('Student order clicked:', order)}
             getRowKey={(row) => row.id}
+            emptyMessage={emptyMessage}
           />
           <Pagination
             currentPage={currentPage}

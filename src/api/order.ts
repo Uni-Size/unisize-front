@@ -44,43 +44,52 @@ export const DELIVERY_STATUS_LABELS: Record<DeliveryStatus, string> = {
 // 주문 목록 조회 (status 필터)
 // ============================================================================
 
+/**
+ * GET /api/v1/orders 응답에 함께 실려오는 학생 정보.
+ *
+ * 서버(service.OrderResponse.Student)는 `service.StudentResponse` 전체를 내려주지만,
+ * 주문 목록 화면에서 실제로 쓰는 필드만 정의한다. 서버가 Student를 Preload하지 못하면
+ * `student` 키 자체가 빠지므로(`json:"student,omitempty"`) optional이다.
+ */
 export interface PendingOrderStudent {
   id: string;
   name: string;
+  /** 서버에서 normalizGender를 거친 값 (M / F / U 등) */
   gender: string;
+  student_phone?: string;
+  guardian_phone?: string;
+  previous_school?: string;
+  admission_school: string;
+  admission_year?: number;
+  admission_grade?: number;
+  student_type?: string;
+  is_deleted?: boolean;
 }
 
-export interface PendingOrderItem {
-  id: string;
-  order_id: string;
-  product_id: string;
-  size: string;
-  quantity: number;
-  supported_quantity: number;
-  unit_price: number;
-  subtotal: number;
-  name_tag_count: number;
-  name_tag_name: string;
-  name_tag_attach: boolean;
-  created_at: string;
-}
-
+/**
+ * 주문 목록의 한 건. 서버 `service.OrderResponse`와 1:1로 대응한다.
+ *
+ * 주의: 상태 필드는 `status`가 아니라 `order_status`이고, 품목 필드는 `size`/`quantity`가
+ * 아니라 `selected_size`/`purchase_quantity`다 (service.OrderItemResponse 기준).
+ */
 export interface PendingOrder {
   id: string;
   order_number: string;
   student_id: string;
-  student: PendingOrderStudent;
+  student?: PendingOrderStudent;
   total_amount: number;
-  status: OrderStatus;
-  status_display: string;
+  order_status: OrderStatus;
+  order_status_display: string;
   order_date: string;
   delivery_date: string | null;
   notes: string;
-  order_items: PendingOrderItem[];
-  can_cancel: boolean;
-  can_modify: boolean;
-  is_completed: boolean;
-  is_cancelled: boolean;
+  total_name_tag_count: number;
+  total_name_tag_attach_count: number;
+  order_items: AdminOrderItem[];
+  winter_subtotal: number;
+  summer_subtotal: number;
+  name_tag_subtotal: number;
+  seller_name?: string;
   signature?: string;
   created_at: string;
   updated_at: string;
@@ -114,7 +123,9 @@ export async function getOrders(params?: GetOrdersParams): Promise<{
   );
   const { orders, total } = response.data.data;
   const page = params?.page ?? 1;
-  const limit = params?.limit ?? 20;
+  // 서버(utils.GetPaginationParams)의 limit 기본값이 10이므로 여기 기본값도 10이어야
+  // total_pages 계산이 실제 응답과 어긋나지 않는다.
+  const limit = params?.limit ?? 10;
   return {
     orders,
     meta: { page, limit, total, total_pages: Math.ceil(total / limit) },
