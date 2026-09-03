@@ -452,11 +452,25 @@ export interface StockRound {
 }
 
 export interface InventorySizeStat {
+  /** 입고 이력이 한 번도 없는 사이즈 칸은 "". 판정에 쓰지 말고 is_unstocked를 볼 것. */
   inventory_id?: string;
   size: string;
   stock: number;
   ordered: number;
+  /**
+   * stock - ordered. 음수가 될 수 있으며, 음수는 오류가 아니라 예약 수량이다.
+   * (측정 기간에는 재고가 부족해도 주문을 거부하지 않고 전부 예약으로 받는다.)
+   */
   remaining: number;
+  /** max(0, ordered - stock). 측정 종료 후 추가 발주할 수량. 항상 >= 0. */
+  reserved: number;
+  /**
+   * 입고 이력이 한 번도 없는 사이즈 칸인가.
+   * 서버 계약상 is_unstocked === true ⇔ inventory_id === "" ⇔ (stock === 0 && rounds가 비어 있음).
+   * 프론트는 stock === 0 같은 암묵적 추론을 하지 말고 이 필드만 본다.
+   */
+  is_unstocked: boolean;
+  /** 이 사이즈의 주문 전체. rounds[]와 같은 주문 라인의 다른 뷰이므로 둘을 더해서 세면 안 된다. */
   orders: InventoryOrder[];
   rounds?: StockRound[];
   unassigned?: InventoryOrder[];
@@ -489,9 +503,44 @@ export interface InventoryProduct {
   size_stats: InventorySizeStat[];
 }
 
+/**
+ * 미등록 품목 주문의 사이즈 그룹.
+ * 학교 카탈로그(school_uniforms)에 없는 품목이라 재고/잔여 개념 자체가 없다 — 주문만 있다.
+ */
+export interface UnregisteredSizeGroup {
+  size: string;
+  orders: InventoryOrder[];
+}
+
+/**
+ * 학교 품목으로 등록되지 않은 품목에 걸린 주문.
+ *
+ * 재고 부족(예약) 주문이 아니다. 예약 주문은 products[].size_stats[]의 is_unstocked 칸에 들어간다.
+ * 여기 나오는 건 "학교-품목 매핑 누락"이라는 데이터 정합성 경고이고, 필요한 조치도
+ * 추가 발주가 아니라 학교 품목 등록이다.
+ *
+ * 서버 계약: products와 unregistered의 product_id 집합은 서로소이며, 취소되지 않은 모든
+ * 주문 라인은 정확히 한쪽에 정확히 한 번만 나타난다. 프론트에서 dedupe하지 말 것
+ * (dedupe를 넣으면 서버 버그를 가려서 이중 계상 문제가 재발한다).
+ */
+export interface UnregisteredProduct {
+  product_id: string;
+  product_name: string;
+  /** school_uniforms가 없으므로 서버가 products.name을 그대로 넣는다. */
+  display_name: string;
+  category: string;
+  gender: string;
+  /** Go 쪽이 omitempty라 빈 값이면 아예 오지 않는다. */
+  season?: 'W' | 'S' | 'A';
+  sizes: UnregisteredSizeGroup[];
+}
+
 export interface OrderInventoryResponse {
   school_name: string;
+  /** 학교에 등록된 품목. 서버 계약상 절대 null이 아니다(비면 []). */
   products: InventoryProduct[];
+  /** 학교에 등록되지 않은 품목의 주문. 서버 계약상 절대 null이 아니다(비면 []). */
+  unregistered: UnregisteredProduct[];
 }
 
 /**
