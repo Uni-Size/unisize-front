@@ -1,6 +1,5 @@
 export * from './LoginPage';
 export * from './MainPage';
-export * from './OrderListPage';
 export * from './StudentOrderPage';
 export * from './ProductListPage';
 export * from './SchoolListPage';
