@@ -100,13 +100,31 @@ export interface GetOrdersResponse {
   total: number;
 }
 
+/**
+ * GET /api/v1/orders 쿼리 파라미터.
+ *
+ * 채워진 조건끼리는 서버에서 AND로 결합된다(예: status + search → 그 상태의 검색 결과만).
+ * 비워두면 해당 조건은 적용되지 않는다.
+ */
 export interface GetOrdersParams {
   student_id?: string;
   status?: string;
+  /** YYYY-MM-DD. 형식이 어긋나면 400 */
   start_date?: string;
+  /** YYYY-MM-DD. 형식이 어긋나면 400 */
   end_date?: string;
   page?: number;
+  /** 기본 10, 최대 100. 범위를 벗어나면 서버가 10으로 되돌린다 */
   limit?: number;
+  /**
+   * 학생 이름 / 본인 연락처 / 보호자 연락처 / 입학예정 학교명을 대상으로 한
+   * 대소문자 무시 부분 일치 검색.
+   *
+   * 전화번호는 하이픈 표기 차이를 서버가 흡수한다(010-1234-5678 ↔ 01012345678).
+   * 앞뒤 공백은 서버가 잘라내며, 공백뿐이면 필터가 적용되지 않는다.
+   * total/total_pages도 이 필터를 적용한 뒤 기준으로 계산된다.
+   */
+  search?: string;
 }
 
 /**
