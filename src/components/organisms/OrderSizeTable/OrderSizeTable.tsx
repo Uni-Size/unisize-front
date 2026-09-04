@@ -36,6 +36,13 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
     stock: number;
     ordered: number;
     remaining: number;
+    /** max(0, ordered - stock). 서버가 계산해 내려준다. 프론트에서 다시 유도하지 않는다. */
+    reserved: number;
+    /**
+     * 입고 이력이 한 번도 없는 사이즈 칸인가. 서버 계약(is_unstocked)을 그대로 쓴다.
+     * stock === 0 으로 유추하면 "입고했다가 전부 나간 사이즈"와 구분되지 않는다.
+     */
+    isUnstocked: boolean;
     orders: InventoryOrder[];
     rounds: Array<{ round_number: number; total_in: number; orders: InventoryOrder[] }>;
     unassigned: InventoryOrder[];
@@ -55,6 +62,9 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
       existing.stock += stat.stock;
       existing.ordered += stat.ordered;
       existing.remaining += stat.remaining;
+      existing.reserved += stat.reserved ?? 0;
+      // 하나라도 입고 이력이 있으면 그 사이즈는 미입고가 아니다.
+      existing.isUnstocked = existing.isUnstocked && (stat.is_unstocked ?? false);
       const seenOrders = new Set(existing.orders.map((o) => o.name));
       for (const o of statOrders) {
         if (!seenOrders.has(o.name)) { existing.orders.push(o); seenOrders.add(o.name); }
@@ -81,6 +91,8 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
         stock: stat.stock,
         ordered: stat.ordered,
         remaining: stat.remaining,
+        reserved: stat.reserved ?? 0,
+        isUnstocked: stat.is_unstocked ?? false,
         orders: [...statOrders],
         rounds,
         unassigned: [...unassigned],
@@ -119,7 +131,7 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
     }
 
     // rounds가 없는 경우 stat.orders를 직접 표시
-    // stock > 0이면 슬롯 안에 배치, stock = 0이면 전부 초과(빨간색)
+    // 입고 이력이 있으면 재고 슬롯 안에 배치, 미입고(is_unstocked)면 전부 초과(빨간색)
     if (s.rounds.length === 0 && s.orders.length > 0) {
       const expanded: InventoryOrder[] = [];
       for (const o of s.orders) {
@@ -128,7 +140,7 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
       const slotCount = Math.max(s.stock, expanded.length);
       for (let i = 0; i < slotCount; i++) {
         const o = expanded[i];
-        const overflow = s.stock === 0 || i >= s.stock;
+        const overflow = s.isUnstocked || i >= s.stock;
         if (!o) {
           cells.push({ kind: 'empty', roundNum: 1 });
         } else if (overflow) {
@@ -150,7 +162,11 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
   });
 
   const maxRows = Math.max(0, ...sizeCells.map((c) => c.length));
-  const hasOverflow = sizes.some((s) => s.remaining < 0);
+  // 예약 = 재고보다 많이 들어온 주문. unisize는 재고가 없어도 주문을 막지 않고 예약으로 받으므로
+  // (reservation-over-rejection) "재고 부족"이 아니라 "예약"으로 표기한다. 재고 부족이라고 쓰면
+  // 주문이 막혔다는 오해를 준다.
+  const totalReserved = sizes.reduce((sum, s) => sum + s.reserved, 0);
+  const hasReserved = sizes.some((s) => s.reserved > 0);
   const totalStock = sizes.reduce((sum, s) => sum + s.stock, 0);
   const totalOrdered = sizes.reduce((sum, s) => sum + s.ordered, 0);
 
@@ -167,9 +183,9 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
             <span className="text-14 font-medium text-gray-700">
               {product.display_name}
             </span>
-            {hasOverflow && (
-              <span className="text-11 text-red-500 font-medium bg-red-50 border border-red-200 rounded px-1.5 py-0.5">
-                재고 부족
+            {hasReserved && (
+              <span className="text-11 text-blue-700 font-medium bg-blue-050 border border-blue-700/20 rounded px-1.5 py-0.5">
+                예약 {totalReserved}건
               </span>
             )}
           </div>
@@ -201,10 +217,27 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
                       key={s.size}
                       className={[
                         "px-2 py-2 text-center font-medium min-w-17.5",
-                        s.stock > 0 ? "border-[0.5px] border-gray-200" : "text-gray-300",
+                        s.isUnstocked ? "text-gray-300" : "border-[0.5px] border-gray-200",
                       ].join(" ")}
                     >
-                      {s.size} ({s.stock === 0 ? "-" : s.stock})
+                      <div className="flex flex-col items-center gap-0.5">
+                        {/* 미입고 칸은 재고 숫자 대신 "-". 입고 이력이 있는데 0인 칸은 "0"으로 구분된다. */}
+                        <span>{s.size} ({s.isUnstocked ? "-" : s.stock})</span>
+                        {(s.isUnstocked || s.reserved > 0) && (
+                          <span className="flex flex-wrap justify-center gap-0.5">
+                            {s.isUnstocked && (
+                              <span className="text-11 font-medium text-gray-600 bg-gray-100 rounded px-1 py-px whitespace-nowrap">
+                                미입고
+                              </span>
+                            )}
+                            {s.reserved > 0 && (
+                              <span className="text-11 font-medium text-blue-700 bg-blue-050 rounded px-1 py-px whitespace-nowrap">
+                                예약 {s.reserved}
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </div>
                     </th>
                   ))}
                 </tr>
@@ -298,15 +331,20 @@ export const OrderSizeTable = ({ product }: OrderSizeTableProps) => {
                     key={s.size}
                     className={[
                       "px-2 py-1.5 text-center text-13",
-                      s.stock > 0 ? "border-[0.5px] border-gray-200" : "text-gray-300",
+                      s.isUnstocked ? "text-gray-300" : "border-[0.5px] border-gray-200",
                     ].join(" ")}
                   >
-                    <div>{s.size} ({totalOrdered}/{s.stock === 0 ? "-" : s.stock})</div>
-                    {s.stock > 0 && surplus !== 0 && (
-                      <div className={surplus < 0 ? "text-red-600 font-bold" : "text-blue-600 font-bold"}>
-                        {surplus < 0 ? `부족 ${Math.abs(surplus)}` : `재고 ${surplus}`}
-                      </div>
-                    )}
+                    <div>{s.size} ({totalOrdered}/{s.isUnstocked ? "-" : s.stock})</div>
+                    {/*
+                      재고를 넘긴 주문은 "부족"이 아니라 "예약"이다 — 측정 기간에는 재고가 없어도
+                      주문을 받아 예약으로 쌓고, 측정 종료 후 관리자가 취합해 추가 발주한다.
+                      수치는 서버가 내려준 reserved를 그대로 쓴다(사이즈 헤더의 배지와 항상 일치).
+                    */}
+                    {s.reserved > 0 ? (
+                      <div className="text-blue-700 font-bold">예약 {s.reserved}</div>
+                    ) : !s.isUnstocked && surplus > 0 ? (
+                      <div className="text-blue-600 font-bold">재고 {surplus}</div>
+                    ) : null}
                   </td>
                 );
               })}
