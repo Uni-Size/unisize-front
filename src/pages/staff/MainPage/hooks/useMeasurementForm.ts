@@ -231,13 +231,18 @@ const toSupplyItem = (item: SupplyItemResponse): MeasurementSupplyItem => ({
   availableSizes: item.available_sizes ?? [],
 });
 
-const calcNameTagSummary = (
+export const calcNameTagSummary = (
   all: MeasurementUniformItem[],
   minUnit: number,
   prevOrderQuantity: number,
 ): MeasurementNameTag => {
   const nameTagTotal = all.reduce((sum, i) => sum + i.nameTagCount, 0);
-  const attachTotal = all.reduce((sum, i) => (i.nameTagAttach ? sum + i.nameTagCount : sum), 0);
+  // 부착비는 명찰 신청 개수가 아니라 실제로 박음질하는 옷 벌수(구매 수량)에 비례한다 —
+  // 백엔드 CalculateNameTagAttachAmount와 동일한 기준.
+  const attachTotal = all.reduce(
+    (sum, i) => (i.nameTagAttach ? sum + i.supportedQuantity + i.additionalQuantity : sum),
+    0,
+  );
   const minCeiled = nameTagTotal === 0 ? 0 : Math.ceil(nameTagTotal / minUnit) * minUnit;
   return {
     orderQuantity: Math.max(prevOrderQuantity, minCeiled),
