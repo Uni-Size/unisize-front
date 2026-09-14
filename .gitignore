@@ -25,3 +25,7 @@ dist-ssr
 
 *storybook.log
 storybook-static
+
+# Style Dictionary build output — generated from tokens/*.json, see
+# style-dictionary.config.mjs and the "tokens:build" npm script.
+src/styles/tokens.generated.css

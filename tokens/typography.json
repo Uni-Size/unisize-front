@@ -1,0 +1,16 @@
+{
+  "text": {
+    "11": { "value": "11px" },
+    "13": { "value": "13px" },
+    "14": { "value": "14px" },
+    "15": { "value": "15px" },
+    "17": { "value": "17px" }
+  },
+  "font": {
+    "family": {
+      "pretendard": {
+        "value": "'Pretendard Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+      }
+    }
+  }
+}
