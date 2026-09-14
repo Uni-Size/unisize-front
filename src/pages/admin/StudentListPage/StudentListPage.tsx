@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import { AdminHeader } from '@components/organisms/AdminHeader';
@@ -41,6 +42,28 @@ interface StudentRow {
   deleteReason: string;
 }
 
+// 목록 조회에 실제로 반영되는 파라미터만 키에 넣는다. 입력창 값(searchTerm/categoryFilter)은
+// 절대 넣지 않는다 — 넣으면 타이핑할 때마다 서버 조회가 나간다. 조회 조건은 검색 버튼이
+// activeSearch에 반영해 줄 때만 바뀐다.
+// undefined는 queryKey 직렬화에서 키가 통째로 빠져 "검색 없음"과 캐시가 갈리므로 null로 정규화한다.
+const studentListQueryKey = (params: {
+  page: number;
+  search?: string;
+  grade?: number;
+  deletedOnly: boolean;
+}) =>
+  [
+    'admin',
+    'students',
+    'list',
+    {
+      page: params.page,
+      search: params.search ?? null,
+      grade: params.grade ?? null,
+      deletedOnly: params.deletedOnly,
+    },
+  ] as const;
+
 export const StudentListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('통합검색');
@@ -52,12 +75,9 @@ export const StudentListPage = () => {
   // 검색 결과가 유지된다.
   const [activeSearch, setActiveSearch] = useState<{ search?: string; grade?: number }>({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [students, setStudents] = useState<StudentRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<ReactNode>(null);
   const [toast, setToast] = useState<{ message: string; variant: ToastVariant } | null>(null);
   const itemsPerPage = 10;
+  const queryClient = useQueryClient();
 
   // 모달 state
   const [modalMode, setModalMode] = useState<'add' | 'view' | null>(null);
@@ -159,36 +179,39 @@ export const StudentListPage = () => {
     deleteReason: student.delete_reason ?? '',
   });
 
-  const fetchStudents = useCallback(async (page: number, search?: string, school?: string, grade?: number, onlyDeleted = false) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await getStudents({
-        page,
+  const { data, isFetching, error: queryError } = useQuery({
+    queryKey: studentListQueryKey({
+      page: currentPage,
+      search: activeSearch.search,
+      grade: activeSearch.grade,
+      deletedOnly,
+    }),
+    queryFn: () =>
+      getStudents({
+        page: currentPage,
         limit: itemsPerPage,
-        search,
-        school,
-        grade,
-        ...(onlyDeleted ? { deleted_only: true } : {}),
-      });
-      const rows = response.data.map((s, i) => mapToRow(s, i, page));
-      setStudents(rows);
-      setTotalPages(response.meta.total_pages);
-    } catch (err) {
-      console.error('학생 목록 조회 실패:', err);
-      setError(getApiErrorMessage(err, '학생 목록을 불러오는 중 오류가 발생했습니다.'));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+        search: activeSearch.search,
+        grade: activeSearch.grade,
+        ...(deletedOnly ? { deleted_only: true } : {}),
+      }).catch((err) => {
+        console.error('학생 목록 조회 실패:', err);
+        throw err;
+      }),
+  });
 
-  const refetchList = useCallback((page: number = currentPage) => {
-    fetchStudents(page, activeSearch.search, undefined, activeSearch.grade, deletedOnly);
-  }, [fetchStudents, currentPage, activeSearch, deletedOnly]);
+  // No.는 절대 순번이라 페이지 오프셋이 필요하다. page가 queryKey에 있으므로 data와 항상 짝이 맞는다.
+  const students: StudentRow[] = data?.data.map((s, i) => mapToRow(s, i, currentPage)) ?? [];
+  const totalPages = data?.meta.total_pages ?? 1;
+  // isPending이 아니라 isFetching: 기존 코드는 재조회 때도 로딩 표시를 켜고 테이블을 비웠다.
+  const loading = isFetching;
+  const error: ReactNode = queryError
+    ? getApiErrorMessage(queryError, '학생 목록을 불러오는 중 오류가 발생했습니다.')
+    : null;
 
-  useEffect(() => {
-    fetchStudents(currentPage, activeSearch.search, undefined, activeSearch.grade, deletedOnly);
-  }, [currentPage, activeSearch, deletedOnly, fetchStudents]);
+  // 학생 추가/삭제/주문 변경 후 재조회. 순번이 뒤 페이지까지 밀리므로 현재 페이지만이 아니라
+  // 캐시에 남은 모든 페이지·검색 조건을 prefix로 무효화한다.
+  const invalidateStudentList = () =>
+    queryClient.invalidateQueries({ queryKey: ['admin', 'students', 'list'] });
 
   const handleSearch = () => {
     const gradeParam = categoryFilter === '신입' ? 1 : categoryFilter === '재학' ? 2 : undefined;
@@ -230,7 +253,7 @@ export const StudentListPage = () => {
           : {}),
       });
       setToast({ message: '학생이 추가되었습니다.', variant: 'success' });
-      refetchList();
+      invalidateStudentList();
     } catch (err) {
       console.error('학생 추가 실패:', err);
       setToast({ message: '학생 추가에 실패했습니다.', variant: 'error' });
@@ -516,7 +539,7 @@ export const StudentListPage = () => {
         setSelectedStudent(refreshed);
       }
       setToast({ message: '주문이 수정되었습니다.', variant: 'success' });
-      refetchList();
+      invalidateStudentList();
     } catch (error) {
       console.error('주문 수정 실패:', error);
       setToast({ message: '주문 수정에 실패했습니다.', variant: 'error' });
@@ -572,7 +595,7 @@ export const StudentListPage = () => {
         const refreshed = await fetchStudentDetail(studentId);
         setSelectedStudent(refreshed);
       }
-      refetchList();
+      invalidateStudentList();
     } catch (err) {
       console.error('주문 수정 실패:', err);
       setToast({ message: '주문 수정에 실패했습니다.', variant: 'error' });
@@ -613,7 +636,7 @@ export const StudentListPage = () => {
       });
       const refreshed = await fetchStudentDetail(studentId);
       setSelectedStudent(refreshed);
-      refetchList();
+      invalidateStudentList();
     } catch (err) {
       console.error('주문 생성 실패:', err);
       setToast({ message: '주문 생성에 실패했습니다.', variant: 'error' });
@@ -651,7 +674,7 @@ export const StudentListPage = () => {
             : '삭제되었습니다.',
         variant: result.pending_review_item_count > 0 ? 'info' : 'success',
       });
-      refetchList();
+      invalidateStudentList();
     } catch (error) {
       console.error('학생 삭제 실패:', error);
       setDeleteError(getApiErrorMessage(error, '학생 삭제에 실패했습니다.'));
@@ -862,7 +885,7 @@ export const StudentListPage = () => {
           student={selectedStudent}
           onSubmit={handleAddStudent}
           onEditSave={handleEditSave}
-          onStudentUpdated={() => refetchList()}
+          onStudentUpdated={invalidateStudentList}
           onOrderCreate={handleOrderCreate}
           onOrderUpdate={handleOrderUpdate}
           onStatusChange={handleStatusChange}
