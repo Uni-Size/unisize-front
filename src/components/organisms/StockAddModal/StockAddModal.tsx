@@ -13,7 +13,8 @@ export interface StockAddModalProps {
 }
 
 interface NewRound {
-  id: number;
+  /** 로컬 전용 식별자(React key·행 조회용). 서버로 전송되지 않는다. */
+  id: string;
   roundNumber: number;
   orderDate: string;
   values: Record<string, string>;
@@ -51,17 +52,22 @@ export const StockAddModal = ({
     setNewRoundMap(initial);
   }, [isOpen, products]);
 
-  function makeNewRound(roundNumber: number, sizes: string[]): NewRound {
+  // id를 인자로 받는 이유: 이 함수는 setNewRoundMap의 updater 안에서 호출되는데,
+  // updater는 순수해야 한다(React가 여러 번 호출할 수 있다). 값 생성은 호출부에서
+  // 미리 끝내고 여기서는 조립만 한다.
+  function makeNewRound(id: string, roundNumber: number, sizes: string[]): NewRound {
     const values: Record<string, string> = {};
     sizes.forEach((s) => {
       values[s] = "0";
     });
-    return { id: Date.now() + Math.random(), roundNumber, orderDate: "", values };
+    return { id, roundNumber, orderDate: "", values };
   }
 
   // 서버에 이미 저장된 차수 번호까지 포함해서 다음 번호를 정한다. 로컬 차수만 보면
   // 서버에 1·2차가 있어도 새 차수가 1차로 나가 기존 차수를 덮어쓴다.
   function addRound(productId: string, sizes: string[], serverRoundNums: number[]) {
+    // updater 바깥에서 한 번만 생성한다 — 안에서 만들면 updater가 순수하지 않게 된다.
+    const id = crypto.randomUUID();
     setNewRoundMap((prev) => {
       const rounds = prev[productId] ?? [];
       const maxNum = [...serverRoundNums, ...rounds.map((r) => r.roundNumber)].reduce(
@@ -70,12 +76,12 @@ export const StockAddModal = ({
       );
       return {
         ...prev,
-        [productId]: [...rounds, makeNewRound(maxNum + 1, sizes)],
+        [productId]: [...rounds, makeNewRound(id, maxNum + 1, sizes)],
       };
     });
   }
 
-  function removeRound(productId: string, roundId: number) {
+  function removeRound(productId: string, roundId: string) {
     setNewRoundMap((prev) => {
       const rounds = (prev[productId] ?? []).filter((r) => r.id !== roundId);
       return { ...prev, [productId]: rounds };
@@ -84,7 +90,7 @@ export const StockAddModal = ({
 
   function handleValueChange(
     productId: string,
-    roundId: number,
+    roundId: string,
     size: string,
     value: string,
   ) {
@@ -96,7 +102,7 @@ export const StockAddModal = ({
     });
   }
 
-  function handleOrderDateChange(productId: string, roundId: number, value: string) {
+  function handleOrderDateChange(productId: string, roundId: string, value: string) {
     setNewRoundMap((prev) => {
       const rounds = (prev[productId] ?? []).map((r) =>
         r.id === roundId ? { ...r, orderDate: value } : r,
