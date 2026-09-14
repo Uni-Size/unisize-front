@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import type { ReactNode } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminLayout } from "@components/templates/AdminLayout";
 import { AdminHeader } from "@components/organisms/AdminHeader";
 import { InvoiceModal } from "@components/organisms/InvoiceModal";
@@ -50,12 +50,13 @@ const toRow = (item: PaymentPendingOrder, absoluteIndex: number): PendingRow => 
 
 const ITEMS_PER_PAGE = 10;
 
+// 페이지 번호가 queryKey에 들어가므로 페이지 이동 = 다른 캐시 엔트리 = 자동 재조회.
+const paymentPendingQueryKey = (page: number) =>
+  ["admin", "orders", "payment-pending", page] as const;
+
 export const MainPage = () => {
-  const [orders, setOrders] = useState<PendingRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ReactNode>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const queryClient = useQueryClient();
 
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] =
@@ -64,29 +65,27 @@ export const MainPage = () => {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
-  const fetchOrders = useCallback(async (page: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response: PaymentPendingListResponse = await getPaymentPendingOrders({ page, limit: ITEMS_PER_PAGE });
-      setOrders(response.orders.map((item, i) => toRow(item, (page - 1) * ITEMS_PER_PAGE + i)));
-      setTotalPages(response.meta.total_pages ?? 1);
-    } catch (err) {
-      console.error("결제 대기자 목록 조회 실패:", err);
-      setError(
-        getApiErrorMessage(
-          err,
-          "결제 대기자 목록을 불러오는 중 오류가 발생했습니다.",
-        ),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, isFetching, error: queryError } = useQuery({
+    queryKey: paymentPendingQueryKey(currentPage),
+    queryFn: (): Promise<PaymentPendingListResponse> =>
+      getPaymentPendingOrders({ page: currentPage, limit: ITEMS_PER_PAGE }).catch((err) => {
+        console.error("결제 대기자 목록 조회 실패:", err);
+        throw err;
+      }),
+  });
 
-  useEffect(() => {
-    fetchOrders(currentPage);
-  }, [currentPage, fetchOrders]);
+  // No.는 절대 순번이라 페이지 오프셋을 더해야 한다 (page가 queryKey에 있으므로 data와 항상 짝이 맞는다).
+  const orders: PendingRow[] =
+    data?.orders.map((item, i) => toRow(item, (currentPage - 1) * ITEMS_PER_PAGE + i)) ?? [];
+  const totalPages = data?.meta.total_pages ?? 1;
+  // isPending이 아니라 isFetching: 기존 코드는 재조회 때도 로딩 표시를 켜고 테이블을 비웠다.
+  const loading = isFetching;
+  const error = queryError
+    ? getApiErrorMessage(
+        queryError,
+        "결제 대기자 목록을 불러오는 중 오류가 발생했습니다.",
+      )
+    : null;
 
   const parseAdminOrderItems = (
     orderItems: AdminOrderItem[],
@@ -326,7 +325,8 @@ export const MainPage = () => {
             await completePayment(String(orderId), { amount, method: "cash" });
             setIsDetailOpen(false);
             setPaymentSuccess(true);
-            fetchOrders(currentPage);
+            // 결제 완료된 항목이 목록에서 빠지면 뒤 페이지 순번이 밀리므로 prefix로 전부 무효화한다.
+            queryClient.invalidateQueries({ queryKey: ["admin", "orders", "payment-pending"] });
           } catch (err) {
             setPaymentError(getApiErrorString(err, "결제 처리 중 오류가 발생했습니다."));
           }
