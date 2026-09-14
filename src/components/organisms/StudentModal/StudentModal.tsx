@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Modal, Select } from "@components/atoms";
+import { Modal, Select, SelectMarkerDot } from "@components/atoms";
+import type { SelectOption } from "@components/atoms";
 import { DeletedStudentBanner } from "@components/organisms/DeletedStudentBanner";
 import { OrderReturnRefundPanel } from "@components/organisms/OrderReturnRefundPanel";
 import type { ReturnStatusDecision, RefundRequestPayload } from "@components/organisms/OrderReturnRefundPanel";
@@ -17,6 +18,23 @@ import {
 } from "@/utils/dateUtils";
 import { formatGender } from "@/utils/genderUtils";
 import { resolveSelectableGroups } from "@/utils/selectableGroups";
+
+/**
+ * 사이즈별 학교 재고를 색 점 marker로 변환한다. 0=빨강 / 1~2=주황 / 3+=초록,
+ * 재고를 모르는 사이즈는 marker 없음. 재고가 0이어도 선택은 막지 않는다
+ * (측정 기간 중에는 예약으로 주문을 받는 모델).
+ */
+const stockMarker = (
+  stockBySize: Record<string, number> | undefined,
+  size: string,
+): SelectOption["marker"] => {
+  const qty = stockBySize?.[size];
+  if (qty == null) return undefined;
+  return {
+    level: qty === 0 ? "none" : qty <= 2 ? "low" : "ok",
+    label: `재고 ${qty}`,
+  };
+};
 
 const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "student.create": "학생 등록",
@@ -1296,7 +1314,17 @@ export const StudentModal = ({
                       </td>
                       <td className="p-1 border border-gray-200 text-center text-gray-700 align-middle">
                         {isTableView ? (
-                          <span>{item.size || "-"}</span>
+                          (() => {
+                            const marker = item.size
+                              ? stockMarker(item.stockBySize, item.size)
+                              : undefined;
+                            return (
+                              <span className="inline-flex items-center gap-1.5">
+                                {item.size || "-"}
+                                {marker && <SelectMarkerDot marker={marker} />}
+                              </span>
+                            );
+                          })()
                         ) : (
                           <Select
                             options={(() => {
@@ -1326,7 +1354,11 @@ export const StudentModal = ({
                                   (a, b) =>
                                     Number(a) - Number(b) || a.localeCompare(b),
                                 )
-                                .map((s) => ({ value: s, label: s }));
+                                .map((s) => ({
+                                  value: s,
+                                  label: s,
+                                  marker: stockMarker(item.stockBySize, s),
+                                }));
                             })()}
                             value={item.size}
                             onChange={(value) =>

@@ -5,7 +5,27 @@ export interface SelectOption {
   value: string;
   label: string;
   group?: string;
+  /**
+   * 옵션 옆에 찍는 색 점. `label`은 화면에 노출되지 않고 스크린리더 전용이다
+   * (재고 수량 같은 정보가 고객에게 그대로 읽히면 안 되는 화면에서 쓴다).
+   */
+  marker?: { level: 'ok' | 'low' | 'none'; label: string };
 }
+
+const MARKER_COLOR: Record<NonNullable<SelectOption['marker']>['level'], string> = {
+  ok: 'bg-green-600',
+  low: 'bg-orange-500',
+  none: 'bg-red-600',
+};
+
+/** 색 점 하나. 시각적 단서는 색이 유일하고, 의미는 aria-label로만 전달한다. */
+export const SelectMarkerDot = ({ marker }: { marker: NonNullable<SelectOption['marker']> }) => (
+  <span
+    role="img"
+    aria-label={marker.label}
+    className={`inline-block shrink-0 w-1.5 h-1.5 rounded-full ${MARKER_COLOR[marker.level]}`}
+  />
+);
 
 export interface SelectOptionGroup {
   label: string;
@@ -84,7 +104,7 @@ export const Select = ({
   const textClass = size === 'sm' ? 'text-13' : 'text-15';
 
   const optionClass = (v: string) =>
-    `px-3 py-2 text-13 font-normal cursor-pointer transition-colors duration-200 ease-in-out hover:bg-primary-050 ${v === value ? 'bg-primary-050 text-primary-900 font-medium' : 'text-gray-700'}`;
+    `flex items-center gap-1.5 px-3 py-2 text-13 font-normal cursor-pointer transition-colors duration-200 ease-in-out hover:bg-primary-050 ${v === value ? 'bg-primary-050 text-primary-900 font-medium' : 'text-gray-700'}`;
 
   return (
     <div ref={containerRef} className={`flex flex-col gap-2 ${fullWidth ? 'w-full' : ''}`}>
@@ -109,6 +129,7 @@ export const Select = ({
             {selectedOption ? selectedOption.label : placeholder}
           </span>
         )}
+        {selectedOption?.marker && <SelectMarkerDot marker={selectedOption.marker} />}
         <svg
           className={`shrink-0 transition-transform duration-200 ease-in-out ${isOpen ? 'rotate-180' : ''}`}
           width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -137,6 +158,7 @@ export const Select = ({
                           onMouseDown={(e) => { e.preventDefault(); handleSelect(option.value); }}
                         >
                           {option.label}
+                          {option.marker && <SelectMarkerDot marker={option.marker} />}
                         </li>
                       ))}
                     </ul>
@@ -149,6 +171,7 @@ export const Select = ({
                     onMouseDown={(e) => { e.preventDefault(); handleSelect(option.value); }}
                   >
                     {option.label}
+                    {option.marker && <SelectMarkerDot marker={option.marker} />}
                   </li>
                 ))}
             {(filteredGroups ? filteredGroups.length === 0 : filteredOptions.length === 0) && (

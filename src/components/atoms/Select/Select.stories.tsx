@@ -89,6 +89,29 @@ export const WithGroups: Story = {
   },
 };
 
+/**
+ * 재고 표시용 색 점. 화면에 보이는 단서는 색뿐이고(숫자/배지/툴팁 없음),
+ * 수량은 스크린리더용 aria-label로만 노출된다.
+ */
+export const WithStockMarker: Story = {
+  render: () => {
+    const [value, setValue] = useState('100');
+    return (
+      <Select
+        label="사이즈"
+        options={[
+          { value: '90', label: '90', marker: { level: 'ok', label: '재고 12' } },
+          { value: '95', label: '95', marker: { level: 'low', label: '재고 2' } },
+          { value: '100', label: '100', marker: { level: 'none', label: '재고 0' } },
+          { value: '105', label: '105' },
+        ]}
+        value={value}
+        onChange={setValue}
+      />
+    );
+  },
+};
+
 export const Disabled: Story = {
   args: {
     label: '비활성',
