@@ -455,7 +455,10 @@ export const StudentModal = ({
   const [orderHistoryMap, setOrderHistoryMap] = useState<Map<string, OrderHistory[]>>(new Map());
   const [orderHistoryLoading, setOrderHistoryLoading] = useState(false);
   const [auditTab, setAuditTab] = useState<'student' | string>(() => {
-    const snap = student?.orderSnapshots?.[activeDateIndexRef.current];
+    // 렌더 단계에서는 ref(activeDateIndexRef)를 읽지 않는다 — React가 금지하는 패턴이고,
+    // 마운트 시점에는 state와 ref가 모두 초기값이라 state를 그대로 쓰면 동작이 같다.
+    // 이후 탭 전환/학생 변경 시의 auditTab 갱신은 아래 effect가 담당한다.
+    const snap = student?.orderSnapshots?.[activeDateIndex];
     return snap ? String(snap.orderId) : 'student';
   });
 
