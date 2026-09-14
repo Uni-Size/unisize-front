@@ -46,6 +46,11 @@ export const StudentListPage = () => {
   const [searchType, setSearchType] = useState('통합검색');
   const [categoryFilter, setCategoryFilter] = useState('전체');
   const [deletedOnly, setDeletedOnly] = useState(false);
+  // 현재 목록 조회에 적용 중인 검색 조건. 입력창의 searchTerm/categoryFilter는
+  // 사용자가 타이핑하는 값일 뿐이라, 검색 버튼을 눌러야만 여기에 반영된다.
+  // 삭제/추가/페이지 이동 등 목록을 새로고침하는 모든 지점은 이 값을 사용해야
+  // 검색 결과가 유지된다.
+  const [activeSearch, setActiveSearch] = useState<{ search?: string; grade?: number }>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [students, setStudents] = useState<StudentRow[]>([]);
@@ -177,14 +182,18 @@ export const StudentListPage = () => {
     }
   }, []);
 
+  const refetchList = useCallback((page: number = currentPage) => {
+    fetchStudents(page, activeSearch.search, undefined, activeSearch.grade, deletedOnly);
+  }, [fetchStudents, currentPage, activeSearch, deletedOnly]);
+
   useEffect(() => {
-    fetchStudents(currentPage, undefined, undefined, undefined, deletedOnly);
-  }, [currentPage, deletedOnly, fetchStudents]);
+    fetchStudents(currentPage, activeSearch.search, undefined, activeSearch.grade, deletedOnly);
+  }, [currentPage, activeSearch, deletedOnly, fetchStudents]);
 
   const handleSearch = () => {
-    setCurrentPage(1);
     const gradeParam = categoryFilter === '신입' ? 1 : categoryFilter === '재학' ? 2 : undefined;
-    fetchStudents(1, searchTerm || undefined, undefined, gradeParam, deletedOnly);
+    setActiveSearch({ search: searchTerm || undefined, grade: gradeParam });
+    setCurrentPage(1);
   };
 
   const handleReset = () => {
@@ -192,8 +201,8 @@ export const StudentListPage = () => {
     setSearchType('통합검색');
     setCategoryFilter('전체');
     setDeletedOnly(false);
+    setActiveSearch({});
     setCurrentPage(1);
-    fetchStudents(1);
   };
 
   const handleAddStudent = async (data: StudentFormInput) => {
@@ -221,7 +230,7 @@ export const StudentListPage = () => {
           : {}),
       });
       setToast({ message: '학생이 추가되었습니다.', variant: 'success' });
-      fetchStudents(currentPage);
+      refetchList();
     } catch (err) {
       console.error('학생 추가 실패:', err);
       setToast({ message: '학생 추가에 실패했습니다.', variant: 'error' });
@@ -507,7 +516,7 @@ export const StudentListPage = () => {
         setSelectedStudent(refreshed);
       }
       setToast({ message: '주문이 수정되었습니다.', variant: 'success' });
-      fetchStudents(currentPage);
+      refetchList();
     } catch (error) {
       console.error('주문 수정 실패:', error);
       setToast({ message: '주문 수정에 실패했습니다.', variant: 'error' });
@@ -563,7 +572,7 @@ export const StudentListPage = () => {
         const refreshed = await fetchStudentDetail(studentId);
         setSelectedStudent(refreshed);
       }
-      fetchStudents(currentPage);
+      refetchList();
     } catch (err) {
       console.error('주문 수정 실패:', err);
       setToast({ message: '주문 수정에 실패했습니다.', variant: 'error' });
@@ -604,7 +613,7 @@ export const StudentListPage = () => {
       });
       const refreshed = await fetchStudentDetail(studentId);
       setSelectedStudent(refreshed);
-      fetchStudents(currentPage);
+      refetchList();
     } catch (err) {
       console.error('주문 생성 실패:', err);
       setToast({ message: '주문 생성에 실패했습니다.', variant: 'error' });
@@ -642,7 +651,7 @@ export const StudentListPage = () => {
             : '삭제되었습니다.',
         variant: result.pending_review_item_count > 0 ? 'info' : 'success',
       });
-      fetchStudents(currentPage, undefined, undefined, undefined, deletedOnly);
+      refetchList();
     } catch (error) {
       console.error('학생 삭제 실패:', error);
       setDeleteError(getApiErrorMessage(error, '학생 삭제에 실패했습니다.'));
@@ -853,7 +862,7 @@ export const StudentListPage = () => {
           student={selectedStudent}
           onSubmit={handleAddStudent}
           onEditSave={handleEditSave}
-          onStudentUpdated={() => fetchStudents(currentPage)}
+          onStudentUpdated={() => refetchList()}
           onOrderCreate={handleOrderCreate}
           onOrderUpdate={handleOrderUpdate}
           onStatusChange={handleStatusChange}
