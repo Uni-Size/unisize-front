@@ -831,9 +831,9 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
   // products와 unregistered는 서버가 서로소로 보장한다. 같은 주문 라인이 양쪽에 나오면 서버 버그이므로
   // 프론트에서 dedupe/병합하지 않는다 (dedupe를 넣으면 그 버그가 화면에서 안 보이게 된다).
   //
-  // NOTE: 이 앱에는 QueryClientProvider가 어디에도 배선돼 있지 않아(grep -rn "QueryClient" src/ → 0건)
-  // TanStack Query를 쓸 수 없다. 설계 문서 §5는 useQuery를 제안하지만, Provider 전역 배선은
-  // 이번 작업 범위를 크게 넘으므로 앱의 기존 관례(useState + useEffect)를 따른다.
+  // NOTE: QueryClientProvider는 이제 App.tsx에 배선돼 있어 TanStack Query를 쓸 수 있다.
+  // 다만 마이그레이션은 StaffListPage 파일럿부터 화면 단위로 진행 중이고 이 화면은 아직 차례가 아니라,
+  // 당분간 기존 방식(useState + useEffect)을 유지한다. 설계 문서 §5의 useQuery 전환은 파일럿 검증 후.
   const [allProducts, setAllProducts] = useState<InventoryProduct[]>([]);
   const [unregisteredProducts, setUnregisteredProducts] = useState<UnregisteredProduct[]>([]);
   const [loading, setLoading] = useState(false);
