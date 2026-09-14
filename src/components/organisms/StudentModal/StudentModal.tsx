@@ -101,6 +101,9 @@ export interface UniformItem {
   name: string;
   size: string;
   availableSizes?: string[];
+  // 사이즈별 학교 재고. 인보이스에서 사이즈를 바꿀 수 있으므로 현재 사이즈 하나가 아니라
+  // 전체 맵을 들고 있어야 한다.
+  stockBySize?: Record<string, number>;
   supportedQuantity: number;
   additionalQuantity: number;
   unitPrice?: number;
