@@ -85,9 +85,23 @@ export const MainPage = () => {
   const needsSizeSelection = (availableSizes: { size: string }[]) =>
     availableSizes.length > 1 || (availableSizes.length === 1 && availableSizes[0].size !== 'FREE');
 
+  // 등록된 재고 사이즈가 하나도 없는 상품은 스태프가 고를 수 있는 값이 없다.
+  // "사이즈를 선택해주세요"로 안내하면 할 수 있는 게 없으므로 따로 구분해 알린다.
+  const getUnregisteredSizeItemNames = () =>
+    [...form.winterUniforms, ...form.summerUniforms]
+      .filter(
+        (u) => u.supportedQuantity + u.additionalQuantity > 0 && u.availableSizes.length === 0,
+      )
+      .map((u) => u.name);
+
   const getMissingSizeItemNames = () => {
     const missingUniforms = [...form.winterUniforms, ...form.summerUniforms]
-      .filter((u) => u.supportedQuantity + u.additionalQuantity > 0 && !u.selectedSize)
+      .filter(
+        (u) =>
+          u.supportedQuantity + u.additionalQuantity > 0 &&
+          !u.selectedSize &&
+          u.availableSizes.length > 0,
+      )
       .map((u) => u.name);
     const missingSupplies = form.supplies
       .filter((s) => s.quantity > 0 && !s.selectedSize && needsSizeSelection(s.availableSizes))
@@ -149,6 +163,13 @@ export const MainPage = () => {
 
   const handleConfirm = async (signature: string) => {
     if (!selectedStudent) return;
+    const unregisteredSizeItems = getUnregisteredSizeItemNames();
+    if (unregisteredSizeItems.length > 0) {
+      showToast(
+        `재고 미등록 상품이라 진행할 수 없습니다. 담당자에게 문의하세요: ${unregisteredSizeItems.join(', ')}`,
+      );
+      return;
+    }
     const missingSizeItems = getMissingSizeItemNames();
     if (missingSizeItems.length > 0) {
       showToast(`사이즈를 선택해주세요: ${missingSizeItems.join(', ')}`);
