@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { ReactNode } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import { AdminHeader } from '@components/organisms/AdminHeader';
 import { StaffEditModal } from '@components/organisms/StaffEditModal';
@@ -40,35 +40,41 @@ const toStaffEditData = (row: StaffRow): StaffEditData => ({
   registeredDate: row.registeredDate,
 });
 
+const itemsPerPage = 10;
+
+// 페이지 번호가 queryKey에 들어가므로 페이지 이동 = 다른 캐시 엔트리 = 자동 재조회.
+const staffListQueryKey = (page: number) => ['admin', 'staff', 'list', page] as const;
+
 export const StaffListPage = () => {
-  const [staffList, setStaffList] = useState<StaffRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ReactNode>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffEditData | null>(null);
-  const itemsPerPage = 10;
+  const queryClient = useQueryClient();
 
-  const fetchStaffList = useCallback(async (page: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response: StaffListResponse = await getStaffList({ page, limit: itemsPerPage });
-      setStaffList(response.data.map((item, i) => toStaffRow(item, (page - 1) * itemsPerPage + i)));
-      setTotalPages(response.meta.total_pages ?? 1);
-    } catch (err) {
-      console.error('스태프 목록 조회 실패:', err);
-      setError(getApiErrorMessage(err, '스태프 목록을 불러오는 중 오류가 발생했습니다.'));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, isFetching, error: queryError } = useQuery({
+    queryKey: staffListQueryKey(currentPage),
+    queryFn: (): Promise<StaffListResponse> =>
+      getStaffList({ page: currentPage, limit: itemsPerPage }).catch((err) => {
+        console.error('스태프 목록 조회 실패:', err);
+        throw err;
+      }),
+  });
 
-  useEffect(() => {
-    fetchStaffList(currentPage);
-  }, [currentPage, fetchStaffList]);
+  // No.는 절대 순번이라 페이지 오프셋을 더해야 한다 (page가 queryKey에 있으므로 data와 항상 짝이 맞는다).
+  const staffList: StaffRow[] =
+    data?.data.map((item, i) => toStaffRow(item, (currentPage - 1) * itemsPerPage + i)) ?? [];
+  const totalPages = data?.meta.total_pages ?? 1;
+  // isPending이 아니라 isFetching: 기존 코드는 재조회 때도 로딩 표시를 켜고 테이블을 비웠다.
+  const loading = isFetching;
+  const error = queryError
+    ? getApiErrorMessage(queryError, '스태프 목록을 불러오는 중 오류가 발생했습니다.')
+    : null;
+
+  // 목록을 바꾸는 작업(수정/삭제/등록) 후 재조회. 현재 페이지만이 아니라
+  // 캐시에 남은 다른 페이지도 낡으므로 prefix로 전부 무효화한다.
+  const invalidateStaffList = () =>
+    queryClient.invalidateQueries({ queryKey: ['admin', 'staff', 'list'] });
 
   const handleEditClick = (staff: StaffRow) => {
     setSelectedStaff(toStaffEditData(staff));
@@ -87,7 +93,7 @@ export const StaffListPage = () => {
         gender: data.gender === '남' ? 'M' : 'F',
       });
       handleCloseEditModal();
-      fetchStaffList(currentPage);
+      invalidateStaffList();
     } catch (err) {
       console.error('스태프 정보 수정 실패:', err);
       alert(getApiErrorMessage(err, '스태프 정보 수정에 실패했습니다.'));
@@ -100,7 +106,7 @@ export const StaffListPage = () => {
 
     try {
       await deleteStaff(staff.id);
-      fetchStaffList(currentPage);
+      invalidateStaffList();
     } catch (err) {
       console.error('스태프 삭제 실패:', err);
       alert(getApiErrorMessage(err, '스태프 삭제에 실패했습니다.'));
@@ -196,7 +202,7 @@ export const StaffListPage = () => {
       <StaffRegisterModal
         isOpen={isRegisterModalOpen}
         onClose={() => setIsRegisterModalOpen(false)}
-        onSuccess={() => fetchStaffList(currentPage)}
+        onSuccess={invalidateStaffList}
       />
     </AdminLayout>
   );
