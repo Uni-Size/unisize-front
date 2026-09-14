@@ -14,6 +14,7 @@ import {
   type PaymentPendingListResponse,
 } from "@/api/order";
 import { getStudentDetail, getOrderHistory } from "@/api/student";
+import { getSchoolDetail } from "@/api/school";
 import type { AdminOrderItem, AdminStudentOrder } from "@/api/student";
 import { completePayment } from "@/api/staff";
 import { getApiErrorMessage, getApiErrorString } from "@/utils/errorUtils";
@@ -87,7 +88,11 @@ export const MainPage = () => {
     fetchOrders(currentPage);
   }, [currentPage, fetchOrders]);
 
-  const parseAdminOrderItems = (orderItems: AdminOrderItem[], nameTagService?: AdminStudentOrder['name_tag_service']) => {
+  const parseAdminOrderItems = (
+    orderItems: AdminOrderItem[],
+    nameTagService?: AdminStudentOrder['name_tag_service'],
+    stockByProductId?: Map<string, Record<string, number>>,
+  ) => {
     const winterUniforms: import("@components/organisms/StudentModal").UniformItem[] = [];
     const summerUniforms: import("@components/organisms/StudentModal").UniformItem[] = [];
     const allUniforms: import("@components/organisms/StudentModal").UniformItem[] = [];
@@ -119,6 +124,7 @@ export const MainPage = () => {
         itemStatus: item.delivery_status,
         seasonCode,
         category: item.product?.category,
+        stockBySize: stockByProductId?.get(String(item.product_id)),
       };
       if (seasonCode === "W") winterUniforms.push(uniform);
       else if (seasonCode === "S") summerUniforms.push(uniform);
@@ -138,9 +144,21 @@ export const MainPage = () => {
       const detail = await getStudentDetail(row.studentId);
       const adminOrders = detail.orders ?? [];
 
+      // 인보이스에서 "지금 몇 개를 실제로 건네줄 수 있는지" 참고용으로 보여줄 학교 재고.
+      // 재고 조회가 실패해도 인보이스 자체는 떠야 하므로 실패는 삼킨다.
+      const schoolDetail = row.school ? await getSchoolDetail(row.school).catch(() => null) : null;
+      const stockByProductId = new Map<string, Record<string, number>>();
+      for (const u of [...(schoolDetail?.uniforms.winter ?? []), ...(schoolDetail?.uniforms.summer ?? [])]) {
+        if (!u.product_id) continue;
+        stockByProductId.set(
+          u.product_id,
+          Object.fromEntries(u.stock_by_sizes.map((s) => [s.size, s.quantity])),
+        );
+      }
+
       const orderSnapshots: import("@components/organisms/StudentModal").OrderSnapshot[] =
         adminOrders.map((order: AdminStudentOrder) => {
-          const { winterUniforms, summerUniforms, allUniforms } = parseAdminOrderItems(order.order_items ?? [], order.name_tag_service);
+          const { winterUniforms, summerUniforms, allUniforms } = parseAdminOrderItems(order.order_items ?? [], order.name_tag_service, stockByProductId);
           return {
             orderId: order.id,
             date: order.order_date ?? order.created_at,
