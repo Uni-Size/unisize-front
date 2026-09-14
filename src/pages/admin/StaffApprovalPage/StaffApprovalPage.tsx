@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { ReactNode } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AdminLayout } from '@components/templates/AdminLayout';
 import { AdminHeader } from '@components/organisms/AdminHeader';
 import { Table } from '@components/atoms/Table';
@@ -31,38 +31,40 @@ const toPendingRow = (item: StaffItem, absoluteIndex: number): PendingStaffRow =
   registeredDate: formatDate(item.created_at),
 });
 
+const itemsPerPage = 10;
+
+// 페이지 번호가 queryKey에 들어가므로 페이지 이동 = 다른 캐시 엔트리 = 자동 재조회.
+const pendingStaffQueryKey = (page: number) => ['admin', 'staff', 'pending', page] as const;
+
 export const StaffApprovalPage = () => {
-  const [pendingList, setPendingList] = useState<PendingStaffRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ReactNode>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [toast, setToast] = useState<{ message: string; variant: 'success' | 'error' } | null>(null);
-  const itemsPerPage = 10;
+  const queryClient = useQueryClient();
 
-  const fetchPendingList = useCallback(async (page: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response: StaffListResponse = await getPendingStaffList({ page, limit: itemsPerPage });
-      setPendingList(response.data.map((item, i) => toPendingRow(item, (page - 1) * itemsPerPage + i)));
-      setTotalPages(response.meta.total_pages ?? 1);
-    } catch (err) {
-      console.error('승인 대기 목록 조회 실패:', err);
-      setError(getApiErrorMessage(err, '승인 대기 목록을 불러오는 중 오류가 발생했습니다.'));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, isFetching, error: queryError } = useQuery({
+    queryKey: pendingStaffQueryKey(currentPage),
+    queryFn: (): Promise<StaffListResponse> =>
+      getPendingStaffList({ page: currentPage, limit: itemsPerPage }).catch((err) => {
+        console.error('승인 대기 목록 조회 실패:', err);
+        throw err;
+      }),
+  });
 
-  useEffect(() => {
-    fetchPendingList(currentPage);
-  }, [currentPage, fetchPendingList]);
+  // No.는 절대 순번이라 페이지 오프셋을 더해야 한다 (page가 queryKey에 있으므로 data와 항상 짝이 맞는다).
+  const pendingList: PendingStaffRow[] =
+    data?.data.map((item, i) => toPendingRow(item, (currentPage - 1) * itemsPerPage + i)) ?? [];
+  const totalPages = data?.meta.total_pages ?? 1;
+  // isPending이 아니라 isFetching: 기존 코드는 재조회 때도 로딩 표시를 켜고 테이블을 비웠다.
+  const loading = isFetching;
+  const error = queryError
+    ? getApiErrorMessage(queryError, '승인 대기 목록을 불러오는 중 오류가 발생했습니다.')
+    : null;
 
   const handleApprove = async (staffId: string) => {
     try {
       await approveStaff(staffId);
-      fetchPendingList(currentPage);
+      // 승인된 항목이 목록에서 빠지면 뒤 페이지 순번이 밀리므로 prefix로 전부 무효화한다.
+      queryClient.invalidateQueries({ queryKey: ['admin', 'staff', 'pending'] });
       setToast({ message: '승인이 완료되었습니다.', variant: 'success' });
     } catch (error) {
       console.error('승인 실패:', error);
