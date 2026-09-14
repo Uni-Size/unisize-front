@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Modal } from "@components/atoms/Modal";
 import { Button } from "@components/atoms/Button";
-import type { InventoryProduct } from "@/api/order";
+import type { InventoryProduct, StockUpdateItem } from "@/api/order";
 
 const EXCLUDED_STATUSES = new Set(["receipt", "delivered", "shipped"]);
 
@@ -9,20 +9,13 @@ export interface StockAddModalProps {
   isOpen: boolean;
   onClose: () => void;
   products: InventoryProduct[];
-  onSubmit: (
-    items: {
-      product_id: string;
-      size: string;
-      size_type?: "numeric" | "alpha" | "free";
-      stock: number;
-      round_number?: number;
-    }[],
-  ) => Promise<void>;
+  onSubmit: (items: StockUpdateItem[]) => Promise<void>;
 }
 
 interface NewRound {
   id: number;
   roundNumber: number;
+  orderDate: string;
   values: Record<string, string>;
 }
 
@@ -63,13 +56,18 @@ export const StockAddModal = ({
     sizes.forEach((s) => {
       values[s] = "0";
     });
-    return { id: Date.now() + Math.random(), roundNumber, values };
+    return { id: Date.now() + Math.random(), roundNumber, orderDate: "", values };
   }
 
-  function addRound(productId: string, sizes: string[]) {
+  // 서버에 이미 저장된 차수 번호까지 포함해서 다음 번호를 정한다. 로컬 차수만 보면
+  // 서버에 1·2차가 있어도 새 차수가 1차로 나가 기존 차수를 덮어쓴다.
+  function addRound(productId: string, sizes: string[], serverRoundNums: number[]) {
     setNewRoundMap((prev) => {
       const rounds = prev[productId] ?? [];
-      const maxNum = rounds.reduce((m, r) => Math.max(m, r.roundNumber), 0);
+      const maxNum = [...serverRoundNums, ...rounds.map((r) => r.roundNumber)].reduce(
+        (m, n) => Math.max(m, n),
+        0,
+      );
       return {
         ...prev,
         [productId]: [...rounds, makeNewRound(maxNum + 1, sizes)],
@@ -98,6 +96,15 @@ export const StockAddModal = ({
     });
   }
 
+  function handleOrderDateChange(productId: string, roundId: number, value: string) {
+    setNewRoundMap((prev) => {
+      const rounds = (prev[productId] ?? []).map((r) =>
+        r.id === roundId ? { ...r, orderDate: value } : r,
+      );
+      return { ...prev, [productId]: rounds };
+    });
+  }
+
   function getNewRoundTotal(round: NewRound, size: string): number {
     return parseInt(round.values[size] ?? "0", 10) || 0;
   }
@@ -117,13 +124,7 @@ export const StockAddModal = ({
   }
 
   const handleSubmit = async () => {
-    const items: {
-      product_id: string;
-      size: string;
-      size_type?: "numeric" | "alpha" | "free";
-      stock: number;
-      round_number?: number;
-    }[] = [];
+    const items: StockUpdateItem[] = [];
 
     for (const product of products) {
       const sizes = Array.from(new Set(product.size_stats.map((s) => s.size)))
@@ -140,6 +141,9 @@ export const StockAddModal = ({
             size_type: product.size_type,
             stock: qty,
             round_number: round.roundNumber,
+            // 같은 차수의 모든 사이즈 항목에 동일한 값을 실어야 한다. 서버는
+            // (product_id, round_number)별로 발주일이 엇갈리면 400을 낸다.
+            order_date: round.orderDate || undefined,
           });
         }
       }
@@ -238,6 +242,12 @@ export const StockAddModal = ({
               ),
             ).sort((a, b) => a - b);
 
+            // 발주일은 차수 단위라 사이즈별 행 중 값이 있는 첫 번째 것을 쓴다.
+            const serverOrderDate = (rNum: number) =>
+              product.size_stats
+                .flatMap((s) => s.rounds ?? [])
+                .find((r) => r.round_number === rNum && r.order_date)?.order_date;
+
             return (
               <div key={product.product_id} className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
@@ -246,7 +256,7 @@ export const StockAddModal = ({
                   </span>
                   <button
                     type="button"
-                    onClick={() => addRound(product.product_id, sizes)}
+                    onClick={() => addRound(product.product_id, sizes, serverRoundNums)}
                     className="flex items-center gap-1 text-13 text-blue-600 border border-blue-300 rounded px-3 py-1 hover:bg-blue-50 transition-colors"
                   >
                     + 차수 추가
@@ -257,7 +267,7 @@ export const StockAddModal = ({
                   <table className="border-collapse text-13 w-full">
                     <thead>
                       <tr className="bg-gray-100">
-                        <th className="border-b border-r border-gray-200 px-2 py-2 text-center font-medium text-gray-600 whitespace-nowrap w-20 sticky left-0 bg-gray-100 z-10">
+                        <th className="border-b border-r border-gray-200 px-2 py-2 text-center font-medium text-gray-600 whitespace-nowrap w-32 sticky left-0 bg-gray-100 z-10">
                           구분
                         </th>
                         {sizes.map((size) => (
@@ -275,7 +285,12 @@ export const StockAddModal = ({
                       {serverRoundNums.map((rNum) => (
                         <tr key={rNum} className="bg-gray-50">
                           <td className="border-b border-r border-gray-200 px-2 py-2 text-center text-gray-500 whitespace-nowrap sticky left-0 bg-gray-50 z-10">
-                            {roundLabel(rNum)}
+                            <div className="flex flex-col items-center leading-tight">
+                              <span>{roundLabel(rNum)}</span>
+                              <span className="text-11 text-gray-400">
+                                {serverOrderDate(rNum) ?? "발주일 -"}
+                              </span>
+                            </div>
                           </td>
                           {sizes.map((size) => {
                             const stat = product.size_stats.find(
@@ -300,22 +315,37 @@ export const StockAddModal = ({
                       {newRounds.map((round) => (
                         <tr key={round.id} className="bg-blue-50">
                           <td className="border-b border-r border-gray-200 px-2 py-1 text-center whitespace-nowrap sticky left-0 z-10 bg-blue-50">
-                            <div className="flex items-center justify-between gap-1">
-                              <span className="font-medium text-13 text-blue-700">
-                                {roundLabel(round.roundNumber)}
-                              </span>
-                              {newRounds.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    removeRound(product.product_id, round.id)
-                                  }
-                                  className="text-gray-400 hover:text-red-400 text-12 leading-none"
-                                  title="차수 삭제"
-                                >
-                                  ✕
-                                </button>
-                              )}
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="font-medium text-13 text-blue-700">
+                                  {roundLabel(round.roundNumber)}
+                                </span>
+                                {newRounds.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      removeRound(product.product_id, round.id)
+                                    }
+                                    className="text-gray-400 hover:text-red-400 text-12 leading-none"
+                                    title="차수 삭제"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
+                              <input
+                                type="date"
+                                value={round.orderDate}
+                                onChange={(e) =>
+                                  handleOrderDateChange(
+                                    product.product_id,
+                                    round.id,
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full text-11 border border-blue-200 rounded px-1 py-0.5 bg-white text-gray-600 focus:outline-none focus:border-blue-400"
+                                title="발주일 (차수 단위)"
+                              />
                             </div>
                           </td>
                           {sizes.map((size) => (

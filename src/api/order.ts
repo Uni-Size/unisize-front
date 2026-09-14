@@ -476,6 +476,8 @@ export interface InventoryOrder {
 export interface StockRound {
   round_number: number;
   total_in: number;
+  /** 공급업체 발주일. "YYYY-MM-DD" */
+  order_date?: string;
   orders?: InventoryOrder[];
   unassigned?: InventoryOrder[];
 }
@@ -597,8 +599,12 @@ export interface StockUpdateItem {
   product_id: string;
   size: string;
   size_type?: "numeric" | "alpha" | "free";
+  /** 그 차수의 입고 수량(누적 절대값이 아님) */
   stock: number;
+  /** 0은 이월재고 */
   round_number?: number;
+  /** 공급업체 발주일. "YYYY-MM-DD". 같은 차수의 항목은 모두 같은 값이어야 하며, 다르면 서버가 400을 낸다 */
+  order_date?: string;
 }
 
 export interface UpdateStockRequest {
