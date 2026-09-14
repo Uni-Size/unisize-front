@@ -545,10 +545,13 @@ export const SchoolFormContent = ({
               <div className="flex items-center h-9 px-2.5 border border-gray-200 rounded-lg bg-white gap-1">
                 <input
                   type="number"
+                  min="0"
                   className="min-w-0 flex-1 border-none bg-transparent text-13 text-gray-700 text-right outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   placeholder="-"
                   value={product.contractPrice || ""}
-                  onChange={(e) => handleProductChange(season, product.id, "contractPrice", Number(e.target.value))}
+                  onChange={(e) =>
+                    handleProductChange(season, product.id, "contractPrice", Math.max(0, Number(e.target.value)))
+                  }
                 />
                 <span className="text-13 text-gray-700 shrink-0">원</span>
               </div>
@@ -869,8 +872,11 @@ export const SchoolFormContent = ({
                 label="예상인원"
                 placeholder="100"
                 type="number"
+                min="0"
                 value={String(y.expected_student_count ?? "")}
-                onChange={(e) => handleYearChange(y._id, "expected_student_count", Number(e.target.value))}
+                onChange={(e) =>
+                  handleYearChange(y._id, "expected_student_count", Math.max(0, Number(e.target.value)))
+                }
                 fullWidth
               />
             </div>
@@ -941,8 +947,11 @@ export const SchoolFormContent = ({
                 <Input
                   label="예상인원"
                   type="number"
+                  min="0"
                   value={String(y.expected_student_count ?? "")}
-                  onChange={(e) => handleYearChange(y._id, "expected_student_count", Number(e.target.value))}
+                  onChange={(e) =>
+                    handleYearChange(y._id, "expected_student_count", Math.max(0, Number(e.target.value)))
+                  }
                   fullWidth
                 />
               ) : (
