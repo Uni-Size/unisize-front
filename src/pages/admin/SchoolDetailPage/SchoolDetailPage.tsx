@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useParams, useLocation } from "react-router-dom";
@@ -880,8 +880,18 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
 
   // 서버 계약상 두 배열 모두 null이 아니지만, 구버전 서버(unregistered 미배포)와도
   // 안전하게 동작하도록 기본값을 준다.
-  const allProducts: InventoryProduct[] = inventoryData?.products ?? [];
-  const unregisteredProducts: UnregisteredProduct[] = inventoryData?.unregistered ?? [];
+  // useMemo로 identity를 고정한다. 이 배열은 StockAddModal에 prop으로 내려가고
+  // 그쪽 effect가 products를 의존성으로 쓰기 때문에, 매 렌더 새 배열을 만들면
+  // 모달이 열린 동안 부모가 리렌더될 때마다 입력 중이던 차수가 초기화된다.
+  // (useState로 들고 있던 시절에는 identity가 저절로 안정적이었다.)
+  const allProducts: InventoryProduct[] = useMemo(
+    () => inventoryData?.products ?? [],
+    [inventoryData],
+  );
+  const unregisteredProducts: UnregisteredProduct[] = useMemo(
+    () => inventoryData?.unregistered ?? [],
+    [inventoryData],
+  );
   const loading = inventoryFetching;
   // 기존과 동일하게 고정 문구를 쓴다(이 화면은 getApiErrorMessage를 쓰지 않았다).
   const error: string | null = inventoryError
