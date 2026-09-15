@@ -230,31 +230,35 @@ export const MainPage = () => {
         />
       )}
 
-      <MeasurementBottomSheet
-        isOpen={isMeasurementOpen}
-        onClose={handleMeasurementClose}
-        onTempSave={handleTempSave}
-        onError={showToast}
-        onNext={handleNext}
-        student={selectedStudent}
-        measurementData={measurementData}
-        winterUniforms={form.winterUniforms}
-        summerUniforms={form.summerUniforms}
-        supplies={form.supplies}
-        nameTag={form.nameTag}
-        nameTagMinUnit={form.nameTagMinUnit}
-        nameTagName={form.nameTagName}
-        onUpdateNameTagName={form.setNameTagName}
-        onUpdateUniform={form.updateUniform}
-        onToggleGroupSupport={form.toggleGroupSupport}
-        onAddUniformRow={form.addUniformRow}
-        onRemoveUniformRow={form.removeUniformRow}
-        onUpdateSupply={form.updateSupply}
-        onAddSupplyRow={form.addSupplyRow}
-        onRemoveSupplyRow={form.removeSupplyRow}
-        onUpdateNameTagOrderQuantity={form.updateNameTagOrderQuantity}
-        onConfirm={handleConfirm}
-      />
+      {/* 열 때만 렌더해 매번 새로 마운트시킨다 — step/탭/서명을 effect로 리셋하지 않고
+          초기값으로 잡기 위해서. 시트는 닫힘 상태에서 null을 렌더하므로 차이 없다. */}
+      {isMeasurementOpen && (
+        <MeasurementBottomSheet
+          isOpen={isMeasurementOpen}
+          onClose={handleMeasurementClose}
+          onTempSave={handleTempSave}
+          onError={showToast}
+          onNext={handleNext}
+          student={selectedStudent}
+          measurementData={measurementData}
+          winterUniforms={form.winterUniforms}
+          summerUniforms={form.summerUniforms}
+          supplies={form.supplies}
+          nameTag={form.nameTag}
+          nameTagMinUnit={form.nameTagMinUnit}
+          nameTagName={form.nameTagName}
+          onUpdateNameTagName={form.setNameTagName}
+          onUpdateUniform={form.updateUniform}
+          onToggleGroupSupport={form.toggleGroupSupport}
+          onAddUniformRow={form.addUniformRow}
+          onRemoveUniformRow={form.removeUniformRow}
+          onUpdateSupply={form.updateSupply}
+          onAddSupplyRow={form.addSupplyRow}
+          onRemoveSupplyRow={form.removeSupplyRow}
+          onUpdateNameTagOrderQuantity={form.updateNameTagOrderQuantity}
+          onConfirm={handleConfirm}
+        />
+      )}
 
       <main className="px-5 pb-5">
         <StudentTable

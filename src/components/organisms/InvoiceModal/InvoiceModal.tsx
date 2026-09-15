@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Modal, Select } from "@components/atoms";
 import { Toast } from "@components/atoms/Toast";
 import { formatGender } from "@/utils/genderUtils";
@@ -43,6 +43,23 @@ const supplySizeOptions = [
 ];
 
 // 한국어 날짜 형식("2026년 06월 18일 ...") 포함 처리하여 YYYY-MM-DD 키 추출
+// 주문 스냅샷을 orderId -> 화면 편집 상태 맵으로 바꾼다.
+// (마운트 시 초기값 계산에 쓴다 — 예전에는 열릴 때마다 effect에서 만들었다.)
+const buildSnapshotStates = (
+  snapshots: { orderId: string | number; winterUniforms: UniformItem[]; summerUniforms: UniformItem[]; allUniforms?: UniformItem[]; supplies: SupplyItem[] }[],
+): Map<string | number, SnapshotState> => {
+  const map = new Map<string | number, SnapshotState>();
+  for (const s of snapshots) {
+    map.set(s.orderId, {
+      winterUniforms: s.winterUniforms,
+      summerUniforms: s.summerUniforms,
+      allUniforms: s.allUniforms ?? [],
+      supplies: s.supplies,
+    });
+  }
+  return map;
+};
+
 const toDateKey = (date: string): string => {
   const korean = date.match(/(\d{4})년\s*(\d{2})월\s*(\d{2})일/);
   if (korean) return `${korean[1]}-${korean[2]}-${korean[3]}`;
@@ -62,10 +79,19 @@ export const InvoiceModal = ({
   student,
   onPaymentComplete,
 }: InvoiceModalProps) => {
-  const [activeDateKey, setActiveDateKey] = useState<string>("");
-  const [snapshotStates, setSnapshotStates] = useState<Map<string | number, SnapshotState>>(new Map());
-  const [activeHistory, setActiveHistory] = useState<HistoryItem[]>([]);
-  const [nameTagName, setNameTagName] = useState('');
+  // 부모가 열 때만 렌더하므로 열 때마다 새로 마운트된다. student를 state로 베끼는
+  // effect 대신 초기값으로 만든다 (기존 effect가 하던 계산과 동일하다).
+  const initialSnapshots = student?.orderSnapshots ?? [];
+  const [activeDateKey, setActiveDateKey] = useState<string>(() =>
+    initialSnapshots.length > 0 ? toDateKey(initialSnapshots[0].date) : "",
+  );
+  const [snapshotStates, setSnapshotStates] = useState<Map<string | number, SnapshotState>>(
+    () => buildSnapshotStates(initialSnapshots),
+  );
+  const [activeHistory, setActiveHistory] = useState<HistoryItem[]>(() => student?.history ?? []);
+  const [nameTagName, setNameTagName] = useState(
+    () => initialSnapshots[0]?.nameTagName ?? student?.nameTagName ?? '',
+  );
   const [saving, setSaving] = useState(false);
   // 행별 분리 수량. 비어 있으면 1로 본다.
   const [splitQuantities, setSplitQuantities] = useState<Record<string, number>>({});
@@ -91,27 +117,6 @@ export const InvoiceModal = ({
   const dateKeys = Array.from(dateGroups.keys());
   const activeSnapshots = dateGroups.get(activeDateKey) ?? [];
   const isReadOnly = activeSnapshots.every((s) => s.status === "complete");
-
-  useEffect(() => {
-    if (!isOpen || !student) return;
-
-    const snapshots = student.orderSnapshots ?? [];
-    const firstKey = snapshots.length > 0 ? toDateKey(snapshots[0].date) : "";
-    setActiveDateKey(firstKey);
-
-    const map = new Map<string | number, SnapshotState>();
-    for (const s of snapshots) {
-      map.set(s.orderId, {
-        winterUniforms: s.winterUniforms,
-        summerUniforms: s.summerUniforms,
-        allUniforms: s.allUniforms ?? [],
-        supplies: s.supplies,
-      });
-    }
-    setSnapshotStates(map);
-    setActiveHistory(student.history ?? []);
-    setNameTagName(snapshots[0]?.nameTagName ?? student.nameTagName ?? '');
-  }, [isOpen, student]);
 
   // 서버 응답의 품목을 화면 행에 반영한다. 아는 id는 교체, 모르는 id는 추가,
   // deleted_item_ids는 제거 — 이 한 규칙으로 수량 변경/행 분리/형제 병합이 모두 덮인다.

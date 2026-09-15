@@ -1105,12 +1105,16 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
         <UnregisteredOrderNotice products={unregisteredProducts} />
       )}
 
-      <StockAddModal
-        isOpen={isStockModalOpen}
-        onClose={() => setIsStockModalOpen(false)}
-        products={allProducts}
-        onSubmit={handleStockSubmit}
-      />
+      {/* 열 때만 렌더해 매번 새로 마운트시킨다 — 모달이 products를 state로 베끼는
+          effect 없이 초기화되도록. Modal은 닫힘 상태에서 null을 렌더하므로 차이 없다. */}
+      {isStockModalOpen && (
+        <StockAddModal
+          isOpen={isStockModalOpen}
+          onClose={() => setIsStockModalOpen(false)}
+          products={allProducts}
+          onSubmit={handleStockSubmit}
+        />
+      )}
     </>
   );
 };

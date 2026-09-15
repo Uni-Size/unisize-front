@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Modal } from "@components/atoms/Modal";
 import { Button } from "@components/atoms/Button";
 import type { InventoryProduct, StockUpdateItem } from "@/api/order";
@@ -34,7 +34,11 @@ export const StockAddModal = ({
   products,
   onSubmit,
 }: StockAddModalProps) => {
-  const [newRoundMap, setNewRoundMap] = useState<NewRoundMap>({});
+  // 부모가 열 때만 렌더하므로 열 때마다 새로 마운트된다. prop을 state로 베끼는
+  // effect 대신 초기값으로 만든다 (기존 effect가 products마다 빈 배열을 넣던 것과 동일).
+  const [newRoundMap, setNewRoundMap] = useState<NewRoundMap>(() =>
+    Object.fromEntries(products.map((p) => [p.product_id, [] as NewRound[]])),
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [seasonTab, setSeasonTab] = useState<SeasonTab>("동복");
@@ -44,13 +48,6 @@ export const StockAddModal = ({
   const tabProducts = products.filter((p) =>
     seasonTab === "동복" ? p.season === "W" : p.season === "S",
   );
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const initial: NewRoundMap = {};
-    products.forEach((p) => { initial[p.product_id] = []; });
-    setNewRoundMap(initial);
-  }, [isOpen, products]);
 
   // id를 인자로 받는 이유: 이 함수는 setNewRoundMap의 updater 안에서 호출되는데,
   // updater는 순수해야 한다(React가 여러 번 호출할 수 있다). 값 생성은 호출부에서
