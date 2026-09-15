@@ -251,18 +251,12 @@ export const MeasurementBottomSheet = ({
 }: MeasurementBottomSheetProps) => {
   const [step, setStep] = useState<1 | 2>(1);
   const [activeSeasonTab, setActiveSeasonTab] = useState<'winter' | 'summer'>('winter');
-  const [signature, setSignature] = useState('');
+  // 부모가 열 때만 렌더하므로 열 때마다 새로 마운트된다. step/탭은 초기값이 이미
+  // 리셋값과 같고, 서명만 열릴 당시의 measurementData에서 가져오면 된다.
+  const [signature, setSignature] = useState(measurementData?.signature || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTempSaving, setIsTempSaving] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      setStep(1);
-      setActiveSeasonTab('winter');
-      setSignature(measurementData?.signature || '');
-    }
-  }, [isOpen, measurementData?.signature]);
 
   useEffect(() => {
     if (isOpen) {
