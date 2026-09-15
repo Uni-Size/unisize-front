@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { AdminLayout } from "@components/templates/AdminLayout";
 import { AdminHeader } from "@components/organisms/AdminHeader";
@@ -81,11 +82,11 @@ const toSchoolRow = (item: SchoolListItem, index: number): SchoolRow => ({
 });
 
 export const SchoolListPage = () => {
-  const [schools, setSchools] = useState<SchoolRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<ReactNode>(null);
-  const [searched, setSearched] = useState(false);
+  const queryClient = useQueryClient();
+  // 목록 조회에 실제로 적용 중인 필터. 입력창/드롭다운 상태(searchTerm, typeFilter,
+  // activeFilter, yearFilter)는 사용자가 만지는 값일 뿐이라, 검색 버튼을 눌러야
+  // 여기에 반영된다. 이 값이 queryKey에 들어가므로 조작만으로는 조회가 나가지 않는다.
+  const [appliedParams, setAppliedParams] = useState<SchoolListParams>({ year: CURRENT_YEAR });
 
   // 필터 상태
   const [searchTerm, setSearchTerm] = useState("");
@@ -214,31 +215,34 @@ export const SchoolListPage = () => {
     return params;
   }, [typeFilter, activeFilter, yearFilter]);
 
-  const fetchSchools = useCallback(async (params?: SchoolListParams) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getSchoolList(params);
-      setSchools(data.schools.map(toSchoolRow));
-      setTotal(data.total);
-      setSearched(true);
-    } catch (err) {
-      console.error("학교 목록 조회 실패:", err);
-      setError(
-        getApiErrorMessage(err, "학교 목록을 불러오는 중 오류가 발생했습니다."),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, isFetching, error: queryError } = useQuery({
+    queryKey: ["admin", "schools", "list", appliedParams] as const,
+    queryFn: () =>
+      getSchoolList(appliedParams).catch((err) => {
+        console.error("학교 목록 조회 실패:", err);
+        throw err;
+      }),
+  });
 
-  useEffect(() => {
-    fetchSchools({ year: CURRENT_YEAR });
-  }, [fetchSchools]);
+  const schools: SchoolRow[] = data?.schools.map(toSchoolRow) ?? [];
+  const total = data?.total ?? 0;
+  // isPending이 아니라 isFetching: 기존 코드는 재조회 때도 로딩 표시를 켰다.
+  const loading = isFetching;
+  // 기존 searched는 조회가 한 번이라도 성공하면 true가 되어 "총 N건" 표시를 열었다.
+  // data가 한 번 채워지면 재조회 중에도 유지되므로 의미가 같다.
+  const searched = data !== undefined;
+  const error: ReactNode = queryError
+    ? getApiErrorMessage(queryError, "학교 목록을 불러오는 중 오류가 발생했습니다.")
+    : null;
+
+  // 목록을 바꾸는 작업(추가/삭제/수정) 후 재조회. 적용 중인 필터는 그대로 두고
+  // 캐시만 무효화한다.
+  const invalidateSchools = () =>
+    queryClient.invalidateQueries({ queryKey: ["admin", "schools", "list"] });
 
   const handleSearch = () => {
+    setAppliedParams(buildParams());
     setCurrentPage(1);
-    fetchSchools(buildParams());
   };
 
   const handleReset = () => {
@@ -247,13 +251,13 @@ export const SchoolListPage = () => {
     setTypeFilter("all");
     setActiveFilter("all");
     setYearFilter(CURRENT_YEAR);
+    setAppliedParams({ year: CURRENT_YEAR });
     setCurrentPage(1);
-    fetchSchools({ year: CURRENT_YEAR });
   };
 
   const handleAddSchool = () => {
     setIsAddModalOpen(false);
-    fetchSchools(buildParams());
+    invalidateSchools();
     setToast({ message: "학교가 추가되었습니다.", variant: "success" });
   };
 
@@ -374,7 +378,7 @@ export const SchoolListPage = () => {
               }
               try {
                 await deleteSupportedSchool(id);
-                fetchSchools(buildParams());
+                invalidateSchools();
               } catch (err) {
                 alert(getApiErrorMessage(err, "학교 삭제에 실패했습니다."));
               }
@@ -578,7 +582,7 @@ export const SchoolListPage = () => {
         isOpen={isDetailModalOpen}
         onClose={handleCloseDetailModal}
         school={selectedSchool}
-        onUpdate={() => fetchSchools(buildParams())}
+        onUpdate={invalidateSchools}
         onSubmit={handleUpdateSchool}
         onAddNewProduct={(onCreated, addToCache) => {
           setOnProductCreated(() => onCreated);
