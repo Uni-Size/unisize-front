@@ -322,6 +322,10 @@ export const SchoolFormContent = ({
 
   const handleAddProduct = (season: "winter" | "summer") => {
     const newProduct: EditableProduct = {
+      // 렌더 중이 아니라 onClick 핸들러 안에서만 실행된다(handleAddProduct의 호출부는 추가
+      // 버튼 하나뿐). 규칙이 컴포넌트 본문에 정의된 함수를 보수적으로 잡는 경우다.
+      // 값은 로컬 행 식별자이며 서버로 전송되지 않는다.
+      // eslint-disable-next-line react-hooks/purity
       id: `product-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       category: "",
       gender: "",
