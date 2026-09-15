@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { AdminLayout } from "@components/templates/AdminLayout";
@@ -52,16 +53,33 @@ interface StudentRow {
 // 학생 탭
 // ============================================================================
 
+// 페이지/검색 조건이 queryKey에 들어가므로 조건이 바뀌면 자동 재조회된다.
+// search/grade는 ?? null로 정규화한다 — undefined는 직렬화에서 빠져 "검색 없음"과
+// 다른 모양의 키가 충돌할 수 있다.
+const studentListQueryKey = (p: {
+  schoolName: string;
+  page: number;
+  search?: string;
+  grade?: number;
+}) =>
+  [
+    "admin",
+    "school-students",
+    "list",
+    { schoolName: p.schoolName, page: p.page, search: p.search ?? null, grade: p.grade ?? null },
+  ] as const;
+
 const StudentTab = ({ schoolName }: { schoolName: string }) => {
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [searchType, setSearchType] = useState("통합검색");
   const [categoryFilter, setCategoryFilter] = useState("전체");
   const [purchaseFilter, setPurchaseFilter] = useState("전체");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [students, setStudents] = useState<StudentRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<ReactNode>(null);
+  // 목록 조회에 실제로 적용 중인 검색 조건. 입력창의 searchTerm/categoryFilter는
+  // 타이핑 중인 값일 뿐이라 검색 버튼을 눌러야 여기에 반영된다. 이 값이 queryKey에
+  // 들어가므로, 입력만으로는 서버 조회가 일어나지 않는다.
+  const [activeSearch, setActiveSearch] = useState<{ search?: string; grade?: number }>({});
   const itemsPerPage = 10;
 
   const [toast, setToast] = useState<{ message: string; variant: ToastVariant; duration?: number } | null>(null);
@@ -91,45 +109,48 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     registeredDate: formatDate(student.created_at),
   });
 
-  const fetchStudents = useCallback(
-    async (page: number, search?: string, grade?: number) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await getStudents({
-          page,
-          limit: itemsPerPage,
-          search,
-          school: schoolName,
-          grade,
-        });
-        const rows = response.data.map((s, i) => mapToRow(s, i, page));
-        setStudents(rows);
-        setTotalPages(response.meta.total_pages);
-      } catch (err) {
+  const { data, isFetching, error: queryError } = useQuery({
+    queryKey: studentListQueryKey({
+      schoolName,
+      page: currentPage,
+      search: activeSearch.search,
+      grade: activeSearch.grade,
+    }),
+    // 학교명이 없으면 조회 자체가 무의미하다 (기존 effect의 if (schoolName) 가드와 동일).
+    enabled: !!schoolName,
+    queryFn: () =>
+      getStudents({
+        page: currentPage,
+        limit: itemsPerPage,
+        search: activeSearch.search,
+        school: schoolName,
+        grade: activeSearch.grade,
+      }).catch((err) => {
         console.error("학생 목록 조회 실패:", err);
-        setError(
-          getApiErrorMessage(
-            err,
-            "학생 목록을 불러오는 중 오류가 발생했습니다.",
-          ),
-        );
-      } finally {
-        setLoading(false);
-      }
-    },
-    [schoolName],
-  );
+        throw err;
+      }),
+  });
 
-  useEffect(() => {
-    if (schoolName) fetchStudents(currentPage);
-  }, [currentPage, fetchStudents, schoolName]);
+  // No.는 절대 순번이라 페이지 오프셋에 의존한다 (page가 queryKey에 있으므로 data와 짝이 맞는다).
+  const students: StudentRow[] =
+    data?.data.map((s, i) => mapToRow(s, i, currentPage)) ?? [];
+  const totalPages = data?.meta.total_pages ?? 1;
+  // isPending이 아니라 isFetching: 기존 코드는 재조회 때도 로딩 표시를 켜고 테이블을 비웠다.
+  const loading = isFetching;
+  const error: ReactNode = queryError
+    ? getApiErrorMessage(queryError, "학생 목록을 불러오는 중 오류가 발생했습니다.")
+    : null;
+
+  // 목록을 바꾸는 작업(추가/수정/삭제) 후 재조회. 항목이 늘거나 줄면 뒤 페이지 순번이
+  // 전부 밀리므로 현재 페이지만이 아니라 prefix로 전부 무효화한다.
+  const invalidateStudents = () =>
+    queryClient.invalidateQueries({ queryKey: ["admin", "school-students", "list"] });
 
   const handleSearch = () => {
-    setCurrentPage(1);
     const gradeParam =
       categoryFilter === "신입" ? 1 : categoryFilter === "재학" ? 2 : undefined;
-    fetchStudents(1, searchTerm || undefined, gradeParam);
+    setActiveSearch({ search: searchTerm || undefined, grade: gradeParam });
+    setCurrentPage(1);
   };
 
   const handleReset = () => {
@@ -137,8 +158,8 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     setSearchType("통합검색");
     setCategoryFilter("전체");
     setPurchaseFilter("전체");
+    setActiveSearch({});
     setCurrentPage(1);
-    fetchStudents(1);
   };
 
   const handleAddStudent = async (data: StudentFormInput) => {
@@ -167,7 +188,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
           : {}),
       });
       setToast({ message: '학생이 추가되었습니다.', variant: 'success' });
-      fetchStudents(currentPage);
+      invalidateStudents();
     } catch (err) {
       setToast({ message: getApiErrorString(err, '학생 추가에 실패했습니다.'), variant: 'error' });
       throw err;
@@ -216,7 +237,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         notes: '',
         ...(data.orderDate ? { order_date: data.orderDate } : {}),
       });
-      fetchStudents(currentPage);
+      invalidateStudents();
     } catch (error) {
       console.error('주문 수정 실패:', error);
     }
@@ -264,7 +285,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     };
 
     await updateAdminOrderNew(orderId, payload);
-    fetchStudents(currentPage);
+    invalidateStudents();
   };
 
   const handleOrderCreate = async (studentId: string, data: StudentFormInput) => {
@@ -331,7 +352,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
       };
     });
 
-    fetchStudents(currentPage);
+    invalidateStudents();
   };
 
   const handleStatusChange = async (orderId: string | number, status: import('@components/organisms/StudentModal').OrderStatusValue) => {
@@ -561,7 +582,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         variant: needsReview ? 'info' : 'success',
         duration: needsReview ? 8000 : undefined,
       });
-      fetchStudents(currentPage);
+      invalidateStudents();
     } catch (error) {
       console.error("학생 삭제 실패:", error);
       setDeleteError(getApiErrorMessage(error, '학생 삭제에 실패했습니다.'));
@@ -572,8 +593,9 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
 
   const handleExportCSV = async () => {
     try {
-      const gradeParam = categoryFilter === "신입" ? 1 : categoryFilter === "재학" ? 2 : undefined;
-      const response = await getStudents({ search: searchTerm || undefined, school: schoolName, grade: gradeParam, limit: 99999 });
+      // 입력창 값이 아니라 목록에 적용 중인 조건으로 내보낸다 — 화면에 보이는 것과
+      // CSV 내용이 어긋나지 않도록(검색어를 입력만 하고 검색을 누르지 않은 경우).
+      const response = await getStudents({ search: activeSearch.search, school: schoolName, grade: activeSearch.grade, limit: 99999 });
       const list = response.data;
       downloadCSV(
         ['No.', '학년', '입학학교', '학생이름', '성별', '학생 연락처', '학부모 연락처', '주관구매', '등록일'],
@@ -785,7 +807,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         student={selectedStudent}
         onSubmit={handleAddStudent}
         onEditSave={handleEditSave}
-        onStudentUpdated={() => fetchStudents(currentPage)}
+        onStudentUpdated={invalidateStudents}
         onOrderCreate={handleOrderCreate}
         onOrderUpdate={handleOrderUpdate}
         onStatusChange={handleStatusChange}
