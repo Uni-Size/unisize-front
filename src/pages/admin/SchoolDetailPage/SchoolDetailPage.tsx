@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useParams, useLocation } from "react-router-dom";
@@ -854,51 +854,43 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
   // 프론트에서 dedupe/병합하지 않는다 (dedupe를 넣으면 그 버그가 화면에서 안 보이게 된다).
   //
   // NOTE: QueryClientProvider는 이제 App.tsx에 배선돼 있어 TanStack Query를 쓸 수 있다.
-  // 다만 마이그레이션은 StaffListPage 파일럿부터 화면 단위로 진행 중이고 이 화면은 아직 차례가 아니라,
-  // 당분간 기존 방식(useState + useEffect)을 유지한다. 설계 문서 §5의 useQuery 전환은 파일럿 검증 후.
-  const [allProducts, setAllProducts] = useState<InventoryProduct[]>([]);
-  const [unregisteredProducts, setUnregisteredProducts] = useState<UnregisteredProduct[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const inventoryQueryClient = useQueryClient();
 
   // --- 화면 로컬 상태 (페이지를 벗어나면 사라져야 하므로 전역으로 올리지 않는다) ---
   const [selectedProducts, setSelectedProducts] = useState<string[]>(["전체"]);
   const [seasonTab, setSeasonTab] = useState<SeasonTab>('동복');
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
 
-  // 재고 추가 직후 재조회하면 요청이 겹칠 수 있다. 마지막 요청의 응답만 반영해
-  // 늦게 도착한 이전 응답이 최신 데이터를 덮어쓰는 것을 막는다.
-  const latestRequestIdRef = useRef(0);
-
-  const fetchInventory = useCallback(() => {
-    if (!schoolName) return;
-    const requestId = ++latestRequestIdRef.current;
-    const isStale = () => requestId !== latestRequestIdRef.current;
-
-    setLoading(true);
-    setError(null);
-    getOrderInventory(schoolName)
-      .then((data) => {
-        if (isStale()) return;
-        // 서버 계약상 두 배열 모두 null이 아니지만, 구버전 서버(unregistered 미배포)와도
-        // 안전하게 동작하도록 기본값을 준다.
-        setAllProducts(data.products ?? []);
-        setUnregisteredProducts(data.unregistered ?? []);
-      })
-      .catch((err) => {
-        if (isStale()) return;
+  // 재고 추가 직후 재조회하면 요청이 겹칠 수 있는데, TanStack Query가 같은 키의
+  // 낡은 응답을 자체적으로 버리므로 예전의 requestId 수동 비교(latestRequestIdRef)는
+  // 더 이상 필요하지 않다.
+  const {
+    data: inventoryData,
+    isFetching: inventoryFetching,
+    error: inventoryError,
+  } = useQuery({
+    queryKey: ["admin", "school-inventory", schoolName] as const,
+    enabled: !!schoolName,
+    queryFn: () =>
+      getOrderInventory(schoolName).catch((err) => {
         console.error("주문/재고 조회 실패:", err);
-        setError("데이터를 불러오는 중 오류가 발생했습니다.");
-      })
-      .finally(() => {
-        if (isStale()) return;
-        setLoading(false);
-      });
-  }, [schoolName]);
+        throw err;
+      }),
+  });
 
-  useEffect(() => {
-    fetchInventory();
-  }, [fetchInventory]);
+  // 서버 계약상 두 배열 모두 null이 아니지만, 구버전 서버(unregistered 미배포)와도
+  // 안전하게 동작하도록 기본값을 준다.
+  const allProducts: InventoryProduct[] = inventoryData?.products ?? [];
+  const unregisteredProducts: UnregisteredProduct[] = inventoryData?.unregistered ?? [];
+  const loading = inventoryFetching;
+  // 기존과 동일하게 고정 문구를 쓴다(이 화면은 getApiErrorMessage를 쓰지 않았다).
+  const error: string | null = inventoryError
+    ? "데이터를 불러오는 중 오류가 발생했습니다."
+    : null;
+
+  const invalidateInventory = () =>
+    inventoryQueryClient.invalidateQueries({ queryKey: ["admin", "school-inventory"] });
+
 
   const seasonProducts = allProducts.filter((p) => belongsToSeasonTab(p, seasonTab));
   const productOptions = ["전체", ...seasonProducts.map((p) => p.display_name)];
@@ -988,7 +980,7 @@ const OrderReservationTab = ({ schoolName }: { schoolName: string }) => {
 
   const handleStockSubmit = async (items: StockUpdateItem[]) => {
     await updateInventoryStock(schoolName, { items });
-    fetchInventory();
+    invalidateInventory();
   };
 
   return (
