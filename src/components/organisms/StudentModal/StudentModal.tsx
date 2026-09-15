@@ -628,6 +628,13 @@ export const StudentModal = ({
       const ws: number | "" = student.waist ?? "";
       const ms = student.isManuallySupported ?? false;
 
+      // 이 effect는 단순 초기화가 아니라 "모달을 닫지 않고 데이터를 새로고침하는" 재동기화
+      // 장치다. 모달 안에서 주문을 수정하면 preserveTabRef를 세우고 부모가 갱신된 student를
+      // 다시 내려주는데, 그때 이 effect가 다시 돌아 필드를 최신 값으로 맞추면서 보고 있던
+      // 주문 탭을 유지한다. 마운트 초기화(useState initializer)로 옮기면 주문 수정 결과가
+      // 화면에 반영되지 않고, key로 리마운트시키면 탭 유지가 깨진다. 없애려면 부모-모달
+      // 데이터 흐름 자체를 재설계해야 한다.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAdmissionSchool(aSchool);
       setPreviousSchool(pSchool);
       setName(n);
@@ -2371,6 +2378,12 @@ export const StudentModal = ({
                                       !isOrderCreateMode &&
                                       !isOrderEditMode
                                     ) {
+                                      // onClick 핸들러 안이라 렌더 중 접근이 아니다.
+                                      // handleDateTabClick이 내부에서 activeDateIndexRef를
+                                      // 건드리기 때문에 분석기가 "렌더 중 호출될 수도 있다"고
+                                      // 보수적으로 잡는 것이다. 그 ref는 effect가 의존성에
+                                      // 인덱스를 넣지 않고 최신 값을 읽으려고 둔 장치다.
+                                      // eslint-disable-next-line react-hooks/refs
                                       handleDateTabClick(i);
                                     }
                                   }}
