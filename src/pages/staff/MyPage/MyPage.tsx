@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../stores/authStore';
 import { getStaffProfile, getMyPaymentPending } from '../../../api/staff';
@@ -31,14 +32,6 @@ export const MyPage = () => {
 
   const [profile, setProfile] = useState<StaffProfile | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('in_progress');
-
-  const [inProgressStudents, setInProgressStudents] = useState<RegisterStudent[]>([]);
-  const [inProgressTotal, setInProgressTotal] = useState(0);
-  const [inProgressLoading, setInProgressLoading] = useState(true);
-
-  const [pendingOrders, setPendingOrders] = useState<PaymentPendingOrder[]>([]);
-  const [pendingTotal, setPendingTotal] = useState(0);
-  const [pendingLoading, setPendingLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [isMeasurementOpen, setIsMeasurementOpen] = useState(false);
@@ -46,46 +39,49 @@ export const MyPage = () => {
   const [measurementData, setMeasurementData] = useState<StartMeasurementResponse | null>(null);
 
   const form = useMeasurementForm();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     getStaffProfile().then(setProfile).catch(console.error);
   }, []);
 
-  const fetchInProgress = useCallback(async () => {
-    setInProgressLoading(true);
-    try {
-      const response = await getMeasuringStudents({ page: 1, limit: 100 });
-      if (response.success && response.data) {
-        setInProgressStudents(response.data.students);
-        setInProgressTotal(response.data.total);
+  // 측정 진행 중 목록. 실패하면 이전 데이터를 유지하고 로그만 남기던 기존 동작에 맞춰,
+  // queryFn에서 throw하면 TanStack Query가 직전 성공 데이터를 그대로 들고 있는다.
+  const {
+    data: inProgressData,
+    isFetching: inProgressLoading,
+  } = useQuery({
+    queryKey: ['staff', 'students', 'measuring'] as const,
+    queryFn: async () => {
+      const response = await getMeasuringStudents({ page: 1, limit: 100 }).catch((err) => {
+        console.error(err);
+        throw err;
+      });
+      if (!(response.success && response.data)) {
+        throw new Error('측정 진행 중 목록을 불러오지 못했습니다.');
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setInProgressLoading(false);
-    }
-  }, []);
+      return response.data;
+    },
+  });
+  const inProgressStudents = inProgressData?.students ?? [];
+  const inProgressTotal = inProgressData?.total ?? 0;
 
-  const fetchPending = useCallback(async () => {
-    setPendingLoading(true);
-    try {
-      const data = await getMyPaymentPending();
-      setPendingOrders(data.orders);
-      setPendingTotal(data.total);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setPendingLoading(false);
-    }
-  }, []);
+  // 결제 대기 목록은 해당 탭을 열었을 때만 조회한다(기존 effect의 activeTab 조건과 동일).
+  const { data: pendingData, isFetching: pendingLoading } = useQuery({
+    queryKey: ['staff', 'orders', 'my-payment-pending'] as const,
+    enabled: activeTab === 'payment_pending',
+    queryFn: () =>
+      getMyPaymentPending().catch((err) => {
+        console.error(err);
+        throw err;
+      }),
+  });
+  const pendingOrders = pendingData?.orders ?? [];
+  const pendingTotal = pendingData?.total ?? 0;
 
-  useEffect(() => {
-    fetchInProgress();
-  }, [fetchInProgress]);
+  const invalidateInProgress = () =>
+    queryClient.invalidateQueries({ queryKey: ['staff', 'students', 'measuring'] });
 
-  useEffect(() => {
-    if (activeTab === 'payment_pending') fetchPending();
-  }, [activeTab, fetchPending]);
 
   const handleStudentClick = async (student: RegisterStudent) => {
     try {
@@ -217,7 +213,7 @@ export const MyPage = () => {
     setSelectedStudent(null);
     form.reset();
     showToast('확정 완료되었습니다.');
-    fetchInProgress();
+    invalidateInProgress();
 
     // A6 인보이스 자동 인쇄 — MainPage의 확정 플로우와 동일하게 fire-and-forget으로
     // 시도하고, 실패해도 확정 자체(이미 저장 완료)에는 영향을 주지 않는다.
