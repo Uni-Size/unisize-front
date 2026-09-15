@@ -315,23 +315,27 @@ export const MainPage = () => {
         </div>
       </div>
 
-      <InvoiceModal
-        isOpen={isDetailOpen}
-        onClose={() => setIsDetailOpen(false)}
-        student={selectedStudent}
-        onPaymentComplete={async (orderId) => {
-          const amount = orders.find((o) => o.orderId === orderId)?.remainingAmountRaw ?? 0;
-          try {
-            await completePayment(String(orderId), { amount, method: "cash" });
-            setIsDetailOpen(false);
-            setPaymentSuccess(true);
-            // 결제 완료된 항목이 목록에서 빠지면 뒤 페이지 순번이 밀리므로 prefix로 전부 무효화한다.
-            queryClient.invalidateQueries({ queryKey: ["admin", "orders", "payment-pending"] });
-          } catch (err) {
-            setPaymentError(getApiErrorString(err, "결제 처리 중 오류가 발생했습니다."));
-          }
-        }}
-      />
+      {/* 열 때만 렌더해 매번 새로 마운트시킨다 — student를 state로 베끼는 effect 없이
+          초기값으로 잡기 위해서. */}
+      {isDetailOpen && (
+        <InvoiceModal
+          isOpen={isDetailOpen}
+          onClose={() => setIsDetailOpen(false)}
+          student={selectedStudent}
+          onPaymentComplete={async (orderId) => {
+            const amount = orders.find((o) => o.orderId === orderId)?.remainingAmountRaw ?? 0;
+            try {
+              await completePayment(String(orderId), { amount, method: "cash" });
+              setIsDetailOpen(false);
+              setPaymentSuccess(true);
+              // 결제 완료된 항목이 목록에서 빠지면 뒤 페이지 순번이 밀리므로 prefix로 전부 무효화한다.
+              queryClient.invalidateQueries({ queryKey: ["admin", "orders", "payment-pending"] });
+            } catch (err) {
+              setPaymentError(getApiErrorString(err, "결제 처리 중 오류가 발생했습니다."));
+            }
+          }}
+        />
+      )}
 
       {paymentSuccess && (
         <Toast
