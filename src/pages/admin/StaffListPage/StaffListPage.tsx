@@ -192,12 +192,17 @@ export const StaffListPage = () => {
         </div>
       </div>
 
-      <StaffEditModal
-        isOpen={isEditModalOpen}
-        onClose={handleCloseEditModal}
-        staff={selectedStaff}
-        onUpdate={handleUpdateStaff}
-      />
+      {/* 열 때만 렌더해 매번 새로 마운트시킨다 — 모달이 prop을 state로 베끼는
+          effect 없이 선택된 스태프 정보로 초기화되도록. Modal은 닫힘 상태에서
+          어차피 null을 렌더하므로 화면상 차이는 없다. */}
+      {isEditModalOpen && (
+        <StaffEditModal
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          staff={selectedStaff}
+          onUpdate={handleUpdateStaff}
+        />
+      )}
 
       <StaffRegisterModal
         isOpen={isRegisterModalOpen}

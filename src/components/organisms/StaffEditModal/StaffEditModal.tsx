@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Modal, Input } from '@components/atoms';
 import { resetStaffPassword } from '@/api/staff';
 
@@ -23,18 +23,12 @@ export const StaffEditModal = ({
   staff,
   onUpdate,
 }: StaffEditModalProps) => {
+  // 부모가 모달을 열 때만 렌더하므로(조건부 렌더) 열 때마다 새로 마운트된다.
+  // 따라서 prop을 state로 동기화하는 effect 없이 초기값만 지정하면 된다.
   const [isEditMode, setIsEditMode] = useState(false);
-  const [name, setName] = useState('');
-  const [gender, setGender] = useState<'남' | '여'>('남');
+  const [name, setName] = useState(staff?.name ?? '');
+  const [gender, setGender] = useState<'남' | '여'>(staff?.gender ?? '남');
   const [isResetting, setIsResetting] = useState(false);
-
-  useEffect(() => {
-    if (staff) {
-      setName(staff.name);
-      setGender(staff.gender);
-      setIsEditMode(false);
-    }
-  }, [staff]);
 
   const handleClose = () => {
     setIsEditMode(false);
