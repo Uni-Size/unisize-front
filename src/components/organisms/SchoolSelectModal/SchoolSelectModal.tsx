@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Modal, Select } from '@components/atoms';
 import { getSupportedSchoolsByYear, type School as ApiSchool } from '@/api/school';
 
@@ -32,27 +33,22 @@ export const SchoolSelectModal = ({
   const [year, setYear] = useState(String(currentYear));
   const [selectedSchoolId, setSelectedSchoolId] = useState('');
   const [price, setPrice] = useState('');
-  const [schoolList, setSchoolList] = useState<ApiSchool[]>([]);
-  const [loading, setLoading] = useState(false);
+  // 모달이 열려 있을 때만 조회한다 (기존 effect의 if (isOpen) 가드와 동일).
+  // 연도를 바꾸면 queryKey가 달라져 자동으로 다시 가져온다.
+  const { data, isFetching } = useQuery({
+    queryKey: ['schools', 'supported', 'by-year', year] as const,
+    enabled: isOpen,
+    queryFn: () =>
+      getSupportedSchoolsByYear(Number(year)).catch((error) => {
+        console.error('학교 목록 조회 실패:', error);
+        throw error;
+      }),
+  });
 
-  const fetchSchools = useCallback(async (y: string) => {
-    setLoading(true);
-    try {
-      const schools = await getSupportedSchoolsByYear(Number(y));
-      setSchoolList(schools);
-    } catch (error) {
-      console.error('학교 목록 조회 실패:', error);
-      setSchoolList([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isOpen) {
-      fetchSchools(year);
-    }
-  }, [isOpen, year, fetchSchools]);
+  // 기존 동작: 조회에 실패하면 에러를 표시하지 않고 빈 목록으로 둔다.
+  // 쿼리가 실패하면 data가 undefined이므로 그대로 빈 배열이 된다.
+  const schoolList: ApiSchool[] = data ?? [];
+  const loading = isFetching;
 
   const schoolOptions = schoolList.map((school) => ({
     value: String(school.id),
@@ -76,7 +72,8 @@ export const SchoolSelectModal = ({
     setYear(String(currentYear));
     setSelectedSchoolId('');
     setPrice('');
-    setSchoolList([]);
+    // 목록은 쿼리 캐시가 들고 있고 모달이 닫히면 enabled: false가 되므로
+    // 여기서 비울 필요가 없다(다시 열면 캐시를 즉시 보여주고 뒤에서 갱신한다).
     onClose();
   };
 
