@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import type { ReactNode } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminLayout } from "@components/templates/AdminLayout";
 import { AdminHeader } from "@components/organisms/AdminHeader";
 import { Toast } from "@components/atoms/Toast";
@@ -93,10 +93,17 @@ export const ProductListPage = () => {
   const [genderFilter, setGenderFilter] = useState("");
   const [seasonFilter, setSeasonFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [products, setProducts] = useState<ProductRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<ReactNode>(null);
+  const queryClient = useQueryClient();
+  // 목록 조회에 실제로 적용 중인 필터. 입력창/드롭다운 상태는 사용자가 만지는 값일
+  // 뿐이라 검색 버튼을 눌러야 여기에 반영된다. 이 값이 queryKey에 들어가므로
+  // 드롭다운을 바꾸는 것만으로는 조회가 나가지 않는다. 초기값 {}는 기존 마운트
+  // effect의 "필터 없이 전체 조회"와 같다.
+  const [appliedFilters, setAppliedFilters] = useState<{
+    category?: string;
+    gender?: string;
+    season?: string;
+    search?: string;
+  }>({});
   const itemsPerPage = 10;
 
   // Modal states
@@ -109,49 +116,48 @@ export const ProductListPage = () => {
   const [pendingSchool, setPendingSchool] = useState<ProductSchoolDetail | null>(null);
   const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
 
-  const fetchProducts = useCallback(
-    async (
-      page: number,
-      category?: string,
-      gender?: string,
-      season?: string,
-      search?: string,
-    ) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await getProducts({
-          page,
-          limit: itemsPerPage,
-          category: category || undefined,
-          gender: gender || undefined,
-          season: season || undefined,
-          search: search || undefined,
-        });
-        setProducts(
-          data.products.map((item, idx) =>
-            toProductRow(item, idx, page, itemsPerPage),
-          ),
-        );
-        setTotalPages(Math.ceil(data.total / itemsPerPage) || 1);
-      } catch (err) {
+  const { data, isFetching, error: queryError } = useQuery({
+    queryKey: [
+      "admin",
+      "products",
+      "list",
+      { page: currentPage, ...appliedFilters },
+    ] as const,
+    queryFn: () =>
+      getProducts({
+        page: currentPage,
+        limit: itemsPerPage,
+        category: appliedFilters.category,
+        gender: appliedFilters.gender,
+        season: appliedFilters.season,
+        search: appliedFilters.search,
+      }).catch((err) => {
         console.error("상품 목록 조회 실패:", err);
-        setError(getApiErrorMessage(err, "상품 목록을 불러오는 중 오류가 발생했습니다."));
-      } finally {
-        setLoading(false);
-      }
-    },
-    [],
-  );
+        throw err;
+      }),
+  });
 
-  // 초기 로드: 필터 없이 전체 조회
-  useEffect(() => {
-    fetchProducts(1);
-  }, [fetchProducts]);
+  // No.는 절대 순번이라 페이지 오프셋에 의존한다 (page가 queryKey에 있어 data와 짝이 맞는다).
+  const products =
+    data?.products.map((item, idx) => toProductRow(item, idx, currentPage, itemsPerPage)) ?? [];
+  const totalPages = data ? Math.ceil(data.total / itemsPerPage) || 1 : 1;
+  // isPending이 아니라 isFetching: 기존 코드는 재조회 때도 로딩 표시를 켜고 테이블을 비웠다.
+  const loading = isFetching;
+  const error = queryError
+    ? getApiErrorMessage(queryError, "상품 목록을 불러오는 중 오류가 발생했습니다.")
+    : null;
+
+  const invalidateProducts = () =>
+    queryClient.invalidateQueries({ queryKey: ["admin", "products", "list"] });
 
   const handleSearch = () => {
+    setAppliedFilters({
+      category: categoryFilter || undefined,
+      gender: genderFilter || undefined,
+      season: seasonFilter || undefined,
+      search: searchTerm || undefined,
+    });
     setCurrentPage(1);
-    fetchProducts(1, categoryFilter, genderFilter, seasonFilter, searchTerm);
   };
 
   const handleReset = () => {
@@ -160,13 +166,12 @@ export const ProductListPage = () => {
     setCategoryFilter("");
     setGenderFilter("");
     setSeasonFilter("");
+    setAppliedFilters({});
     setCurrentPage(1);
-    fetchProducts(1);
   };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    fetchProducts(page, categoryFilter, genderFilter, seasonFilter, searchTerm);
   };
 
   const handleOpenAddModal = () => {
@@ -210,7 +215,7 @@ export const ProductListPage = () => {
           : undefined,
       });
       handleCloseAddModal();
-      fetchProducts(currentPage, categoryFilter, genderFilter, seasonFilter, searchTerm);
+      invalidateProducts();
     } catch (err: unknown) {
       const errData = (
         err as {
@@ -325,7 +330,7 @@ export const ProductListPage = () => {
     const updatedDetailData = apiProductToDetailData(updated, data.id);
     setSelectedProduct(updatedDetailData);
     setSelectedSchools(updatedDetailData.schools);
-    fetchProducts(currentPage, categoryFilter, genderFilter, seasonFilter, searchTerm);
+    invalidateProducts();
     setToast({ message: "저장되었습니다.", variant: "success" });
     return updatedDetailData;
   };
@@ -475,13 +480,7 @@ export const ProductListPage = () => {
               if (!confirm("정말 삭제하시겠습니까?")) return;
               try {
                 await deleteProduct(product.id);
-                fetchProducts(
-                  currentPage,
-                  categoryFilter,
-                  genderFilter,
-                  seasonFilter,
-                  searchTerm,
-                );
+                invalidateProducts();
               } catch (error) {
                 console.error("상품 삭제 실패:", error);
               }
