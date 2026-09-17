@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Modal, Select, SelectMarkerDot } from "@components/atoms";
 import type { SelectOption } from "@components/atoms";
 import { DeletedStudentBanner } from "@components/organisms/DeletedStudentBanner";
@@ -461,17 +462,36 @@ export const StudentModal = ({
   }, [isOpen, mode, effectiveOrderId, onActiveOrderChange]);
 
   // 학생 감사 로그
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [auditLogsLoading, setAuditLogsLoading] = useState(false);
-  // 주문별 히스토리 캐시 (orderId → OrderHistory[])
-  const [orderHistoryMap, setOrderHistoryMap] = useState<Map<string, OrderHistory[]>>(new Map());
-  const [orderHistoryLoading, setOrderHistoryLoading] = useState(false);
+  // 학생 감사 로그. 예전에는 재동기화 effect 안에서 직접 불러왔지만, 모달이 열려 있고
+  // 학생이 있으면 조회한다는 조건 그대로 쿼리로 옮겼다.
+  const { data: auditLogsData, isFetching: auditLogsLoading } = useQuery({
+    queryKey: ["admin", "student-audit", student?.id] as const,
+    enabled: isOpen && !!student?.id,
+    queryFn: () =>
+      getStudentAuditLogs(student!.id as string, { limit: 50 })
+        .then((res) => res.data)
+        .catch(() => [] as AuditLog[]),
+  });
+  const auditLogs: AuditLog[] = auditLogsData ?? [];
+  // 주문 이력. 예전에는 orderHistoryMap이라는 수동 캐시(orderId -> 이력)를 두고
+  // fetchOrderHistoryIfNeeded로 중복 조회를 막았는데, 그건 쿼리 캐시가 하는 일이다.
+  // 활성 감사 탭(auditTab)이 곧 주문 id이므로 그것을 키로 쓴다.
   const [auditTab, setAuditTab] = useState<'student' | string>(() => {
     // 렌더 단계에서는 ref(activeDateIndexRef)를 읽지 않는다 — React가 금지하는 패턴이고,
     // 마운트 시점에는 state와 ref가 모두 초기값이라 state를 그대로 쓰면 동작이 같다.
     // 이후 탭 전환/학생 변경 시의 auditTab 갱신은 아래 effect가 담당한다.
     const snap = student?.orderSnapshots?.[activeDateIndex];
     return snap ? String(snap.orderId) : 'student';
+  });
+
+  const { data: orderHistories, isFetching: orderHistoryLoading } = useQuery({
+    queryKey: ["admin", "order-history", auditTab] as const,
+    // 'student' 탭은 주문 이력이 아니라 학생 감사 로그를 보여주므로 조회하지 않는다.
+    enabled: isOpen && auditTab !== 'student',
+    queryFn: () =>
+      getOrderHistory(auditTab)
+        .then((data) => data.histories)
+        .catch(() => [] as OrderHistory[]),
   });
 
   const applyOrderSnapshot = (snapshot: OrderSnapshot) => {
@@ -513,20 +533,6 @@ export const StudentModal = ({
     };
   };
 
-  const fetchOrderHistoryIfNeeded = useCallback((orderId: string | number) => {
-    const key = String(orderId);
-    if (orderHistoryMap.has(key)) return;
-    setOrderHistoryLoading(true);
-    getOrderHistory(orderId)
-      .then((data) => {
-        setOrderHistoryMap((prev) => new Map(prev).set(key, data.histories));
-      })
-      .catch(() => {
-        setOrderHistoryMap((prev) => new Map(prev).set(key, []));
-      })
-      .finally(() => setOrderHistoryLoading(false));
-  }, [orderHistoryMap]);
-
   const handleDateTabClick = (index: number) => {
     if (index === activeDateIndex) return;
     setActiveDateIndexSync(index);
@@ -534,7 +540,6 @@ export const StudentModal = ({
     if (snapshot) {
       applyOrderSnapshot(snapshot);
       setAuditTab(String(snapshot.orderId));
-      fetchOrderHistoryIfNeeded(snapshot.orderId);
     }
   };
 
@@ -720,23 +725,11 @@ export const StudentModal = ({
         };
       }
 
+      // 감사 로그/주문 이력 조회는 useQuery로 옮겼다(상단 참고). 여기서는 보고 있던
+      // 주문에 감사 탭만 맞춰 준다 — 탭이 곧 이력 쿼리의 키라 조회는 자동으로 따라온다.
       if (student.id) {
         const initialSnap = student.orderSnapshots?.[activeDateIndexRef.current];
         setAuditTab(initialSnap ? String(initialSnap.orderId) : 'student');
-        setOrderHistoryMap(new Map());
-        setAuditLogsLoading(true);
-        getStudentAuditLogs(student.id, { limit: 50 })
-          .then((res) => setAuditLogs(res.data))
-          .catch(() => setAuditLogs([]))
-          .finally(() => setAuditLogsLoading(false));
-        if (initialSnap) {
-          const key = String(initialSnap.orderId);
-          setOrderHistoryLoading(true);
-          getOrderHistory(initialSnap.orderId)
-            .then((data) => setOrderHistoryMap((prev) => new Map(prev).set(key, data.histories)))
-            .catch(() => setOrderHistoryMap((prev) => new Map(prev).set(key, [])))
-            .finally(() => setOrderHistoryLoading(false));
-        }
       }
 
       const ntn =
@@ -2704,7 +2697,7 @@ export const StudentModal = ({
                     </div>
                   ));
                 })() : (() => {
-                  const histories = orderHistoryMap.get(auditTab);
+                  const histories = orderHistories;
                   if (orderHistoryLoading && !histories) return <span className="text-sm text-bg-400">불러오는 중...</span>;
                   if (!histories || histories.length === 0) return <span className="text-sm text-bg-400">히스토리 없음</span>;
                   return histories.map((h) => (
