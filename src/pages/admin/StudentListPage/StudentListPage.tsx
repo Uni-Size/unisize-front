@@ -534,12 +534,16 @@ export const StudentListPage = () => {
 
       // 저장 후 해당 학생 데이터 재조회해서 view 모드로 전환
       const studentId = selectedStudent?.id;
+      let refreshedStudent: StudentDetailData | undefined;
       if (studentId) {
-        const refreshed = await fetchStudentDetail(studentId);
-        setSelectedStudent(refreshed);
+        refreshedStudent = await fetchStudentDetail(studentId);
+        setSelectedStudent(refreshedStudent);
       }
       setToast({ message: '주문이 수정되었습니다.', variant: 'success' });
       invalidateStudentList();
+      // 갱신된 상세를 반환한다 — 모달이 student prop 재전달을 기다리지 않고
+      // 직접 반영할 수 있게 하는 다음 단계의 준비다.
+      return refreshedStudent;
     } catch (error) {
       console.error('주문 수정 실패:', error);
       setToast({ message: '주문 수정에 실패했습니다.', variant: 'error' });
@@ -591,11 +595,13 @@ export const StudentListPage = () => {
     try {
       await updateAdminOrderNew(orderId, payload);
       const studentId = selectedStudent?.id;
+      let refreshedStudent: StudentDetailData | undefined;
       if (studentId) {
-        const refreshed = await fetchStudentDetail(studentId);
-        setSelectedStudent(refreshed);
+        refreshedStudent = await fetchStudentDetail(studentId);
+        setSelectedStudent(refreshedStudent);
       }
       invalidateStudentList();
+      return refreshedStudent;
     } catch (err) {
       console.error('주문 수정 실패:', err);
       setToast({ message: '주문 수정에 실패했습니다.', variant: 'error' });
@@ -634,9 +640,10 @@ export const StudentListPage = () => {
         supply_items: supplyItems,
         notes: '',
       });
-      const refreshed = await fetchStudentDetail(studentId);
-      setSelectedStudent(refreshed);
+      const refreshedStudent = await fetchStudentDetail(studentId);
+      setSelectedStudent(refreshedStudent);
       invalidateStudentList();
+      return refreshedStudent;
     } catch (err) {
       console.error('주문 생성 실패:', err);
       setToast({ message: '주문 생성에 실패했습니다.', variant: 'error' });
@@ -648,10 +655,10 @@ export const StudentListPage = () => {
     const { updateOrderStatus } = await import('@/api/order');
     await updateOrderStatus(orderId, status as import('@/api/order').OrderStatus);
     const studentId = selectedStudent?.id;
-    if (studentId) {
-      const refreshed = await fetchStudentDetail(studentId);
-      setSelectedStudent(refreshed);
-    }
+    if (!studentId) return;
+    const refreshedStudent = await fetchStudentDetail(studentId);
+    setSelectedStudent(refreshedStudent);
+    return refreshedStudent;
   };
 
   const handleDeleteStudent = (e: React.MouseEvent, row: StudentRow) => {
