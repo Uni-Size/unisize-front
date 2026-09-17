@@ -280,18 +280,30 @@ export interface StudentModalProps {
   mode: "add" | "edit" | "view";
   student?: StudentDetailData | null;
   onSubmit?: (data: StudentFormInput) => Promise<void> | void;
-  onEditSave?: (orderId: string | number, data: StudentFormInput) => void;
+  /**
+   * 아래 네 콜백(onEditSave/onOrderCreate/onOrderUpdate/onStatusChange)은 성공 시
+   * 갱신된 학생 상세를 반환한다. 지금은 모달이 이 값을 쓰지 않고 student prop이 다시
+   * 내려오길 기다리지만(613행 재동기화 effect), 그 effect를 없애는 다음 단계에서
+   * 핸들러가 반환값을 직접 반영하게 된다. 반환하지 않아도 동작은 같다(void 허용).
+   */
+  onEditSave?: (
+    orderId: string | number,
+    data: StudentFormInput,
+  ) => Promise<StudentDetailData | void> | void;
   onStudentUpdated?: () => void;
   onPaymentComplete?: (orderId: string | number) => void;
-  onOrderCreate?: (studentId: string, data: StudentFormInput) => Promise<void>;
+  onOrderCreate?: (
+    studentId: string,
+    data: StudentFormInput,
+  ) => Promise<StudentDetailData | void>;
   onOrderUpdate?: (
     orderId: string | number,
     data: StudentFormInput,
-  ) => Promise<void>;
+  ) => Promise<StudentDetailData | void>;
   onStatusChange?: (
     orderId: string | number,
     status: OrderStatusValue,
-  ) => Promise<void>;
+  ) => Promise<StudentDetailData | void>;
   /** 현재 선택된 주문의 환불 요약. 학생 삭제로 정리 대상이 된 주문에만 값이 있다. */
   refundSummary?: RefundSummary | null;
   refundSummaryLoading?: boolean;
