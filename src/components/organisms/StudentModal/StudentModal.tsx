@@ -275,6 +275,74 @@ export type OrderStatusValue =
   | "complete" // 완료
   | "cancelled"; // 취소됨
 
+/**
+ * student 상세에서 모달 폼이 쓰는 값 전부를 계산한다.
+ *
+ * 마운트 시 초기화(useState initializer)와 갱신 시 재적용(applyStudentData)이
+ * 같은 규칙을 쓰도록 순수 함수로 분리했다. targetIndex는 보고 있던 주문 탭이며,
+ * 해당 스냅샷이 없으면 학생 레벨 값으로 떨어진다.
+ */
+const deriveStudentState = (student: StudentDetailData, targetIndex: number) => {
+  const snapshot = student.orderSnapshots?.[targetIndex];
+  const firstSnapshotDate = student.orderSnapshots?.[0]?.date;
+  const today = () => new Date().toISOString().slice(0, 10);
+  const snapshotDate = snapshot?.date
+    ? toDateInputValue(snapshot.date) || snapshot.date.slice(0, 10)
+    : "";
+  const fallbackDate = firstSnapshotDate
+    ? toDateInputValue(firstSnapshotDate) || firstSnapshotDate.slice(0, 10)
+    : today();
+
+  const admissionSchool = student.admissionSchool ?? "";
+  const previousSchool = student.previousSchool ?? "";
+  const name = student.name ?? "";
+  const gender = student.gender ?? "";
+  const birthDate = student.birthDate ?? "";
+  const admissionYear: number | "" = student.admissionYear ?? "";
+  const admissionGrade: number | "" = student.admissionGrade ?? "";
+  const studentPhone = student.studentPhone ?? "";
+  const guardianPhone = student.guardianPhone ?? "";
+  const address = student.address ?? "";
+  const height: number | "" = student.height ?? "";
+  const weight: number | "" = student.weight ?? "";
+  const shoulder: number | "" = student.shoulder ?? "";
+  const waist: number | "" = student.waist ?? "";
+  const isManuallySupported = student.isManuallySupported ?? false;
+
+  const winterUniforms = snapshot ? snapshot.winterUniforms : student.winterUniforms;
+  const summerUniforms = snapshot ? snapshot.summerUniforms : student.summerUniforms;
+  const allUniforms = (snapshot ? snapshot.allUniforms : student.allUniforms) ?? [];
+  const nameTagName = student.nameTagName ?? "";
+  const activeDateIndex = snapshot ? targetIndex : 0;
+  const activeOrderId = snapshot ? snapshot.orderId : student.orderId;
+  // 스냅샷이 있는데 날짜가 비어 있으면 기존 값을 유지했던 동작을 그대로 둔다(undefined).
+  const orderDate = snapshot ? (snapshotDate || undefined) : fallbackDate;
+  const auditTab = snapshot ? String(snapshot.orderId) : "student";
+
+  return {
+    admissionSchool, previousSchool, name, gender, birthDate,
+    admissionYear, admissionGrade, studentPhone, guardianPhone, address,
+    height, weight, shoulder, waist, isManuallySupported,
+    supplies: student.supplies,
+    nameTag: student.nameTag,
+    winterUniforms, summerUniforms, allUniforms, nameTagName,
+    activeDateIndex, activeOrderId, orderDate, auditTab,
+    originalOrder: {
+      winterUniforms,
+      summerUniforms,
+      allUniforms,
+      supplies: student.supplies,
+      orderDate: snapshot ? snapshotDate : fallbackDate,
+    },
+    originalStudent: {
+      admissionSchool, previousSchool, name, gender, birthDate,
+      admissionYear, admissionGrade, studentPhone, guardianPhone, address,
+      nameTagName: student.nameTagName ?? student.orderSnapshots?.[0]?.nameTagName ?? "",
+      height, weight, shoulder, waist, isManuallySupported,
+    },
+  };
+};
+
 export interface StudentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -369,6 +437,14 @@ export const StudentModal = ({
   onRefund,
 }: StudentModalProps) => {
   // view 모드에서 수정 버튼 클릭 시 편집 상태
+  // 마운트 시 한 번만 계산한다. 이후 student가 갱신되면 applyStudentData가 같은 규칙으로
+  // 다시 적용한다 — 예전에는 이 둘을 effect 하나가 겸해서 set-state-in-effect에 걸렸다.
+  const [initialState] = useState(() =>
+    (mode === "edit" || mode === "view") && student
+      ? deriveStudentState(student, 0)
+      : null,
+  );
+
   const [isEditing, setIsEditing] = useState(false);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [isSavingStudent, setIsSavingStudent] = useState(false);
@@ -396,54 +472,48 @@ export const StudentModal = ({
   const suggestionRef = useRef<HTMLDivElement>(null);
 
   // 학생 정보 폼 state
-  const [admissionSchool, setAdmissionSchool] = useState("");
-  const [previousSchool, setPreviousSchool] = useState("");
-  const [name, setName] = useState("");
-  const [gender, setGender] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [admissionYear, setAdmissionYear] = useState<number | "">("");
-  const [admissionGrade, setAdmissionGrade] = useState<number | "">("");
-  const [studentPhone, setStudentPhone] = useState("");
-  const [guardianPhone, setGuardianPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [height, setHeight] = useState<number | "">("");
-  const [weight, setWeight] = useState<number | "">("");
-  const [shoulder, setShoulder] = useState<number | "">("");
-  const [waist, setWaist] = useState<number | "">("");
+  const [admissionSchool, setAdmissionSchool] = useState(initialState?.admissionSchool ?? "");
+  const [previousSchool, setPreviousSchool] = useState(initialState?.previousSchool ?? "");
+  const [name, setName] = useState(initialState?.name ?? "");
+  const [gender, setGender] = useState(initialState?.gender ?? "");
+  const [birthDate, setBirthDate] = useState(initialState?.birthDate ?? "");
+  const [admissionYear, setAdmissionYear] = useState<number | "">(initialState?.admissionYear ?? "");
+  const [admissionGrade, setAdmissionGrade] = useState<number | "">(initialState?.admissionGrade ?? "");
+  const [studentPhone, setStudentPhone] = useState(initialState?.studentPhone ?? "");
+  const [guardianPhone, setGuardianPhone] = useState(initialState?.guardianPhone ?? "");
+  const [address, setAddress] = useState(initialState?.address ?? "");
+  const [height, setHeight] = useState<number | "">(initialState?.height ?? "");
+  const [weight, setWeight] = useState<number | "">(initialState?.weight ?? "");
+  const [shoulder, setShoulder] = useState<number | "">(initialState?.shoulder ?? "");
+  const [waist, setWaist] = useState<number | "">(initialState?.waist ?? "");
   // 무상 지원 대상 여부 (수동 지정, 전학생 등) — 중/고 재학 중 각 1회만 지원 가능
-  const [isManuallySupported, setIsManuallySupported] = useState(false);
+  const [isManuallySupported, setIsManuallySupported] = useState(initialState?.isManuallySupported ?? false);
 
   // 구입일자 state (edit 모드용, 기본값 오늘)
-  const [orderDate, setOrderDate] = useState(() =>
-    new Date().toISOString().slice(0, 10),
+  const [orderDate, setOrderDate] = useState(
+    () => initialState?.orderDate ?? new Date().toISOString().slice(0, 10),
   );
 
   // 교복 state
-  const [winterUniforms, setWinterUniforms] = useState<UniformItem[]>([]);
-  const [summerUniforms, setSummerUniforms] = useState<UniformItem[]>([]);
-  const [allUniforms, setAllUniforms] = useState<UniformItem[]>([]);
+  const [winterUniforms, setWinterUniforms] = useState<UniformItem[]>(initialState?.winterUniforms ?? []);
+  const [summerUniforms, setSummerUniforms] = useState<UniformItem[]>(initialState?.summerUniforms ?? []);
+  const [allUniforms, setAllUniforms] = useState<UniformItem[]>(initialState?.allUniforms ?? []);
 
   // 용품 state
-  const [supplies, setSupplies] = useState<SupplyItem[]>([]);
+  const [supplies, setSupplies] = useState<SupplyItem[]>(initialState?.supplies ?? []);
 
   // 명찰 state
-  const [nameTag, setNameTag] = useState<NameTagInfo>({
-    orderQuantity: 0,
-    attachQuantity: 0,
-  });
-  const [nameTagName, setNameTagName] = useState("");
+  const [nameTag, setNameTag] = useState<NameTagInfo>(
+    initialState?.nameTag ?? { orderQuantity: 0, attachQuantity: 0 },
+  );
+  const [nameTagName, setNameTagName] = useState(initialState?.nameTagName ?? "");
 
   // view 모드: 활성 날짜 탭
-  const [activeDateIndex, setActiveDateIndex] = useState(0);
-  const activeDateIndexRef = React.useRef(0);
-  const setActiveDateIndexSync = (i: number) => {
-    activeDateIndexRef.current = i;
-    setActiveDateIndex(i);
-  };
+  const [activeDateIndex, setActiveDateIndex] = useState(initialState?.activeDateIndex ?? 0);
   // 현재 선택된 주문 ID (탭 전환 시 변경)
   const [activeOrderId, setActiveOrderId] = useState<
     string | number | undefined
-  >(undefined);
+  >(initialState?.activeOrderId);
 
   // 선택된 주문을 바깥에 알린다. 회수/환불 요약은 주문 단위라 페이지가 어느 주문을
   // 조회할지 알아야 한다. 같은 id를 두 번 알리지 않아 콜백이 매 렌더 새로 와도 안전하다.
@@ -476,13 +546,9 @@ export const StudentModal = ({
   // 주문 이력. 예전에는 orderHistoryMap이라는 수동 캐시(orderId -> 이력)를 두고
   // fetchOrderHistoryIfNeeded로 중복 조회를 막았는데, 그건 쿼리 캐시가 하는 일이다.
   // 활성 감사 탭(auditTab)이 곧 주문 id이므로 그것을 키로 쓴다.
-  const [auditTab, setAuditTab] = useState<'student' | string>(() => {
-    // 렌더 단계에서는 ref(activeDateIndexRef)를 읽지 않는다 — React가 금지하는 패턴이고,
-    // 마운트 시점에는 state와 ref가 모두 초기값이라 state를 그대로 쓰면 동작이 같다.
-    // 이후 탭 전환/학생 변경 시의 auditTab 갱신은 아래 effect가 담당한다.
-    const snap = student?.orderSnapshots?.[activeDateIndex];
-    return snap ? String(snap.orderId) : 'student';
-  });
+  const [auditTab, setAuditTab] = useState<'student' | string>(
+    initialState?.auditTab ?? 'student',
+  );
 
   const { data: orderHistories, isFetching: orderHistoryLoading } = useQuery({
     queryKey: ["admin", "order-history", auditTab] as const,
@@ -535,7 +601,7 @@ export const StudentModal = ({
 
   const handleDateTabClick = (index: number) => {
     if (index === activeDateIndex) return;
-    setActiveDateIndexSync(index);
+    setActiveDateIndex(index);
     const snapshot = student?.orderSnapshots?.[index];
     if (snapshot) {
       applyOrderSnapshot(snapshot);
@@ -561,14 +627,14 @@ export const StudentModal = ({
     shoulder: number | "";
     waist: number | "";
     isManuallySupported: boolean;
-  } | null>(null);
+  } | null>(initialState?.originalStudent ?? null);
   const originalOrderRef = React.useRef<{
     winterUniforms: UniformItem[];
     summerUniforms: UniformItem[];
     allUniforms: UniformItem[];
     supplies: SupplyItem[];
     orderDate: string;
-  } | null>(null);
+  } | null>(initialState?.originalOrder ?? null);
 
   // 모달 열릴 때 학교 전체 목록 로드
   useEffect(() => {
@@ -625,135 +691,59 @@ export const StudentModal = ({
   }, []);
 
   // edit/view 모드에서 기존 데이터로 초기화
-  const preserveTabRef = React.useRef(false);
 
-  useEffect(() => {
-    if ((mode === "edit" || mode === "view") && student) {
-      const sPhone = student.studentPhone ?? "";
-      const gPhone = student.guardianPhone ?? "";
-      const aSchool = student.admissionSchool ?? "";
-      const pSchool = student.previousSchool ?? "";
-      const n = student.name ?? "";
-      const g = student.gender ?? "";
-      const bd = student.birthDate ?? "";
-      const ay: number | "" = student.admissionYear ?? "";
-      const ag: number | "" = student.admissionGrade ?? "";
-      const addr = student.address ?? "";
-      const h: number | "" = student.height ?? "";
-      const w: number | "" = student.weight ?? "";
-      const sh: number | "" = student.shoulder ?? "";
-      const ws: number | "" = student.waist ?? "";
-      const ms = student.isManuallySupported ?? false;
+  /**
+   * 갱신된 학생 상세를 폼에 다시 적용한다.
+   *
+   * 예전에는 [mode, student] effect가 이 일을 했다 — 부모가 재조회한 student를
+   * prop으로 내려주면 effect가 다시 돌며 필드를 맞추는 구조였고, 그래서
+   * react-hooks/set-state-in-effect에 걸렸다. 지금은 저장 핸들러가 콜백 반환값으로
+   * 받은 상세를 직접 여기에 넘긴다(이벤트 경로라 규칙에 걸리지 않는다).
+   *
+   * targetIndex 기본값이 현재 탭인 이유: 주문을 수정한 뒤에도 보고 있던 주문 탭이
+   * 유지되어야 한다. 예전에는 preserveTabRef로 이 의도를 effect에 전달했는데,
+   * 이제 호출 시점에 인자로 정하므로 그 ref가 필요 없다.
+   */
+  const applyStudentData = (
+    next: StudentDetailData,
+    targetIndex: number = activeDateIndex,
+  ) => {
+    const d = deriveStudentState(next, targetIndex);
 
-      // 이 effect는 단순 초기화가 아니라 "모달을 닫지 않고 데이터를 새로고침하는" 재동기화
-      // 장치다. 모달 안에서 주문을 수정하면 preserveTabRef를 세우고 부모가 갱신된 student를
-      // 다시 내려주는데, 그때 이 effect가 다시 돌아 필드를 최신 값으로 맞추면서 보고 있던
-      // 주문 탭을 유지한다. 마운트 초기화(useState initializer)로 옮기면 주문 수정 결과가
-      // 화면에 반영되지 않고, key로 리마운트시키면 탭 유지가 깨진다. 없애려면 부모-모달
-      // 데이터 흐름 자체를 재설계해야 한다.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setAdmissionSchool(aSchool);
-      setPreviousSchool(pSchool);
-      setName(n);
-      setGender(g);
-      setBirthDate(bd);
-      setAdmissionYear(ay);
-      setAdmissionGrade(ag);
-      setStudentPhone(sPhone);
-      setGuardianPhone(gPhone);
-      setAddress(addr);
-      setHeight(h);
-      setWeight(w);
-      setShoulder(sh);
-      setWaist(ws);
-      setIsManuallySupported(ms);
-      setSupplies(student.supplies);
-      setNameTag(student.nameTag);
-      setIsEditing(false);
-      setIsOrderEditMode(false);
+    setAdmissionSchool(d.admissionSchool);
+    setPreviousSchool(d.previousSchool);
+    setName(d.name);
+    setGender(d.gender);
+    setBirthDate(d.birthDate);
+    setAdmissionYear(d.admissionYear);
+    setAdmissionGrade(d.admissionGrade);
+    setStudentPhone(d.studentPhone);
+    setGuardianPhone(d.guardianPhone);
+    setAddress(d.address);
+    setHeight(d.height);
+    setWeight(d.weight);
+    setShoulder(d.shoulder);
+    setWaist(d.waist);
+    setIsManuallySupported(d.isManuallySupported);
+    setSupplies(d.supplies);
+    setNameTag(d.nameTag);
+    setIsEditing(false);
+    setIsOrderEditMode(false);
 
-      // 주문 수정 완료 후 student가 갱신될 때 탭 유지
-      const targetIndex = preserveTabRef.current
-        ? activeDateIndexRef.current
-        : 0;
-      preserveTabRef.current = false;
+    setWinterUniforms(d.winterUniforms);
+    setSummerUniforms(d.summerUniforms);
+    setAllUniforms(d.allUniforms);
+    setNameTagName(d.nameTagName);
+    setActiveDateIndex(d.activeDateIndex);
+    setActiveOrderId(d.activeOrderId);
+    // 스냅샷 날짜가 비어 있으면 기존 값을 유지한다(예전 `if (date) setOrderDate(date)`).
+    if (d.orderDate) setOrderDate(d.orderDate);
+    if (next.id) setAuditTab(d.auditTab);
 
-      const snapshot = student.orderSnapshots?.[targetIndex];
-      if (snapshot) {
-        setWinterUniforms(snapshot.winterUniforms);
-        setSummerUniforms(snapshot.summerUniforms);
-        setAllUniforms(snapshot.allUniforms ?? []);
-        setNameTagName(student.nameTagName ?? "");
-        setActiveDateIndexSync(targetIndex);
-        setActiveOrderId(snapshot.orderId);
-        const date = snapshot.date
-          ? toDateInputValue(snapshot.date) || snapshot.date.slice(0, 10)
-          : "";
-        if (date) setOrderDate(date);
-        originalOrderRef.current = {
-          winterUniforms: snapshot.winterUniforms,
-          summerUniforms: snapshot.summerUniforms,
-          allUniforms: snapshot.allUniforms ?? [],
-          supplies: student.supplies,
-          orderDate: date,
-        };
-      } else {
-        setWinterUniforms(student.winterUniforms);
-        setSummerUniforms(student.summerUniforms);
-        setAllUniforms(student.allUniforms ?? []);
-        setNameTagName(student.nameTagName ?? "");
-        setActiveDateIndexSync(0);
-        setActiveOrderId(student.orderId);
-        const firstSnapshotDate = student.orderSnapshots?.[0]?.date;
-        setOrderDate(
-          firstSnapshotDate
-            ? toDateInputValue(firstSnapshotDate) ||
-                firstSnapshotDate.slice(0, 10)
-            : new Date().toISOString().slice(0, 10),
-        );
-        const firstSnapshotDateForRef = student.orderSnapshots?.[0]?.date;
-        const orderDateForRef = firstSnapshotDateForRef
-          ? toDateInputValue(firstSnapshotDateForRef) ||
-            firstSnapshotDateForRef.slice(0, 10)
-          : new Date().toISOString().slice(0, 10);
-        originalOrderRef.current = {
-          winterUniforms: student.winterUniforms,
-          summerUniforms: student.summerUniforms,
-          allUniforms: student.allUniforms ?? [],
-          supplies: student.supplies,
-          orderDate: orderDateForRef,
-        };
-      }
+    originalOrderRef.current = d.originalOrder;
+    originalStudentRef.current = d.originalStudent;
+  };
 
-      // 감사 로그/주문 이력 조회는 useQuery로 옮겼다(상단 참고). 여기서는 보고 있던
-      // 주문에 감사 탭만 맞춰 준다 — 탭이 곧 이력 쿼리의 키라 조회는 자동으로 따라온다.
-      if (student.id) {
-        const initialSnap = student.orderSnapshots?.[activeDateIndexRef.current];
-        setAuditTab(initialSnap ? String(initialSnap.orderId) : 'student');
-      }
-
-      const ntn =
-        student.nameTagName ?? student.orderSnapshots?.[0]?.nameTagName ?? "";
-      originalStudentRef.current = {
-        admissionSchool: aSchool,
-        previousSchool: pSchool,
-        name: n,
-        gender: g,
-        birthDate: bd,
-        admissionYear: ay,
-        admissionGrade: ag,
-        studentPhone: sPhone,
-        guardianPhone: gPhone,
-        address: addr,
-        nameTagName: ntn,
-        height: h,
-        weight: w,
-        shoulder: sh,
-        waist: ws,
-        isManuallySupported: ms,
-      };
-    }
-  }, [mode, student]);
 
   const resetForm = () => {
     setAdmissionSchool("");
@@ -777,7 +767,7 @@ export const StudentModal = ({
     setSupplies([]);
     setNameTag({ orderQuantity: 0, attachQuantity: 0 });
     setNameTagName("");
-    setActiveDateIndexSync(0);
+    setActiveDateIndex(0);
     setIsEditing(false);
     setIsOrderCreateMode(false);
     setIsOrderEditMode(false);
@@ -994,7 +984,9 @@ export const StudentModal = ({
         }
         const targetOrderId = activeOrderId ?? student?.orderId;
         if (targetOrderId && orderChanged) {
-          onEditSave?.(targetOrderId, formData);
+          // 부모가 재조회한 상세를 반환하면 보고 있던 탭을 유지한 채 반영한다.
+          const refreshed = await onEditSave?.(targetOrderId, formData);
+          if (refreshed) applyStudentData(refreshed);
         }
         setToast({ message: "저장되었습니다.", variant: "success" });
         setIsEditing(false);
@@ -1008,13 +1000,14 @@ export const StudentModal = ({
       const orderId = activeOrderId ?? student?.orderId;
       if (!orderId || !onOrderUpdate) return;
       setIsCreatingOrder(true);
-      preserveTabRef.current = true;
       try {
-        await onOrderUpdate(orderId, formData);
+        // 부모가 재조회한 상세를 반환하면 보고 있던 탭(activeDateIndex)을 유지한 채
+        // 폼에 반영한다. 반환하지 않는 호출부도 있어(구 계약) 없으면 그냥 넘어간다.
+        const refreshed = await onOrderUpdate(orderId, formData);
+        if (refreshed) applyStudentData(refreshed);
         setToast({ message: "주문이 수정되었습니다.", variant: "success" });
         setIsOrderEditMode(false);
       } catch (err) {
-        preserveTabRef.current = false;
         console.error("주문 수정 실패:", err);
         setToast({ message: "주문 수정에 실패했습니다.", variant: "error" });
       } finally {
@@ -1025,7 +1018,9 @@ export const StudentModal = ({
       if (!studentId || !onOrderCreate) return;
       setIsCreatingOrder(true);
       try {
-        await onOrderCreate(studentId, formData);
+        const refreshed = await onOrderCreate(studentId, formData);
+        // 새 주문은 목록 맨 앞에 붙으므로 첫 탭을 보여 준다.
+        if (refreshed) applyStudentData(refreshed, 0);
         setToast({ message: "주문이 생성되었습니다.", variant: "success" });
         setIsOrderCreateMode(false);
       } catch (err) {
@@ -2384,10 +2379,9 @@ export const StudentModal = ({
                                       !isOrderEditMode
                                     ) {
                                       // onClick 핸들러 안이라 렌더 중 접근이 아니다.
-                                      // handleDateTabClick이 내부에서 activeDateIndexRef를
-                                      // 건드리기 때문에 분석기가 "렌더 중 호출될 수도 있다"고
-                                      // 보수적으로 잡는 것이다. 그 ref는 effect가 의존성에
-                                      // 인덱스를 넣지 않고 최신 값을 읽으려고 둔 장치다.
+                                      // handleDateTabClick -> applyOrderSnapshot이
+                                      // originalOrderRef(편집 변경 감지용 원본)를 쓰기 때문에
+                                      // 분석기가 "렌더 중 호출될 수도 있다"고 보수적으로 잡는다.
                                       // eslint-disable-next-line react-hooks/refs
                                       handleDateTabClick(i);
                                     }
