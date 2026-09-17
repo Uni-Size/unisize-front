@@ -1422,23 +1422,21 @@ export const StudentModal = ({
                           {isTableView ? (
                             <span className="text-xs">
                               {item.attachCount > 0 || (item.nameTag ?? 0) > 0
-                                ? `${item.attachCount} / ${item.nameTag ?? 0}`
+                                ? `${item.attachCount > 0 ? "O" : "X"} / ${item.nameTag ?? 0}`
                                 : "-"}
                             </span>
                           ) : (
                             <div className="flex items-center justify-center gap-1 text-xs">
                               <input
-                                type="number"
-                                className="w-8 px-1 py-0.5 border border-gray-200 rounded text-center text-gray-700 bg-white outline-none focus:border-primary-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                value={item.attachCount}
-                                min={0}
-                                max={totalQty}
+                                type="checkbox"
+                                className="w-4 h-4 accent-primary-900 cursor-pointer"
+                                checked={(item.attachCount ?? 0) > 0}
                                 onChange={(e) =>
                                   handleUniformChange(
                                     season,
                                     item.id,
                                     "attachCount",
-                                    Number(e.target.value),
+                                    e.target.checked ? 1 : 0,
                                   )
                                 }
                               />

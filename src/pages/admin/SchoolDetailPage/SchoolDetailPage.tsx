@@ -412,7 +412,7 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         reservation: item.delivery_status === 'reserved',
         received: item.delivery_status === 'receipt',
         nameTag: item.name_tag_count || null,
-        attachCount: item.name_tag_attach ? item.purchase_quantity : 0,
+        attachCount: item.name_tag_attach_count ?? 0,
         nameTagUnitPrice: nameTagService?.unit_price ?? undefined,
         nameTagAttachPrice: nameTagService?.attach_price ?? undefined,
         itemStatus: item.delivery_status,

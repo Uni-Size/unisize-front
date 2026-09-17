@@ -554,7 +554,9 @@ export interface FinalizeMeasurementOrderItem {
   item_group: 'W' | 'S' | 'supply'; // 동복 / 하복 / 용품
   name_tag_count: number; // 명찰 배정 개수
   name_tag_attach: boolean; // 부착 서비스 구매 여부(배치 단위, 부분 수량 없음)
-  name_tag_attach_count: number; // name_tag_count면 attach=true, 아니면 0
+  // 명찰 부착비 부과 횟수 (부착 1, 미부착 0). 부착비는 품목당 1회만 부과되므로
+  // 이 값 × 부착단가 = 실제 청구액. name_tag_count나 purchase_quantity로 유추하면 안 된다.
+  name_tag_attach_count: number;
   delivery_status: DeliveryStatus;
   is_reserved: boolean; // true→예약, false(=delivery_status "receipt")→수령
   created_at: string;
@@ -655,9 +657,9 @@ export interface AdminOrderItem {
   name_tag_count: number;
   name_tag_attach: boolean;
   /**
-   * 부착 개수. 부착이면 name_tag_count 전체, 아니면 0.
-   * purchase_quantity로 유추하면 안 된다 — 품목이 여러 행으로 분리됐을 때
-   * 행마다 자기 수량으로 계산해 부착비가 중복 집계된다.
+   * 명찰 부착비 부과 횟수 (부착 1, 미부착 0).
+   * 부착비는 품목당 1회만 부과되므로 이 값 × 부착단가 = 실제 청구액.
+   * name_tag_count나 purchase_quantity로 유추하면 안 된다 — 수량에 비례하지 않는다.
    */
   name_tag_attach_count?: number;
   customization?: string;
