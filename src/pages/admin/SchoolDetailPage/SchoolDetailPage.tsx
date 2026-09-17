@@ -238,6 +238,14 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         ...(data.orderDate ? { order_date: data.orderDate } : {}),
       });
       invalidateStudents();
+      // 서버 응답으로 모달 내용을 갱신한다. 이게 없으면 모달은 사용자가 입력한 값만
+      // 보여줘 서버가 정규화/병합한 결과를 확인할 수 없고, StudentModal의
+      // preserveTabRef가 소비되지 않아 true로 남는 문제도 생긴다.
+      const studentId = selectedStudent?.id;
+      if (!studentId) return;
+      const refreshedStudent = await fetchStudentDetail(studentId);
+      setSelectedStudent(refreshedStudent);
+      return refreshedStudent;
     } catch (error) {
       console.error('주문 수정 실패:', error);
     }
@@ -286,6 +294,11 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
 
     await updateAdminOrderNew(orderId, payload);
     invalidateStudents();
+    const studentId = selectedStudent?.id;
+    if (!studentId) return;
+    const refreshedStudent = await fetchStudentDetail(studentId);
+    setSelectedStudent(refreshedStudent);
+    return refreshedStudent;
   };
 
   const handleOrderCreate = async (studentId: string, data: StudentFormInput) => {
@@ -358,6 +371,11 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
   const handleStatusChange = async (orderId: string | number, status: import('@components/organisms/StudentModal').OrderStatusValue) => {
     const { updateOrderStatus } = await import('@/api/order');
     await updateOrderStatus(orderId, status as import('@/api/order').OrderStatus);
+    const studentId = selectedStudent?.id;
+    if (!studentId) return;
+    const refreshedStudent = await fetchStudentDetail(studentId);
+    setSelectedStudent(refreshedStudent);
+    return refreshedStudent;
   };
 
   const parseAdminOrderItems = (
@@ -413,9 +431,10 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
     };
   };
 
-  const handleRowClick = async (student: StudentRow) => {
-    try {
-      const detail = await getStudentDetail(student.id);
+  // 학생 상세를 조회해 모달이 쓰는 StudentDetailData로 조립한다.
+  // 행 클릭뿐 아니라 주문 수정/저장 후 재조회에도 쓰므로 함수로 분리했다.
+  const fetchStudentDetail = async (studentId: string): Promise<StudentDetailData> => {
+      const detail = await getStudentDetail(studentId);
       const adminOrders = detail.orders ?? [];
 
       const orderSnapshots: import("@components/organisms/StudentModal").OrderSnapshot[] =
@@ -548,6 +567,12 @@ const StudentTab = ({ schoolName }: { schoolName: string }) => {
         history: firstHistory,
         isManuallySupported: detail.is_manually_supported,
       };
+    return detailData;
+  };
+
+  const handleRowClick = async (student: StudentRow) => {
+    try {
+      const detailData = await fetchStudentDetail(student.id);
       setSelectedStudent(detailData);
       setModalMode('view');
     } catch (error) {
