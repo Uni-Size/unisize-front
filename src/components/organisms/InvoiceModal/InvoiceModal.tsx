@@ -608,13 +608,13 @@ export const InvoiceModal = ({
                       </td>
                       <td className="p-2 border border-gray-200 text-center text-gray-700 align-middle">
                         {readOnly ? (
-                          <span>{item.attachCount > 0 ? item.attachCount : "-"}</span>
+                          <span>{item.attachCount > 0 ? "O" : "-"}</span>
                         ) : (
                           <input
                             type="checkbox"
                             className="w-4 h-4 accent-primary-900 cursor-pointer"
                             checked={(item.attachCount ?? 0) > 0}
-                            onChange={(e) => handleUniformChange(orderId, season, item.id, "attachCount", e.target.checked ? totalQty : 0)}
+                            onChange={(e) => handleUniformChange(orderId, season, item.id, "attachCount", e.target.checked ? 1 : 0)}
                           />
                         )}
                       </td>
